@@ -4,8 +4,6 @@
 
     <livewire:layouts.revenue-forecast />
     <div class=" my-4"></div>
-    <livewire:layouts.maint-forecast />
-    <div class=" my-4"></div>
 
     <livewire:layouts.financials.revenue-reports />
 
