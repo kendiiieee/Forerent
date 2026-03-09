@@ -11,24 +11,16 @@
     {{-- MAIN CONTAINER --}}
     <div class="space-y-6 mt-6">
 
-
-            <div class="xl:col-span-2">
-                <livewire:layouts.maintenance.projected-maintenance-cost />
-            </div>
-
+        <div class="xl:col-span-2">
+            <livewire:layouts.maintenance.projected-maintenance-cost />
         </div>
 
-
-        <div class="flex flex-col lg:flex-row gap-6 h-[750px]">
-
-             <div class="w-full lg:w-1/3 h-full overflow-hidden">
-                <livewire:layouts.maintenance.manager-maintenance-list />
-            </div>
-
-             <div class="w-full lg:w-2/3 h-full overflow-hidden">
-                <livewire:layouts.maintenance.manager-maintenance-detail />
-            </div>
-
+        {{--
+            We moved the 2-column layout into the list component
+            so the sort tabs can sit on top of both the list and the details.
+        --}}
+        <div class="w-full">
+            <livewire:layouts.maintenance.manager-maintenance-list />
         </div>
 
     </div>

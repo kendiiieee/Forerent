@@ -8,9 +8,12 @@ use Illuminate\Support\Facades\DB;
 
 class ManagerMaintenanceList extends Component
 {
-    // CHANGED: tabs are now all/pending/ongoing/completed (was all/open/pending/closed)
+    // Tabs are all/pending/ongoing/completed
     public $activeTab = 'all';
     public $activeRequestId = null;
+
+    // ADDED: Sort order property initialized to 'newest'
+    public $sortOrder = 'newest';
 
     protected $listeners = ['refreshDashboard' => '$refresh'];
 
@@ -68,14 +71,20 @@ class ManagerMaintenanceList extends Component
                 // 'all' — no extra filter
         }
 
+        // ADDED: Apply sorting direction based on the dropdown selection
+        $direction = $this->sortOrder === 'newest' ? 'desc' : 'asc';
+        $requests = $listQuery->orderBy('maintenance_requests.created_at', $direction)->get();
+
         return view('livewire.layouts.maintenance.manager-maintenance-list', [
-            'requests' => $listQuery->orderBy('maintenance_requests.created_at', 'desc')->get(),
+            'requests' => $requests,
             'counts' => [
                 'all'       => $allCount,
                 'pending'   => $pendingCount,
                 'ongoing'   => $ongoingCount,
                 'completed' => $completedCount,
             ],
+            // ADDED: Pass the active sort order to the view
+            'sortOrder' => $this->sortOrder,
         ]);
     }
 }

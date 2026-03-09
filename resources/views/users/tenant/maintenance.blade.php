@@ -3,7 +3,6 @@
 @section('header-subtitle', 'Monitor costs, track trends, and manage repair tickets')
 
 @section('content')
-{{-- Removed h-[calc(100vh-80px)] and overflow-hidden so the 750px panels won't crop! --}}
 <div class="p-6 w-full flex flex-col font-['Poppins']">
 
     {{-- 1. HEADER & BANNER SECTION --}}

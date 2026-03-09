@@ -1,51 +1,37 @@
-{{--
-    LAYOUT FIXES:
-    - Added pb-6 to outer wrapper so panels don't clip at the bottom when scrolling
-    - Removed p-2 from right panel — detail component fills edge-to-edge (no inner gap)
-    - Left panel keeps its p-2 (internal padding for list scroll area looks better)
---}}
+
 <div class="flex flex-col w-full pb-6">
 
     {{-- TABS & ACTIONS ROW --}}
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 flex-shrink-0 gap-4">
 
-        {{-- Tabs --}}
-        <div class="flex items-center gap-8 border-b-2 border-gray-100 w-full md:w-auto overflow-x-auto px-2">
-            @php
-                $tabs = [
-                    'all'       => 'All',
-                    'pending'   => 'Pending',
-                    'ongoing'   => 'Ongoing',
-                    'completed' => 'Completed',
-                ];
-            @endphp
+        {{-- Tabs (reusable sort‑tab component) --}}
+        @php
+            $tabs = [
+                'all'       => 'All',
+                'pending'   => 'Pending',
+                'ongoing'   => 'Ongoing',
+                'completed' => 'Completed',
+            ];
+        @endphp
 
-            @foreach($tabs as $key => $label)
-                @php
-                    $isActive = $activeTab === $key;
-                    $count = $counts[$key] ?? 0;
-                    $stateClasses = $isActive
-                        ? "border-[#063D84] text-[#063D84]"
-                        : "border-transparent text-[#A5A7A9] hover:text-gray-600";
-                @endphp
-                <button
-                    wire:click="setTab('{{ $key }}')"
-                    class="group flex items-baseline gap-2 pb-3 border-b-4 transition-all {{ $stateClasses }}"
-                    style="font-family: 'Open Sans', sans-serif;"
-                >
-                    <span class="font-bold text-[24px]">{{ $label }}</span>
-                    <span class="font-bold text-lg opacity-60">{{ $count }}</span>
-                </button>
-            @endforeach
-        </div>
-
-        {{-- Add Request Button --}}
-        <x-ui.button-add
-            href="#"
-            text="Add Maintenance Request"
-            @click="$dispatch('open-maintenance-modal')"
-            class="bg-[#070642] hover:bg-[#1a1955]"
+        <x-ui.sort-tab
+            :tabs="$tabs"
+            :activeTab="$activeTab"
+            :counts="$counts"
+            size="lg"
         />
+
+        {{-- Sort dropdown + Add Request --}}
+        <div class="flex items-center gap-4">
+            <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
+
+            <x-ui.button-add
+                href="#"
+                text="Add Maintenance Request"
+                @click="$dispatch('open-maintenance-modal')"
+                class="bg-[#070642] hover:bg-[#1a1955]"
+            />
+        </div>
     </div>
 
     {{-- MAIN CONTENT GRID --}}

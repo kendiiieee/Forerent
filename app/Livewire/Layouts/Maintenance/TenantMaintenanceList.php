@@ -10,6 +10,8 @@ class TenantMaintenanceList extends Component
 {
     public $activeRequestId = null;
     public $activeTab = 'all';
+    // sort order for requests list (newest or oldest)
+    public $sortOrder = 'newest';
 
     public function setTab($tab)
     {
@@ -57,7 +59,7 @@ class TenantMaintenanceList extends Component
                 'request_id',
                 'status',
                 'urgency',
-                'category',      // <--- ADDED THIS LINE
+                'category',      // <--- ADDED this line earlier
                 'problem',
                 'created_at',
                 'ticket_number'
@@ -75,13 +77,16 @@ class TenantMaintenanceList extends Component
                 break;
         }
 
-        $requests = $query->orderBy('created_at', 'desc')->get();
+        // apply sorting direction based on user selection
+        $direction = $this->sortOrder === 'newest' ? 'desc' : 'asc';
+        $requests = $query->orderBy('created_at', $direction)->get();
 
         return view('livewire.layouts.maintenance.tenant-maintenance-list', [
             'requests' => $requests,
             'counts' => $counts,
             'activeTab' => $this->activeTab,
-            'activeRequestId' => $this->activeRequestId
+            'activeRequestId' => $this->activeRequestId,
+            'sortOrder' => $this->sortOrder,
         ]);
     }
 }
