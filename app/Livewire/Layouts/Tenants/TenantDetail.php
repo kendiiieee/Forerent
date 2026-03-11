@@ -74,20 +74,42 @@ class TenantDetail extends Component
     public function transferTenant(): void
     {
         if ($this->currentTenantId) {
-            // Add your logic for transferring the tenant here
-            // e.g., $this->dispatch('openTransferModal', tenantId: $this->currentTenantId);
-            logger('Transfer tenant ' . $this->currentTenantId);
+            $this->dispatch('open-transfer-tenant-modal', tenantId: $this->currentTenantId);
         }
     }
+
 
     // Placeholder for "Move Out" button
     public function moveOutTenant(): void
     {
         if ($this->currentTenantId) {
-            // Add your logic for moving out the tenant here
-            // e.g., $this->dispatch('openMoveOutModal', tenantId: $this->currentTenantId);
-            logger('Move out tenant ' . $this->currentTenantId);
+            $this->dispatch('open-modal', 'move-out-confirmation');
         }
+    }
+
+    public function confirmMoveOut(): void
+    {
+        if (!$this->currentTenantId) return;
+
+        $lease = \App\Models\Lease::where('tenant_id', $this->currentTenantId)
+            ->where('status', 'Active')
+            ->latest()
+            ->first();
+
+        if ($lease) {
+            $lease->update([
+                'status'   => 'Expired',
+                'end_date' => \Carbon\Carbon::today(),
+            ]);
+
+            \App\Models\Bed::where('bed_id', $lease->bed_id)
+                ->update(['status' => 'Vacant']);
+        }
+
+        $this->dispatch('refresh-tenant-list');
+        $this->dispatch('close-modal', 'move-out-confirmation');
+        $this->resetTenantData();
+        session()->flash('success', 'Tenant moved out successfully!');
     }
 
     public function render()

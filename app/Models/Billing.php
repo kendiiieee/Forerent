@@ -15,7 +15,8 @@ class Billing extends Model
     protected $primaryKey = 'billing_id';
 
     protected $fillable = [
-        'lease_id', 'billing_date', 'next_billing', 'to_pay', 'amount', 'status'
+        'lease_id', 'billing_date', 'next_billing', 'to_pay', 'amount', 'status',
+        'tenant_id'
     ];
 
     protected $casts = [

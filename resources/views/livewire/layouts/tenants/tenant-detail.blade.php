@@ -143,6 +143,15 @@
             </div>
         </div>
     @endif
+
+        <x-ui.modal-confirm
+            name="move-out-confirmation"
+            title="Move Out Tenant?"
+            description="Are you sure you want to move out this tenant? Their lease will be marked as Expired and their bed will be freed."
+            confirmText="Yes, Move Out"
+            cancelText="Cancel"
+            confirmAction="confirmMoveOut"
+        />
 </div>
 
 {{-- Custom Scrollbar Styles (Copied from your navigation file) --}}
