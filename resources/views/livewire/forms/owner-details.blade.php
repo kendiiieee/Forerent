@@ -24,7 +24,7 @@
             <div class="mb-8 flex items-center gap-4">
                 <div class="h-20 w-20 shrink-0 rounded-full bg-[#0C0B8A]"></div>
                 <div>
-                    <h3 class="text-3xl font-bold leading-tight text-[#0C0B50]">Profile Picture</h3>
+                    <h3 class="text-xl font-bold leading-tight text-[#0C0B50] md:text-xl">Profile Picture</h3>
                     <p class="mt-1 text-sm text-gray-500">This will be displayed on your profile</p>
                 </div>
             </div>
@@ -37,6 +37,7 @@
                             type="text"
                             id="first_name"
                             wire:model.lazy="firstName"
+                            placeholder="Juan"
                             class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                         >
                     </div>
@@ -50,6 +51,7 @@
                             type="text"
                             id="last_name"
                             wire:model.lazy="lastName"
+                            placeholder="Dela Cruz"
                             class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                         >
                     </div>
@@ -58,7 +60,7 @@
             </div>
 
             <div class="mb-4 mt-8 flex items-center gap-3">
-                <h4 class="text-2xl font-bold leading-tight text-[#0C0B50]">Contact Information</h4>
+                <h4 class="text-xl font-bold leading-tight text-[#0C0B50] md:text-xl">Contact Information</h4>
                 <div class="h-px flex-1 bg-gray-200"></div>
             </div>
 
@@ -66,13 +68,18 @@
                 <div>
                     <label for="phone_number" class="mb-1.5 block text-sm font-semibold text-gray-700">Phone Number</label>
                     <div class="flex h-12 items-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                        <span class="inline-flex h-full items-center border-r border-gray-200 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                        <span class="inline-flex h-full items-center whitespace-nowrap border-r border-gray-200 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
                             PH +63
                         </span>
                         <input
-                            type="text"
+                            type="tel"
                             id="phone_number"
                             wire:model.lazy="phoneNumber"
+                            inputmode="numeric"
+                            maxlength="10"
+                            pattern="[0-9]{10}"
+                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"
+                            placeholder="9123456789"
                             class="w-full border-0 bg-transparent px-3 text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                         >
                     </div>
@@ -86,6 +93,7 @@
                             type="email"
                             id="email"
                             wire:model.lazy="email"
+                            placeholder="juan.delacruz@example.com"
                             class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                         >
                     </div>

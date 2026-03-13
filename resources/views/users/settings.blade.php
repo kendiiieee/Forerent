@@ -5,53 +5,38 @@
 
 @section('content')
 
-    <div class="w-full h-full">
+    <div class="w-full h-full" x-data="{ activeTab: 'personal-info' }">
 
         {{-- TABS NAVIGATION --}}
-        <div class="mb-8">
-            <ul class="flex flex-wrap gap-10 -mb-px text-lg font-bold" id="settings-tab"
-                data-tabs-toggle="#settings-tab-content"
-                data-tabs-active-classes="text-[#0C0B50] border-b-4 border-[#0C0B50]"
-                data-tabs-inactive-classes="text-gray-400 border-b-4 border-transparent hover:text-gray-600 hover:border-gray-300"
-                role="tablist">
+        <div class="mb-8 flex space-x-8 overflow-x-auto overflow-y-visible border-b border-[#E2E8F0] pb-1">
 
-                {{-- Tab 1: Personal Information --}}
-                <li role="presentation">
-                    <button
-                        class="inline-block pb-2 transition-all"
-                        id="personal-info-tab"
-                        data-tabs-target="#personal-info"
-                        type="button"
-                        role="tab"
-                        aria-controls="personal-info"
-                        aria-selected="false">
-                        Personal Information
-                    </button>
-                </li>
+            <button
+                @click="activeTab = 'personal-info'"
+                class="relative whitespace-nowrap pb-3 text-lg font-bold transition-colors"
+                :class="activeTab === 'personal-info' ? 'text-[#0750ce]' : 'text-[#94A3B8] hover:text-[#64748B]'"
+            >
+                Personal Information
+                <div x-show="activeTab === 'personal-info'" class="absolute -bottom-px left-0 h-1 w-full rounded-t-full bg-[#0750ce] shadow-[0_8px_20px_rgba(47,107,255,0.35)]"></div>
+            </button>
 
-                {{-- Tab 2: Security --}}
-                <li role="presentation">
-                    <button
-                        class="inline-block pb-2 transition-all"
-                        id="security-tab"
-                        data-tabs-target="#security"
-                        type="button"
-                        role="tab"
-                        aria-controls="security"
-                        aria-selected="true">
-                        Security
-                    </button>
-                </li>
-            </ul>
+            <button
+                @click="activeTab = 'security'"
+                class="relative whitespace-nowrap pb-3 text-lg font-bold transition-colors"
+                :class="activeTab === 'security' ? 'text-[#0750ce]' : 'text-[#94A3B8] hover:text-[#64748B]'"
+            >
+                Security
+                <div x-show="activeTab === 'security'" class="absolute -bottom-px left-0 h-1 w-full rounded-t-full bg-[#0750ce] shadow-[0_8px_20px_rgba(47,107,255,0.35)]"></div>
+            </button>
+
         </div>
 
         {{-- TAB CONTENT --}}
-        <div id="settings-tab-content">
-            <div class="hidden" id="personal-info" role="tabpanel">
+        <div>
+            <div x-show="activeTab === 'personal-info'">
                 <livewire:actions.settings-form />
             </div>
 
-            <div class="" id="security" role="tabpanel">
+            <div x-show="activeTab === 'security'">
                 <livewire:layouts.settings.security-form />
             </div>
         </div>
