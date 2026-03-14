@@ -1,10 +1,10 @@
-<div class="bg-white rounded-2xl px-6 py-8 shadow-sm border border-gray-100 flex flex-col justify-between h-full">
+<x-ui.magic-card class="px-6 py-8 flex flex-col justify-between h-full min-h-96">
     <h4 class="text-lg font-bold text-gray-900 mb-6 text-center">{{ $title }}</h4>
 
     <div class="flex flex-col items-center justify-center flex-1 gap-6 w-full">
         {{-- Gauge SVG --}}
         {{-- FIX: Changed w-64 to w-full max-w-[16rem] so it shrinks --}}
-        <div class="relative w-full max-w-[16rem] aspect-[2/1] mx-auto">
+        <div class="relative w-full max-w-[16rem] aspect-2/1 mx-auto">
             <svg class="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#E5E7EB" stroke-width="6" stroke-linecap="round"/>
                 <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#1D4ED8" stroke-width="6" stroke-linecap="round"
@@ -27,4 +27,4 @@
             </div>
         </div>
     </div>
-</div>
+</x-ui.magic-card>
