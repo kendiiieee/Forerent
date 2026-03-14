@@ -66,7 +66,7 @@ class TenantNavigation extends Component
 
         return $query
             ->with([
-                'beds.leases' => fn($q) => $q->with([
+                'beds.leases' => fn($q) => $q->where('status', 'Active')->with([
                     'tenant' => fn($q) => $q->where('role', 'tenant'),
                     'billings' => fn($q) => $q->latest()->limit(1)
                 ])
