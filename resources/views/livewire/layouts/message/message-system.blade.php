@@ -43,6 +43,7 @@
 
         {{-- Chat List --}}
         <div class="flex-1 overflow-y-auto px-3 space-y-0.5 pb-4"
+             wire:poll.3000ms="$refresh"
              style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;">
             @forelse($chats as $chat)
                 <button
@@ -131,7 +132,9 @@
                 id="messages-container"
                 class="flex-1 overflow-y-auto p-6 space-y-1"
                 style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;"
+                wire:poll.2000ms="$refresh"
                 x-init="$el.scrollTop = $el.scrollHeight"
+                x-on:livewire:navigated.window="$nextTick(() => $el.scrollTop = $el.scrollHeight)"
             >
                 @forelse($groupedMessages as $date => $messages)
 
@@ -281,6 +284,7 @@
                         placeholder="Type a message here..."
                         rows="1"
                         @input="resize()"
+                        wire:focus="markAsRead"
                         @keydown.enter.prevent="if (!$event.shiftKey) { send(); } else { message += '\n'; $nextTick(() => resize()); }"
                         class="flex-1 border-none focus:ring-0 text-sm px-3 placeholder-slate-400 text-slate-700 bg-transparent resize-none leading-relaxed py-1"
                         style="min-height: 36px; max-height: 160px; overflow-y: auto;"
@@ -504,6 +508,17 @@
         Livewire.on('scroll-to-bottom', () => {
             const el = document.getElementById('messages-container');
             if (el) el.scrollTop = el.scrollHeight;
+        });
+
+        // Auto-scroll on every poll refresh
+        Livewire.hook('commit', ({ component, succeed }) => {
+            succeed(() => {
+                const el = document.getElementById('messages-container');
+                if (el) {
+                    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+                    if (isNearBottom) el.scrollTop = el.scrollHeight;
+                }
+            });
         });
     });
 </script>

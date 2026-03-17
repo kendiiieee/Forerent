@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Layouts\Message;
 
+use App\Events\MessageSent;
+use App\Models\Lease;
+use App\Models\Unit;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\User;
@@ -9,6 +12,7 @@ use App\Models\Message;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use PhpParser\Node\Stmt\If_;
 
 class MessageSystem extends Component
 {
@@ -34,7 +38,7 @@ class MessageSystem extends Component
         // - manager: can chat with owners, managers, and tenants
         // - tenant: can only chat with managers
         match ($userRole) {
-            'landlord' => $this->allowedTabs = ['landlord', 'manager'],
+            'landlord' => $this->allowedTabs = ['manager'],
             'manager'  => $this->allowedTabs = ['landlord', 'manager', 'tenant'],
             'tenant'   => $this->allowedTabs = ['manager'],
             default    => $this->allowedTabs = ['manager'],
@@ -67,14 +71,28 @@ class MessageSystem extends Component
     public function getChatsProperty()
     {
         $myId = Auth::id();
+        $myRole = Auth::user()->role;
 
-        $users = User::where('user_id', '!=', $myId)
+        $usersQuery = User::where('user_id', '!=', $myId)
             ->where('role', $this->activeTab)
             ->where(function ($q) {
                 $q->where('first_name', 'like', "%{$this->search}%")
                     ->orWhere('last_name', 'like', "%{$this->search}%");
-            })
-            ->get();
+            });
+
+        If($myRole === 'manager' && $this->activeTab === 'tenant') {
+            $usersQuery->whereHas('leases.bed.unit', function ($q)  use ($myId) {
+                $q->where('manager_id', $myId);
+            });
+        }
+
+        Else If($myRole === 'tenant' && $this->activeTab === 'manager') {
+            $usersQuery->whereHas('managedUnits.beds.leases', function ($q) use ($myId) {
+                $q->where('tenant_id', $myId);
+            });
+        }
+
+        $users = $usersQuery->get();
 
         return $users->map(function ($user) use ($myId) {
             $lastMsg = Message::where(function ($q) use ($myId, $user) {
@@ -116,11 +134,7 @@ class MessageSystem extends Component
         $this->showProfile = false;
         $this->attachment = null;
 
-        // Mark messages as read
-        Message::where('sender_id', $userId)
-            ->where('receiver_id', Auth::id())
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
+        $this->markAsRead();
     }
 
     public function sendMessage()
@@ -132,13 +146,13 @@ class MessageSystem extends Component
 
         // Handle file attachment
         if ($this->attachment) {
-            $this->validate(['attachment' => 'file|max:10240']); // 10MB max
+            $this->validate(['attachment' => 'file|max:10240']);
 
             $path = $this->attachment->store('messages', 'public');
             $mimeType = $this->attachment->getMimeType();
             $isImage = str_starts_with($mimeType, 'image/');
 
-            Message::create([
+            $msg = Message::create([
                 'sender_id'  => $myId,
                 'receiver_id' => $this->selectedUserId,
                 'message'    => $this->attachment->getClientOriginalName(),
@@ -147,6 +161,8 @@ class MessageSystem extends Component
                 'file_type'  => $isImage ? 'image' : 'document',
                 'is_read'    => false,
             ]);
+
+            broadcast(new MessageSent($msg))->toOthers();
 
             $this->attachment = null;
             $sent = true;
@@ -179,6 +195,16 @@ class MessageSystem extends Component
     public function setMediaTab($tab)
     {
         $this->mediaTab = $tab;
+    }
+
+    public function markAsRead()
+    {
+        if (!$this->selectedUserId) return;
+
+        Message::where('sender_id', $this->selectedUserId)
+            ->where('receiver_id', Auth::id())
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
     }
 
     public function render()
