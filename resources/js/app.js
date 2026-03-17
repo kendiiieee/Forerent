@@ -3,6 +3,7 @@
 // Alpine.start();
 
 import 'flowbite';
+import './landing-animations';
 
 
 // Initialize Flowbite dropdowns

@@ -778,6 +778,8 @@
 
 </footer>
 
+@vite('resources/js/app.js')
+
 <script>
     // ─── NAVBAR THEME: Light vs Dark based on scroll position ───────────────
     // We use explicit section color mapping — much more reliable than

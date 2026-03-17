@@ -18,7 +18,8 @@
             :show-add-button="false"
         />
     </div>
- 
+
+    <livewire:layouts.properties.add-property-modal modal-id="property-dashboard" />
     <livewire:layouts.units.add-unit-modal />
 
     @push('scripts')

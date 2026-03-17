@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Tenants;
 use App\Models\Billing;
 use App\Notifications\NewAccount;
 use App\Services\PasswordGenerator;
+use App\Livewire\Concerns\WithNotifications;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Component;
 use Livewire\WithFileUploads;
