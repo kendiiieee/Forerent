@@ -5,7 +5,7 @@ namespace App\Livewire\Layouts\Financials;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class PaymentReceipts extends Component
 {
@@ -16,18 +16,9 @@ class PaymentReceipts extends Component
     public $filterBuilding = '';
     public $billingIdToMarkPaid = null;
 
-    public function updatedActiveTab()
-    {
-        $this->resetPage();
-    }
-    public function updatedFilterPeriod()
-    {
-        $this->resetPage();
-    }
-    public function updatedFilterBuilding()
-    {
-        $this->resetPage();
-    }
+    public function updatedActiveTab()   { $this->resetPage(); }
+    public function updatedFilterPeriod() { $this->resetPage(); }
+    public function updatedFilterBuilding() { $this->resetPage(); }
 
     public function confirmPayment($id)
     {
@@ -38,33 +29,63 @@ class PaymentReceipts extends Component
     public function viewReceipt($billingId)
     {
         logger("Click registered for Billing ID: " . $billingId);
-
         $this->dispatch('open-payment-receipt', billingId: $billingId);
     }
 
     public function markAsPaid()
     {
         if ($this->billingIdToMarkPaid) {
-            DB::table('billings')->where('billing_id', $this->billingIdToMarkPaid)->update([
-                'status' => 'Paid',
-                'amount' => DB::raw('to_pay'),
-                'updated_at' => now()
-            ]);
+            DB::table('billings')
+                ->where('billing_id', $this->billingIdToMarkPaid)
+                ->update([
+                    'status'     => 'Paid',
+                    'amount'     => DB::raw('to_pay'),
+                    'updated_at' => now(),
+                ]);
 
             $this->dispatch('show-toast', ['message' => 'Payment marked as Paid!']);
-
             $this->dispatch('close-modal', 'mark-as-paid-confirmation');
-
             $this->billingIdToMarkPaid = null;
         }
     }
 
+    // ─── helpers ────────────────────────────────────────────────────────────
+
+    private function isManager(): bool
+    {
+        return Auth::user()?->role === 'manager'; // adjust to your role field/check
+    }
+
+    private function isTenant(): bool
+    {
+        return Auth::user()?->role === 'tenant'; // adjust to your role field/check
+    }
+
+    private function baseQuery()
+    {
+        $query = DB::table('billings')
+            ->join('leases',  'billings.lease_id',  '=', 'leases.lease_id')
+            ->join('beds',    'leases.bed_id',       '=', 'beds.bed_id')
+            ->join('units',   'beds.unit_id',        '=', 'units.unit_id')
+            ->join('users',   'leases.tenant_id',    '=', 'users.user_id')
+            ->select('billings.*', 'users.first_name', 'users.last_name');
+
+        if ($this->isManager()) {
+            $query->where('units.manager_id', Auth::id());
+        }
+
+        if ($this->isTenant()) {
+            $query->where('leases.tenant_id', Auth::id());
+        }
+
+        return $query;
+    }
+
+    // ─── render ─────────────────────────────────────────────────────────────
+
     public function render()
     {
-        $baseQuery = DB::table('billings')
-            ->join('leases', 'billings.lease_id', '=', 'leases.lease_id')
-            ->join('users', 'leases.tenant_id', '=', 'users.user_id')
-            ->select('billings.*', 'users.first_name', 'users.last_name');
+        $baseQuery = $this->baseQuery();
 
         $counts = [
             'all'      => (clone $baseQuery)->count(),
@@ -82,13 +103,19 @@ class PaymentReceipts extends Component
             default    => null,
         };
 
-        if ($this->filterPeriod) $query->whereMonth('billings.billing_date', $this->filterPeriod);
+        if ($this->filterPeriod) {
+            $query->whereMonth('billings.billing_date', $this->filterPeriod);
+        }
 
         $payments = $query->orderBy('billings.billing_date', 'desc')->paginate(10);
 
         return view('livewire.layouts.financials.payment-receipts', [
             'payments' => $payments,
+<<<<<<< HEAD
             'counts' => $counts,
+=======
+            'counts'   => $counts,
+>>>>>>> 3d27e2d
         ]);
     }
 }

@@ -7,13 +7,12 @@ use Livewire\Attributes\On;
 
 class TenantSortControls extends Component
 {
-    public $activeTab = 'all';
+    public $activeTab = 'current';
     public $sortOrder = 'newest';
     public $counts = [
-        'all'     => 0,
-        'paid'    => 0,
-        'pending' => 0,
-        'overdue' => 0,
+        'current'     => 0,
+        'transferred' => 0,
+        'moved_out'   => 0,
     ];
 
     public function setTab($tab): void
@@ -32,6 +31,18 @@ class TenantSortControls extends Component
     public function updateCounts(array $counts): void
     {
         $this->counts = $counts;
+    }
+
+    #[On('tenantTabReset')]
+    public function resetTab(string $tab): void
+    {
+        $this->activeTab = $tab;
+    }
+
+    #[On('buildingSelected')]
+    public function onBuildingChanged($buildingId): void
+    {
+        $this->activeTab = 'current';
     }
 
     public function render()

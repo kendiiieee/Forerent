@@ -10,42 +10,47 @@
         {{-- Wrapper for the "content" state --}}
         <div class="flex flex-col h-full">
 
-            {{-- 1. Fixed Header Card (`flex-shrink-0`) --}}
-            <div class="flex-shrink-0 bg-blue-600 text-white p-6 rounded-t-3xl shadow-md z-10">
+            {{-- 1. Fixed Header Card --}}
+            <div class="flex-shrink-0 rounded-t-3xl z-10 overflow-hidden" style="background: linear-gradient(135deg, #070589 0%, #0a1ea8 40%, #2360E8 100%);">
 
-                {{-- Title --}}
-                <div class="flex items-center gap-2 mb-4">
-                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                    </svg>
-                    <h4 class="font-bold text-xl">Tenant Information</h4>
-                </div>
 
-                {{-- Main Info --}}
-                <div class="flex justify-between items-start">
-                    {{-- Left: Name and Address --}}
-                    <div>
-                        <h3 class="font-bold text-3xl mb-2">{{ $currentTenant['personal_info']['first_name'] }} {{ $currentTenant['personal_info']['last_name'] }}</h3>
-                        <div class="flex flex-col gap-1.5">
-                            <span class="flex items-center gap-2 text-sm text-white/90">
-                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                </svg>
-                                {{ $currentTenant['personal_info']['address'] }}
-                            </span>
-                            <span class="flex items-center gap-2 text-sm text-white/90">
-                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                                </svg>
-                                {{ $currentTenant['personal_info']['property'] }}
-                            </span>
+                <div class="relative p-6">
+                    {{-- Top row: label --}}
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(255,255,255,0.12);">
+                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold uppercase tracking-widest" style="color: rgba(191,219,254,0.9);">Tenant Profile</span>
+                    </div>
+
+                    {{-- Name + Unit --}}
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-white font-bold text-2xl leading-tight">
+                            {{ $currentTenant['personal_info']['first_name'] }} {{ $currentTenant['personal_info']['last_name'] }}
+                        </h3>
+                        <div class="rounded-lg px-3 py-1 flex items-center gap-1.5" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(8px);">
+                            <span class="text-sm font-medium" style="color: rgba(191,219,254,0.8);">Unit</span>
+                            <span class="text-white text-sm font-bold">{{ $currentTenant['personal_info']['unit'] }}</span>
                         </div>
                     </div>
 
-                    {{-- Right: Unit Tag --}}
-                    <span class="flex-shrink-0 bg-white text-blue-700 text-sm font-semibold px-4 py-1.5 rounded-full">
-                        {{ $currentTenant['personal_info']['unit'] }}
-                    </span>
+                    {{-- Info chips --}}
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-1.5 rounded-lg px-3 py-1.5" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.06);">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" style="color: #93c5fd;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-xs truncate max-w-[220px]" style="color: rgba(255,255,255,0.85);">{{ $currentTenant['personal_info']['address'] }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 rounded-lg px-3 py-1.5" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.06);">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" style="color: #93c5fd;" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                            </svg>
+                            <span class="text-xs" style="color: rgba(255,255,255,0.85);">{{ $currentTenant['personal_info']['property'] }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -98,23 +103,25 @@
                     </div>
                 </div>
 
-                {{-- 3. Action Buttons (Inside Scrollable Area) --}}
-                <div class="flex space-x-3 pt-4">
-                    <button
-                        type="button"
-                        wire:click="transferTenant"
-                        class="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-[#1080FC] hover:bg-[#0e74e3] transition-colors focus:outline-none focus:ring-2 focus:ring-[#1080FC] focus:ring-offset-2"
-                    >
-                        Transfer
-                    </button>
-                    <button
-                        type="button"
-                        wire:click="moveOutTenant"
-                        class="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-[#070589] hover:bg-[#05046a] transition-colors focus:outline-none focus:ring-2 focus:ring-[#070589] focus:ring-offset-2"
-                    >
-                        Move Out
-                    </button>
-                </div>
+                {{-- 3. Action Buttons (only for current tenants) --}}
+                @if($viewingTab === 'current')
+                    <div class="flex space-x-3 pt-4">
+                        <button
+                            type="button"
+                            wire:click="transferTenant"
+                            class="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-[#1080FC] hover:bg-[#0e74e3] transition-colors focus:outline-none focus:ring-2 focus:ring-[#1080FC] focus:ring-offset-2"
+                        >
+                            Transfer
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="moveOutTenant"
+                            class="flex-1 py-3 px-4 rounded-lg font-semibold text-white bg-[#070589] hover:bg-[#05046a] transition-colors focus:outline-none focus:ring-2 focus:ring-[#070589] focus:ring-offset-2"
+                        >
+                            Move Out
+                        </button>
+                    </div>
+                @endif
 
             </div>
         </div>

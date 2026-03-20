@@ -24,6 +24,11 @@
                 />
             </div>
 
+            {{-- Property Details Section --}}
+            <div class="mt-6">
+                <livewire:layouts.properties.property-details />
+            </div>
+
             {{-- Units Section --}}
             <div class="mt-6">
                 <livewire:layouts.units.unit-accordion />

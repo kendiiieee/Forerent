@@ -2,8 +2,7 @@
 <div x-data="{ hovered: false }"
      @mouseenter="hovered = true"
      @mouseleave="hovered = false"
-     class="bg-white rounded-lg shadow-md overflow-hidden shrink-0 w-64 transition-all cursor-pointer hover:shadow-xl selected-building:bg-[#2360E8]"
-     onclick="Livewire.dispatch('buildingSelected', { buildingId: {{ $property->property_id }} })">
+     class="bg-white rounded-lg shadow-md overflow-hidden shrink-0 w-64 transition-all cursor-pointer hover:shadow-xl selected-building:bg-[#2360E8]">
 
     {{-- Image Container --}}
     <div class="relative h-48 overflow-hidden">

@@ -6,10 +6,9 @@
     {{-- Left Side: Sort Tabs --}}
     @php
         $tabs = [
-            'all'     => 'All',
-            'paid'    => 'Paid',
-            'pending' => 'Pending',
-            'overdue' => 'Overdue',
+            'current'     => 'Current',
+            'transferred' => 'Transferred',
+            'moved_out'   => 'Moved Out',
         ];
     @endphp
 

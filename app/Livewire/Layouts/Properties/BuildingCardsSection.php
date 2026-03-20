@@ -8,7 +8,7 @@ use Livewire\Component;
 
 class BuildingCardsSection extends Component
 {
-    public $properties;
+    public array $properties = [];
     public $selectedBuilding = null;
 
     public $showAddButton = true;
@@ -26,48 +26,63 @@ class BuildingCardsSection extends Component
         $addButtonEvent = null,
         $eventName = 'property-selected'
     ) {
-        $this->properties = $properties ?? $this->loadPropertiesByRole();
+        if ($properties) {
+            // Convert passed Eloquent collection to plain arrays
+            $this->properties = collect($properties)->map(fn($p) => [
+                'property_id' => $p->property_id ?? $p['property_id'],
+                'building_name' => $p->building_name ?? $p['building_name'],
+                'address' => $p->address ?? $p['address'],
+                'image' => $p->image ?? $p['image'] ?? null,
+            ])->toArray();
+        } else {
+            $this->properties = $this->loadPropertiesByRole();
+        }
+
         $this->showAddButton = $showAddButton;
         $this->title = $title;
         $this->addButtonEvent = $addButtonEvent ?? 'openAddPropertyModal_property-dashboard';
         $this->eventName = $eventName;
 
-        // 👇 Auto-select the first building
-        if ($this->properties->isNotEmpty()) {
-            $this->selectedBuilding = $this->properties->first()->property_id;
+        // Auto-select the first building and notify other components
+        if (!empty($this->properties)) {
+            $this->selectedBuilding = $this->properties[0]['property_id'];
+            $this->dispatch('buildingSelected', buildingId: $this->selectedBuilding);
+            $this->dispatch($this->eventName, id: $this->selectedBuilding);
         }
     }
 
     /**
      * 🔥 Role-based property loading
      */
-    protected function loadPropertiesByRole()
+    protected function loadPropertiesByRole(): array
     {
         $user = Auth::user();
 
+        // Only select columns needed for building cards — returned as plain arrays
+        // to avoid Eloquent model serialization overhead on every Livewire request
+        $columns = ['property_id', 'building_name', 'address', 'image'];
+
         if ($user->role === 'landlord') {
-            return Property::with(['owner', 'units'])->get();
+            return Property::select($columns)->get()->toArray();
         }
 
         if ($user->role === 'manager') {
-            // Get owner IDs from properties where this manager has assigned units
             $ownerIds = Property::whereHas('units', function ($query) use ($user) {
                 $query->where('manager_id', $user->user_id);
             })->pluck('owner_id')->unique();
 
-            // Show ALL properties belonging to those owners
-            return Property::whereIn('owner_id', $ownerIds)
-                ->with(['owner', 'units'])
-                ->get();
+            return Property::select($columns)
+                ->whereIn('owner_id', $ownerIds)
+                ->get()
+                ->toArray();
         }
 
-        return collect();
+        return [];
     }
     public function selectBuilding($propertyId)
     {
         $this->selectedBuilding = $propertyId;
-
-        $this->dispatch($this->eventName, id: $propertyId);
+        $this->skipRender();
     }
 
     /**
@@ -86,9 +101,10 @@ class BuildingCardsSection extends Component
         $this->properties = $this->loadPropertiesByRole();
 
         // maintain existing selection if still present, otherwise pick first
-        if ($this->properties->isNotEmpty()) {
-            if (!$this->properties->pluck('property_id')->contains($this->selectedBuilding)) {
-                $this->selectedBuilding = $this->properties->first()->property_id;
+        if (!empty($this->properties)) {
+            $ids = array_column($this->properties, 'property_id');
+            if (!in_array($this->selectedBuilding, $ids)) {
+                $this->selectedBuilding = $this->properties[0]['property_id'];
             }
         } else {
             $this->selectedBuilding = null;

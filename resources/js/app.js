@@ -2,6 +2,12 @@
 // window.Alpine = Alpine;
 // Alpine.start();
 
+import collapse from '@alpinejs/collapse';
+
+document.addEventListener('alpine:init', () => {
+    window.Alpine.plugin(collapse);
+});
+
 import 'flowbite';
 import './landing-animations';
 

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *.yml *.yaml)",
+      "Bash(php artisan:*)",
+      "Bash(ls database/*.sqlite)",
+      "Bash(./vendor/bin/sail exec:*)",
+      "Bash(npm run:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)"
+    ]
+  }
+}

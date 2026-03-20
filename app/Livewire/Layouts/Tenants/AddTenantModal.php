@@ -36,6 +36,18 @@ class AddTenantModal extends Component
     public ?int $currentLeaseId       = null;
     public ?int $currentBedId         = null;
 
+    // Current lease details (read-only display in transfer mode)
+    public $currentBuilding  = '';
+    public $currentUnit      = '';
+    public $currentBed       = '';
+    public $currentDormType  = '';
+    public $currentTerm      = '';
+    public $currentShift     = '';
+    public $currentStartDate = '';
+    public $currentEndDate   = '';
+    public $currentRate      = '';
+    public $currentAutoRenew = false;
+
     // --- Profile Information ---
     #[Validate('nullable|image|max:10240')]
     public $profilePicture = null;
@@ -127,7 +139,7 @@ class AddTenantModal extends Component
         $tenant = User::where('user_id', $tenantId)
             ->where('role', 'tenant')
             ->with([
-                'leases' => fn($q) => $q->where('status', 'Active')->latest()->limit(1)->with('bed'),
+                'leases' => fn($q) => $q->where('status', 'Active')->latest()->limit(1)->with(['bed.unit.property']),
             ])
             ->first();
 
@@ -149,6 +161,23 @@ class AddTenantModal extends Component
         // Store current lease/bed to vacate on save
         $this->currentLeaseId = $lease?->lease_id;
         $this->currentBedId   = $lease?->bed_id;
+
+        // Populate current lease details for display
+        if ($lease) {
+            $bed  = $lease->bed;
+            $unit = $bed?->unit;
+
+            $this->currentBuilding  = $unit?->property?->building_name ?? '—';
+            $this->currentUnit      = $unit?->unit_number ?? '—';
+            $this->currentBed       = $bed?->bed_number ?? '—';
+            $this->currentDormType  = $unit?->occupants ?? '—';
+            $this->currentTerm      = $lease->term ? $lease->term . ' Months' : '—';
+            $this->currentShift     = $lease->shift ?? '—';
+            $this->currentStartDate = $lease->start_date ? \Carbon\Carbon::parse($lease->start_date)->format('M d, Y') : '—';
+            $this->currentEndDate   = $lease->end_date ? \Carbon\Carbon::parse($lease->end_date)->format('M d, Y') : '—';
+            $this->currentRate      = $lease->contract_rate ? '₱ ' . number_format($lease->contract_rate, 0) : '—';
+            $this->currentAutoRenew = $lease->auto_renew ?? false;
+        }
 
         $this->loadBuildings();
         $this->isOpen = true;
@@ -377,6 +406,16 @@ class AddTenantModal extends Component
             'transferFromTenantId',
             'currentLeaseId',
             'currentBedId',
+            'currentBuilding',
+            'currentUnit',
+            'currentBed',
+            'currentDormType',
+            'currentTerm',
+            'currentShift',
+            'currentStartDate',
+            'currentEndDate',
+            'currentRate',
+            'currentAutoRenew',
             'profilePicture',
             'existingProfileImg',
             'firstName',

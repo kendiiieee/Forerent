@@ -15,8 +15,8 @@ class UnitAccordion extends Component
 
     public $openUnitId = null;
     public $selectedBuildingId = null;
+    public $selectedBuildingName = null;
     public $specifications = [];
-    public $hoveredUnitId = null;
     public $sortBy = 'newest';
 
     /**
@@ -26,17 +26,17 @@ class UnitAccordion extends Component
     public function loadUnitsForBuilding($buildingId)
     {
         $this->selectedBuildingId = $buildingId;
+
+        // Single query: get building name using pluck (no model hydration)
+        $this->selectedBuildingName = \App\Models\Property::where('property_id', $buildingId)
+            ->value('building_name');
+
         $this->resetPage();
         $this->specifications = [];
         $this->openUnitId = null;
-        $this->hoveredUnitId = null;
 
-        // Auto-open the first unit if available
-        $firstUnit = Unit::where('property_id', $this->selectedBuildingId)->first();
-        if ($firstUnit) {
-            $this->openUnitId = $firstUnit->unit_id;
-            $this->loadSpecifications($this->openUnitId);
-        }
+        // Sync Alpine openId with server state
+        $this->dispatch('unitsReset');
     }
 
     /**
@@ -59,27 +59,10 @@ class UnitAccordion extends Component
             $this->openUnitId = $unitId;
             $this->loadSpecifications($unitId);
         }
-        $this->hoveredUnitId = null;
     }
 
     /**
-     * Set hover state
-     */
-    public function setHover($unitId)
-    {
-        $this->hoveredUnitId = $unitId;
-    }
-
-    /**
-     * Clear hover state
-     */
-    public function clearHover()
-    {
-        $this->hoveredUnitId = null;
-    }
-
-    /**
-     * Load specifications from database
+     * Load specifications from database (used by toggleUnit when clicking accordion)
      */
     public function loadSpecifications($unitId)
     {
@@ -92,6 +75,14 @@ class UnitAccordion extends Component
             return;
         }
 
+        $this->buildSpecificationsFromUnit($unit);
+    }
+
+    /**
+     * Build specifications from an already-loaded unit model (avoids extra query)
+     */
+    public function buildSpecificationsFromUnit($unit)
+    {
         // Calculate occupancy based on active leases
         $occupiedCount = 0;
         foreach ($unit->beds as $bed) {
@@ -229,6 +220,13 @@ class UnitAccordion extends Component
             }
 
             $units = $query->paginate(4);
+
+            // Auto-open first unit if none is open (e.g. after building switch)
+            if ($this->openUnitId === null && $units->isNotEmpty()) {
+                $firstUnit = $units->first();
+                $this->openUnitId = $firstUnit->unit_id;
+                $this->buildSpecificationsFromUnit($firstUnit);
+            }
         } else {
             $units = new LengthAwarePaginator([], 0, 4, 1);
         }

@@ -20,27 +20,7 @@
             -ms-overflow-style: none;
         }
         .building-scroll::-webkit-scrollbar {
-            height: 4px;
-            background: transparent;
-        }
-        .building-scroll::-webkit-scrollbar-track {
-            background: transparent;
-            border-radius: 999px;
-        }
-        .building-scroll::-webkit-scrollbar-thumb {
-            background: transparent;
-            border-radius: 999px;
-            transition: background 0.3s;
-        }
-        .building-scroll:hover {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(180, 180, 180, 0.5) transparent;
-        }
-        .building-scroll:hover::-webkit-scrollbar-thumb {
-            background: rgba(180, 180, 180, 0.6);
-        }
-        .building-scroll:hover::-webkit-scrollbar-thumb:hover {
-            background: rgba(150, 150, 150, 0.7);
+            display: none;
         }
 
         /* Selected building card */
@@ -59,14 +39,19 @@
             scrollContainer: null,
             canScrollLeft: false,
             canScrollRight: false,
+            hovered: false,
             init() {
                 this.scrollContainer = this.$refs.scroller;
                 this.checkScroll();
                 this.scrollContainer.addEventListener('scroll', () => this.checkScroll());
                 new ResizeObserver(() => this.checkScroll()).observe(this.scrollContainer);
+                // Recheck after Livewire child components finish rendering
+                setTimeout(() => this.checkScroll(), 100);
+                setTimeout(() => this.checkScroll(), 500);
             },
             checkScroll() {
                 const el = this.scrollContainer;
+                if (!el) return;
                 this.canScrollLeft = el.scrollLeft > 0;
                 this.canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth - 1;
             },
@@ -74,54 +59,77 @@
                 this.scrollContainer.scrollBy({ left: direction * 300, behavior: 'smooth' });
             }
         }"
-        class="group/arrows relative"
+        class="relative"
+        @mouseenter="hovered = true"
+        @mouseleave="hovered = false"
     >
-        {{-- Left Arrow --}}
-        <button
-            x-show="canScrollLeft"
+        {{-- Left fade + arrow --}}
+        <div
+            x-show="canScrollLeft && hovered"
             x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
+            x-transition:enter-start="opacity-0 -translate-x-2"
+            x-transition:enter-end="opacity-100 translate-x-0"
             x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            @click="scrollBy(-1)"
-            class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/90 shadow-md border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-white hover:text-[#2360E8] hover:border-[#2360E8]/30 transition-all opacity-0 group-hover/arrows:opacity-100 cursor-pointer"
+            x-transition:leave-start="opacity-100 translate-x-0"
+            x-transition:leave-end="opacity-0 -translate-x-2"
+            class="absolute left-0 top-0 bottom-0 z-10 flex items-center"
+            style="display: none;"
         >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
-            </svg>
-        </button>
+            {{-- Gradient fade --}}
+            <div class="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#F4F7FC] via-[#F4F7FC]/80 to-transparent pointer-events-none"></div>
 
-        {{-- Right Arrow --}}
-        <button
-            x-show="canScrollRight"
+            {{-- Arrow button --}}
+            <button
+                @click="scrollBy(-1)"
+                class="relative ml-2 w-10 h-10 rounded-full bg-white shadow-lg border border-gray-200/80 flex items-center justify-center text-gray-700 hover:bg-[#2360E8] hover:text-white hover:border-[#2360E8] hover:shadow-[0_4px_14px_rgba(35,96,232,0.35)] transition-all duration-200 cursor-pointer active:scale-90"
+            >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Right fade + arrow --}}
+        <div
+            x-show="canScrollRight && hovered"
             x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
+            x-transition:enter-start="opacity-0 translate-x-2"
+            x-transition:enter-end="opacity-100 translate-x-0"
             x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            @click="scrollBy(1)"
-            class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white/90 shadow-md border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-white hover:text-[#2360E8] hover:border-[#2360E8]/30 transition-all opacity-0 group-hover/arrows:opacity-100 cursor-pointer"
+            x-transition:leave-start="opacity-100 translate-x-0"
+            x-transition:leave-end="opacity-0 translate-x-2"
+            class="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-end"
+            style="display: none;"
         >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-            </svg>
-        </button>
+            {{-- Gradient fade --}}
+            <div class="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#F4F7FC] via-[#F4F7FC]/80 to-transparent pointer-events-none"></div>
+
+            {{-- Arrow button --}}
+            <button
+                @click="scrollBy(1)"
+                class="relative mr-2 w-10 h-10 rounded-full bg-white shadow-lg border border-gray-200/80 flex items-center justify-center text-gray-700 hover:bg-[#2360E8] hover:text-white hover:border-[#2360E8] hover:shadow-[0_4px_14px_rgba(35,96,232,0.35)] transition-all duration-200 cursor-pointer active:scale-90"
+            >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                </svg>
+            </button>
+        </div>
 
         {{-- Scrollable Container --}}
-        <div x-ref="scroller" class="building-scroll flex gap-4 overflow-x-auto py-2 pb-4">
+        <div x-ref="scroller" class="building-scroll flex gap-4 overflow-x-auto py-2 px-1"
+             x-data="{ selectedId: {{ $selectedBuilding ?? 'null' }} }">
             @forelse ($properties as $property)
                 <div
-                    wire:key="building-{{ $property->property_id }}"
-                    wire:click="selectBuilding({{ $property->property_id }})"
-                    class="cursor-pointer rounded-lg transition-all duration-300 {{ $selectedBuilding == $property->property_id ? 'selected-building' : 'hover:shadow-lg' }}"
+                    wire:key="building-{{ $property['property_id'] }}"
+                    @click="
+                        if (selectedId === {{ $property['property_id'] }}) return;
+                        selectedId = {{ $property['property_id'] }};
+                        Livewire.dispatch('buildingSelected', { buildingId: {{ $property['property_id'] }} });
+                    "
+                    class="cursor-pointer rounded-lg transition-all duration-300"
+                    :class="selectedId === {{ $property['property_id'] }} ? 'selected-building' : 'hover:shadow-lg'"
                 >
-                    <livewire:layouts.properties.buildings
-                        :property="$property"
-                        :key="'card-'.$property->property_id"
-                    />
+                    @include('livewire.layouts.properties.buildingcard', ['property' => (object) $property])
                 </div>
             @empty
                 <div class="w-full flex flex-col items-center justify-center text-center p-16 border-2 border-dashed border-gray-300 rounded-lg bg-white">

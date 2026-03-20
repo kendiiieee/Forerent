@@ -1,6 +1,9 @@
 <?php
 
 namespace App\Livewire\Layouts\Tenants;
+
+use App\Models\Lease;
+use App\Models\User;
 use Livewire\Component;
 use Livewire\Attributes\On;
 
@@ -8,18 +11,15 @@ class TenantDetail extends Component
 {
     public $currentTenantId = null;
     public $currentTenant = null;
+    public $viewingTab = 'current';
 
     #[On('tenantSelected')]
-    public function loadTenant(int $tenantId): void
+    public function loadTenant(int $tenantId, string $tab = 'current', ?int $buildingId = null): void
     {
-        $tenant = \App\Models\User::where('user_id', $tenantId)
+        $this->viewingTab = $tab;
+
+        $tenant = User::where('user_id', $tenantId)
             ->where('role', 'tenant')
-            ->with([
-                'leases' => fn($q) => $q->latest()->limit(1)->with([
-                    'bed.unit.property',
-                    'billings' => fn($q) => $q->latest()->limit(1)
-                ])
-            ])
             ->first();
 
         if (!$tenant) {
@@ -27,11 +27,31 @@ class TenantDetail extends Component
             return;
         }
 
-        $lease   = $tenant->leases->first();
-        $bed     = $lease?->bed;
-        $unit    = $bed?->unit;
+        // For current tenants: load latest active lease
+        // For transferred/moved-out: load the expired lease from the selected building
+        if ($tab === 'current') {
+            $lease = Lease::where('tenant_id', $tenantId)
+                ->where('status', 'Active')
+                ->latest()
+                ->with(['bed.unit.property', 'billings' => fn($q) => $q->latest()->limit(1)])
+                ->first();
+        } else {
+            // Load the expired lease from the specific building
+            $leaseQuery = Lease::where('tenant_id', $tenantId)
+                ->where('status', 'Expired')
+                ->with(['bed.unit.property', 'billings' => fn($q) => $q->latest()->limit(1)]);
+
+            if ($buildingId) {
+                $leaseQuery->whereHas('bed.unit', fn($q) => $q->where('property_id', $buildingId));
+            }
+
+            $lease = $leaseQuery->latest()->first();
+        }
+
+        $bed      = $lease?->bed;
+        $unit     = $bed?->unit;
         $property = $unit?->property;
-        $billing = $lease?->billings->first();
+        $billing  = $lease?->billings->first();
 
         $this->currentTenantId = $tenantId;
         $this->currentTenant = [
@@ -70,7 +90,6 @@ class TenantDetail extends Component
         $this->currentTenant = null;
     }
 
-    // Placeholder for "Transfer" button
     public function transferTenant(): void
     {
         if ($this->currentTenantId) {
@@ -78,8 +97,6 @@ class TenantDetail extends Component
         }
     }
 
-
-    // Placeholder for "Move Out" button
     public function moveOutTenant(): void
     {
         if ($this->currentTenantId) {
@@ -91,7 +108,7 @@ class TenantDetail extends Component
     {
         if (!$this->currentTenantId) return;
 
-        $lease = \App\Models\Lease::where('tenant_id', $this->currentTenantId)
+        $lease = Lease::where('tenant_id', $this->currentTenantId)
             ->where('status', 'Active')
             ->latest()
             ->first();
