@@ -7,6 +7,37 @@
     >
         {{-- FILTERS SLOT --}}
         <x-slot:filters>
+            {{-- Month Filter --}}
+            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}">
+                <x-dropdown-item wire:click="$set('selectedMonth', null)" @click="open = false">
+                    All Months
+                </x-dropdown-item>
+                @foreach ($monthOptions as $value => $label)
+                    <x-dropdown-item
+                        wire:click="$set('selectedMonth', {{ $value }})"
+                        @click="open = false"
+                        :active="$selectedMonth == $value"
+                    >
+                        {{ $label }}
+                    </x-dropdown-item>
+                @endforeach
+            </x-dropdown>
+
+            {{-- Building Filter --}}
+            <x-dropdown label="{{ $selectedBuilding ?? 'Building' }}">
+                <x-dropdown-item wire:click="$set('selectedBuilding', null)" @click="open = false">
+                    All Buildings
+                </x-dropdown-item>
+                @foreach ($buildingOptions as $value => $label)
+                    <x-dropdown-item
+                        wire:click="$set('selectedBuilding', '{{ $value }}')"
+                        @click="open = false"
+                        :active="$selectedBuilding === $value"
+                    >
+                        {{ $label }}
+                    </x-dropdown-item>
+                @endforeach
+            </x-dropdown>
         </x-slot:filters>
 
         {{-- TABLE SLOT --}}

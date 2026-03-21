@@ -7,7 +7,14 @@
       "Bash(./vendor/bin/sail exec:*)",
       "Bash(npm run:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(grep -r Hello e:/reigne/Citispace-Forerent/resources/views/ --include=*.blade.php)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(find e:/reigne/Citispace-Forerent -type f \\\\\\(-name *layout* -o -name *sidebar* -o -name *header* -o -name *topbar* -o -name *nav* \\\\\\))",
+      "Bash(grep -l \"livewire:sidebar\\\\|livewire:top-bar\\\\|<livewire:navbar\\\\|<livewire:layout\" e:/reigne/Citispace-Forerent/resources/views/livewire/layouts/*.blade.php)"
     ]
   }
 }

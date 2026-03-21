@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /e/reigne/Citispace-Forerent -type f -name *routes* -o -name *Route*)",
+      "Bash(xargs grep:*)",
+      "Bash(where.exe php:*)",
+      "Bash(ls \"/c/laragon/bin/php\"*)",
+      "Bash(ls \"/c/wamp64/bin/php\"*)",
+      "Bash(cmd.exe /c \"dir /s /b C:\\\\php\\\\php.exe C:\\\\xampp\\\\php\\\\php.exe C:\\\\laragon\\\\bin\\\\php\\\\php*.exe C:\\\\wamp64\\\\bin\\\\php\\\\php*.exe C:\\\\herd\\\\bin\\\\php.exe 2>nul\")",
+      "Bash(cmd.exe /c 'dir /s /b C:\\\\php*.exe 2>nul')",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\\\Users'' -Recurse -Filter php.exe -ErrorAction SilentlyContinue | Select-Object -First 5 -ExpandProperty FullName\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\\\Program Files'',''C:\\\\Program Files \\(x86\\)'',''C:\\\\tools'',''C:\\\\Users\\\\yasuo\\\\AppData'' -Recurse -Filter php.exe -ErrorAction SilentlyContinue | Select-Object -First 5 -ExpandProperty FullName\")",
+      "Read(//c/composer/vendor/**)",
+      "Read(//e/reigne/Citispace-Forerent/$USERPROFILE/.config/**)",
+      "Read(//e/reigne/Citispace-Forerent/$APPDATA/**)",
+      "Read(//c/ProgramData/**)"
+    ]
+  }
+}
