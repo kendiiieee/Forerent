@@ -7,6 +7,7 @@ use Livewire\Component;
 class Buildings extends Component
 {
     public Property $property; // <-- Accept the Property model
+    public bool $compact = false;
     // public $image; // You might need this if you add images
     public function render()
     {

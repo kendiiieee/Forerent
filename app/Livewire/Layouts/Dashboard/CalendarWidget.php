@@ -89,11 +89,18 @@ class CalendarWidget extends Component
                 ->pluck('property_id')
                 ->unique();
 
-            $this->dailyAnnouncements = Announcement::where('author_id', auth()->id())
-                ->orWhereIn('property_id', $propertyIds)
+            $this->dailyAnnouncements = Announcement::where(function ($query) use ($propertyIds) {
+                    $query->where('author_id', auth()->id())
+                        ->orWhere(function ($propertyQuery) use ($propertyIds) {
+                            $propertyQuery->whereIn('property_id', $propertyIds)
+                                ->where('recipient_role', 'manager');
+                        });
+                })
                 ->whereDate('notification_date', $this->selectedDate)
                 ->orderBy('notification_date', 'desc')
-                ->where('recipient_role', 'manager')->get();
+                ->orderBy('created_at', 'desc')
+                ->distinct('announcement_id')
+                ->get();
         }
         else if ($this->role == "tenant") {
             $leases = Lease::with('bed.unit')->where('tenant_id', auth()->id())->get();

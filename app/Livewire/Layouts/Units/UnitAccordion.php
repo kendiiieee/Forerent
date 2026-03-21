@@ -7,6 +7,8 @@ use Livewire\Attributes\On;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Unit;
 use App\Models\Bed;
+use App\Models\Property;
+use Illuminate\Support\Facades\Auth;
 
 class UnitAccordion extends Component
 {
@@ -16,13 +18,50 @@ class UnitAccordion extends Component
     public $selectedBuildingId = null;
     public $specifications = [];
     public $hoveredUnitId = null;
+    public $showAddButton = true;
+
+    public function mount($showAddButton = true): void
+    {
+        $this->showAddButton = (bool) $showAddButton;
+
+        if ($this->selectedBuildingId) {
+            return;
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            return;
+        }
+
+        $defaultPropertyId = null;
+        if ($user->role === 'landlord') {
+            $defaultPropertyId = Property::query()->orderBy('property_id')->value('property_id');
+        } elseif ($user->role === 'manager') {
+            $defaultPropertyId = Property::query()
+                ->whereHas('units', function ($query) use ($user) {
+                    $query->where('manager_id', $user->user_id);
+                })
+                ->orderBy('property_id')
+                ->value('property_id');
+        }
+
+        if ($defaultPropertyId) {
+            $this->loadUnitsForBuilding($defaultPropertyId);
+        }
+    }
 
     /**
      * Listen for building selection from property.blade.php
      */
     #[On('buildingSelected')]
-    public function loadUnitsForBuilding($buildingId)
+    #[On('property-selected')]
+    public function loadUnitsForBuilding($buildingId = null, $id = null)
     {
+        $buildingId = $buildingId ?? $id;
+        if (!$buildingId) {
+            return;
+        }
+
         $this->selectedBuildingId = $buildingId;
         $this->resetPage();
         $this->specifications = [];

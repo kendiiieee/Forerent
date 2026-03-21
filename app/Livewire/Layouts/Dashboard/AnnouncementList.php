@@ -26,10 +26,16 @@ class AnnouncementList extends Component
             ->pluck('property_id')
             ->unique();
 
-            $this->announcements = Announcement::where('author_id', auth()->id())
-                ->orWhereIn('property_id', $propertyIds)
+            $this->announcements = Announcement::where(function ($query) use ($propertyIds) {
+                    $query->where('author_id', auth()->id())
+                        ->orWhere(function ($propertyQuery) use ($propertyIds) {
+                            $propertyQuery->whereIn('property_id', $propertyIds)
+                                ->where('recipient_role', 'manager');
+                        });
+                })
                 ->orderBy('created_at', 'desc')
-                ->where('recipient_role', 'manager')->get();
+                ->distinct('announcement_id')
+                ->get();
         }
         else if ($this->role == "tenant") {
             $propertyIds = Lease::where('tenant_id', auth()->id())

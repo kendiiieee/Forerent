@@ -5,7 +5,7 @@
 
     <div class="flex-1 min-h-0 flex flex-col lg:flex-row">
         {{-- Calendar Panel --}}
-        <div class="lg:w-[340px] lg:min-w-[340px] p-4 border-b lg:border-b-0 lg:border-r border-gray-100">
+        <div id="calendar-grid-panel" class="lg:w-[340px] lg:min-w-[340px] p-4 border-b lg:border-b-0 lg:border-r border-gray-100">
             <div class="max-w-sm mx-auto">
                 {{-- Calendar Header with Navigation --}}
                 <div class="flex items-center justify-between mb-4">
@@ -80,12 +80,12 @@
         </div>
 
         {{-- Selected Date Announcements Panel --}}
-        <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div id="selected-date-panel" class="flex-1 min-h-0 flex flex-col overflow-hidden">
             <div class="bg-blue-700 px-6 py-3">
                 <p class="text-[11px] font-medium uppercase tracking-wide text-blue-100">Selected Date</p>
                 <h3 class="text-white text-sm font-semibold">{{ \Carbon\Carbon::parse($selectedDate)->format('F d, Y') }}</h3>
             </div>
-            <div class="flex-1 p-6 overflow-y-auto">
+            <div class="flex-1 min-h-0 p-6 overflow-y-auto pr-3">
                 @forelse($dailyAnnouncements as $dailyAnnouncement)
                     <div class="border-b border-gray-200 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0">
                         <h4 class="text-base font-bold text-gray-900 mb-1">{{ $dailyAnnouncement->headline }}</h4>
@@ -100,3 +100,43 @@
         </div>
     </div>
 </div>
+
+@once
+<script>
+    function syncSelectedDatePanelHeight() {
+        const calendarGridPanel = document.getElementById('calendar-grid-panel');
+        const selectedDatePanel = document.getElementById('selected-date-panel');
+
+        if (!calendarGridPanel || !selectedDatePanel) {
+            return;
+        }
+
+        if (window.innerWidth < 1024) {
+            selectedDatePanel.style.height = '';
+            return;
+        }
+
+        selectedDatePanel.style.height = `${calendarGridPanel.getBoundingClientRect().height}px`;
+    }
+
+    function runSelectedDateHeightSync() {
+        syncSelectedDatePanelHeight();
+        requestAnimationFrame(syncSelectedDatePanelHeight);
+        setTimeout(syncSelectedDatePanelHeight, 50);
+    }
+
+    document.addEventListener('DOMContentLoaded', runSelectedDateHeightSync);
+    document.addEventListener('livewire:navigated', runSelectedDateHeightSync);
+    window.addEventListener('resize', runSelectedDateHeightSync);
+
+    if (window.ResizeObserver) {
+        const observer = new ResizeObserver(() => runSelectedDateHeightSync());
+        document.addEventListener('DOMContentLoaded', () => {
+            const calendarGridPanel = document.getElementById('calendar-grid-panel');
+            if (calendarGridPanel) {
+                observer.observe(calendarGridPanel);
+            }
+        });
+    }
+</script>
+@endonce
