@@ -1,4 +1,4 @@
-<div class="h-full bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col overflow-hidden" x-data="{ lightbox: false, lightboxSrc: '' }">
+<div class="h-full bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col overflow-hidden" x-data="{ lightbox: false, lightboxSrc: '', confirmDelete: null }">
 
     @if($ticket)
         @php
@@ -68,7 +68,9 @@
 
         {{-- Success Toast --}}
         @if($successMessage)
-            <div class="mx-5 mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-medium flex items-center gap-2 flex-shrink-0">
+            <div class="mx-5 mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-medium flex items-center gap-2 flex-shrink-0"
+                 x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
+                 x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
@@ -182,6 +184,270 @@
                         </div>
                     @endif
                 </div>
+
+                {{-- ══════════════════════════════════════════════════════════ --}}
+                {{-- ── MAINTENANCE COST TRACKER ── --}}
+                {{-- ══════════════════════════════════════════════════════════ --}}
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-[#070642] flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full" style="background-color: #10b981;"></span>
+                            Maintenance Costs
+                        </h3>
+
+                        {{-- Add Cost Button --}}
+                        @if(in_array($ticket->status, ['Ongoing', 'Completed', 'Resolved']))
+                            <button
+                                wire:click="toggleCostForm"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200"
+                                style="{{ $showCostForm
+                                    ? 'background:#f3f4f6; color:#4b5563;'
+                                    : 'background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;' }}"
+                            >
+                                @if($showCostForm)
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    Cancel
+                                @else
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    Add Cost
+                                @endif
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- Cost Summary Cards --}}
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        {{-- This Request Total --}}
+                        <div class="relative overflow-hidden rounded-2xl p-4 text-white shadow-sm" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <div class="absolute top-0 right-0 w-16 h-16 rounded-full" style="background: rgba(255,255,255,0.1); transform: translate(16px, -16px);"></div>
+                            <div class="absolute bottom-0 left-0 w-10 h-10 rounded-full" style="background: rgba(255,255,255,0.05); transform: translate(-12px, 12px);"></div>
+                            <p class="text-[10px] uppercase font-bold tracking-wider mb-1" style="color: #d1fae5;">This Request</p>
+                            <p class="text-2xl font-extrabold tracking-tight">
+                                @php
+                                    $formatted = number_format($requestTotal, 2);
+                                    $parts = explode('.', $formatted);
+                                @endphp
+                                <span class="text-base font-bold mr-0.5" style="color: #a7f3d0;">PHP</span>{{ $parts[0] }}<span class="text-base" style="color: #a7f3d0;">.{{ $parts[1] }}</span>
+                            </p>
+                            <p class="text-[10px] mt-1.5" style="color: #a7f3d0;">
+                                {{ count($costItems) }} {{ count($costItems) === 1 ? 'item' : 'items' }} logged
+                            </p>
+                        </div>
+
+                        {{-- Unit Total --}}
+                        <div class="relative overflow-hidden rounded-2xl p-4 text-white shadow-sm" style="background: linear-gradient(135deg, #2B66F5, #1a4fd4);">
+                            <div class="absolute top-0 right-0 w-16 h-16 rounded-full" style="background: rgba(255,255,255,0.1); transform: translate(16px, -16px);"></div>
+                            <div class="absolute bottom-0 left-0 w-10 h-10 rounded-full" style="background: rgba(255,255,255,0.05); transform: translate(-12px, 12px);"></div>
+                            <p class="text-[10px] uppercase font-bold tracking-wider mb-1" style="color: #bfdbfe;">{{ $unitDisplay }} Total</p>
+                            <p class="text-2xl font-extrabold tracking-tight">
+                                @php
+                                    $uFormatted = number_format($unitTotal, 2);
+                                    $uParts = explode('.', $uFormatted);
+                                @endphp
+                                <span class="text-base font-bold mr-0.5" style="color: #bfdbfe;">PHP</span>{{ $uParts[0] }}<span class="text-base" style="color: #bfdbfe;">.{{ $uParts[1] }}</span>
+                            </p>
+                            <p class="text-[10px] mt-1.5" style="color: #bfdbfe;">
+                                All-time maintenance
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Add Cost Form (slide-down) --}}
+                    @if($showCostForm)
+                        <div class="rounded-2xl p-5 mb-4 space-y-4" style="background: linear-gradient(to bottom, rgba(236,253,245,0.8), white); border: 1px solid #d1fae5;"
+                             x-data x-init="$nextTick(() => $refs.costInput?.focus())">
+
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background-color: #d1fae5;">
+                                    <svg class="w-4 h-4" style="color: #059669;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <h4 class="text-sm font-bold text-[#070642]">New Cost Entry</h4>
+                            </div>
+
+                            {{-- Description --}}
+                            <div>
+                                <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">Description</label>
+                                <input
+                                    type="text"
+                                    wire:model="costDescription"
+                                    placeholder="e.g. Labor - Plumber (2 hrs), Pipe fittings..."
+                                    maxlength="255"
+                                    class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-300 transition-all outline-none"
+                                >
+                                @error('costDescription')
+                                    <p class="text-xs mt-1" style="color: #ef4444;">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Amount --}}
+                            <div>
+                                <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">Amount (PHP)</label>
+                                <style>
+                                    input.hide-spinner::-webkit-outer-spin-button,
+                                    input.hide-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+                                    input.hide-spinner { -moz-appearance: textfield; }
+                                </style>
+                                <input
+                                    type="text"
+                                    inputmode="decimal"
+                                    wire:model="costAmount"
+                                    x-ref="costInput"
+                                    placeholder="Enter amount (e.g. 2500.00)"
+                                    maxlength="12"
+                                    x-on:input="$el.value = $el.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1')"
+                                    class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-300 transition-all outline-none font-mono hide-spinner"
+                                >
+                                @error('costAmount')
+                                    <p class="text-xs mt-1" style="color: #ef4444;">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            {{-- Quick Amount Presets --}}
+                            <div>
+                                <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">Quick Select</label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach([500, 1000, 2500, 5000, 10000] as $preset)
+                                        <button
+                                            type="button"
+                                            wire:click="$set('costAmount', {{ $preset }})"
+                                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                                            style="{{ $costAmount == $preset
+                                                ? 'background-color:#10b981; color:white; box-shadow:0 1px 2px rgba(0,0,0,0.1);'
+                                                : 'background:white; border:1px solid #e5e7eb; color:#4b5563;' }}"
+                                        >
+                                            {{ number_format($preset) }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            {{-- Save Button --}}
+                            <button
+                                wire:click="saveCost"
+                                wire:loading.attr="disabled"
+                                wire:target="saveCost"
+                                class="w-full py-2.5 text-white font-bold text-sm rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                                style="background-color: #10b981; box-shadow: 0 1px 3px rgba(16,185,129,0.3);"
+                                onmouseover="this.style.backgroundColor='#059669'" onmouseout="this.style.backgroundColor='#10b981'"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <span wire:loading.remove wire:target="saveCost">Save Cost Entry</span>
+                                <span wire:loading wire:target="saveCost">Saving...</span>
+                            </button>
+                        </div>
+                    @endif
+
+                    {{-- Cost Items List --}}
+                    @if(!empty($costItems))
+                        <div class="space-y-2">
+                            @foreach($costItems as $index => $item)
+                                <div class="group bg-white border border-gray-100 rounded-xl p-3.5 flex items-center gap-3 hover:border-gray-200 hover:shadow-sm transition-all duration-200">
+                                    {{-- Icon --}}
+                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                                         style="background-color: {{ $index === 0 ? '#ecfdf5' : '#f9fafb' }};">
+                                        <svg class="w-4 h-4" style="color: {{ $index === 0 ? '#10b981' : '#9ca3af' }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                    </div>
+
+                                    {{-- Info --}}
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-[#070642] truncate">
+                                            {{ $item['description'] ?? 'Maintenance Cost' }}
+                                        </p>
+                                        <p class="text-[10px] text-gray-400 mt-0.5">
+                                            {{ \Carbon\Carbon::parse($item['completion_date'])->format('M d, Y') }}
+                                        </p>
+                                    </div>
+
+                                    {{-- Amount --}}
+                                    <div class="text-right flex-shrink-0">
+                                        <p class="text-sm font-bold font-mono" style="color: #059669;">
+                                            PHP {{ number_format($item['cost'], 2) }}
+                                        </p>
+                                    </div>
+
+                                    {{-- Delete Button --}}
+                                    <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            @click="confirmDelete = {{ $item['log_id'] }}"
+                                            class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                                            style="background-color: #fef2f2;"
+                                            onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='#fef2f2'"
+                                            title="Remove cost"
+                                        >
+                                            <svg class="w-3.5 h-3.5" style="color: #ef4444;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            {{-- Total Bar --}}
+                            @if(count($costItems) > 1)
+                                <div class="rounded-xl p-3.5 flex items-center justify-between mt-1" style="background-color: #ecfdf5; border: 1px solid #d1fae5;">
+                                    <span class="text-xs font-bold uppercase tracking-wide" style="color: #047857;">Request Total</span>
+                                    <span class="text-base font-extrabold font-mono" style="color: #047857;">PHP {{ number_format($requestTotal, 2) }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    @elseif($ticket->status === 'Pending')
+                        {{-- Pending - can't add costs yet --}}
+                        <div class="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-6 flex flex-col items-center text-gray-400">
+                            <div class="bg-white p-2.5 rounded-full shadow-sm mb-2">
+                                <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xs font-medium text-gray-400">Costs can be added once work begins</p>
+                            <p class="text-[10px] text-gray-300 mt-0.5">Mark as Ongoing to start tracking costs</p>
+                        </div>
+                    @else
+                        {{-- No costs yet --}}
+                        <div class="rounded-xl border-2 border-dashed py-6 flex flex-col items-center text-gray-400" style="border-color: #a7f3d0; background: rgba(236,253,245,0.5);">
+                            <div class="bg-white p-2.5 rounded-full shadow-sm mb-2">
+                                <svg class="w-6 h-6" style="color: #6ee7b7;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xs font-medium text-gray-500">No costs recorded yet</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">Click "Add Cost" above to log expenses</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Delete Confirmation Modal --}}
+                <template x-if="confirmDelete">
+                    <div class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40" @click.self="confirmDelete = null">
+                        <div class="bg-white rounded-2xl shadow-2xl p-6 w-80 mx-4" @click.stop>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-[#070642]">Remove Cost Entry?</h4>
+                                    <p class="text-xs text-gray-400">This action cannot be undone.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button @click="confirmDelete = null" class="flex-1 px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                    Cancel
+                                </button>
+                                <button
+                                    @click="$wire.removeCostItem(confirmDelete); confirmDelete = null"
+                                    class="flex-1 px-4 py-2 rounded-xl text-sm font-bold bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
 
                 {{-- Updates + Manager Action Buttons --}}
                 <div>

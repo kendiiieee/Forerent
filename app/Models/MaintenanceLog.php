@@ -13,7 +13,7 @@ class MaintenanceLog extends Model
     protected $primaryKey = 'log_id';
 
     protected $fillable = [
-        'request_id', 'completion_date', 'cost'
+        'request_id', 'completion_date', 'cost', 'description'
     ];
 
     protected $casts = [

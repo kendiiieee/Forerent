@@ -216,6 +216,31 @@ class="fixed inset-0 bg-gradient-to-br from-gray-900/50 via-gray-900/20 to-gray-
                     </li>
                 </ul>
             </div>
+
+            {{-- Account User Display --}}
+            <div class="border-t border-gray-200 px-3 py-4 flex-shrink-0">
+                <a href="{{ url('settings') }}" wire:navigate
+                   class="group flex items-center p-3 rounded-lg text-[#6B7280] hover:bg-[#DFE8FC] hover:text-[#070642] transition-all duration-200 hover:shadow-sm active:scale-[0.98]"
+                   :class="!sidebarExpanded && 'justify-center'"
+                   :title="!sidebarExpanded ? '{{ auth()->user()->first_name ?? 'Account' }}' : ''">
+                    <div class="flex-shrink-0 w-9 h-9 bg-white border-2 border-blue-600 rounded-full flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+                        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                        </svg>
+                    </div>
+                    <div x-show="sidebarExpanded"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 -translate-x-2"
+                         x-transition:enter-end="opacity-100 translate-x-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-x-0"
+                         x-transition:leave-end="opacity-0 -translate-x-2"
+                         class="ms-3 overflow-hidden">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ auth()->user()->first_name ?? '' }} {{ auth()->user()->last_name ?? '' }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ ucfirst(auth()->user()->role) }}</p>
+                    </div>
+                </a>
+            </div>
         </aside>
     </nav>
 </div>
