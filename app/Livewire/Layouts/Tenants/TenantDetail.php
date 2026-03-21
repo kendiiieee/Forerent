@@ -33,13 +33,26 @@ class TenantDetail extends Component
             $lease = Lease::where('tenant_id', $tenantId)
                 ->where('status', 'Active')
                 ->latest()
-                ->with(['bed.unit.property', 'billings' => fn($q) => $q->latest()->limit(1)])
+                ->with([
+                    'bed.unit.property',
+                    'billings' => fn($q) => $q
+                        ->whereMonth('billing_date', now()->month)
+                        ->whereYear('billing_date', now()->year)
+                        ->latest()
+                        ->limit(1)
+                ])
                 ->first();
         } else {
-            // Load the expired lease from the specific building
             $leaseQuery = Lease::where('tenant_id', $tenantId)
                 ->where('status', 'Expired')
-                ->with(['bed.unit.property', 'billings' => fn($q) => $q->latest()->limit(1)]);
+                ->with([
+                    'bed.unit.property',
+                    'billings' => fn($q) => $q
+                        ->whereMonth('billing_date', now()->month)
+                        ->whereYear('billing_date', now()->year)
+                        ->latest()
+                        ->limit(1)
+                ]);
 
             if ($buildingId) {
                 $leaseQuery->whereHas('bed.unit', fn($q) => $q->where('property_id', $buildingId));

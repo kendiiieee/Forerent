@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Tenants;
 
 use App\Models\Billing;
+use App\Models\Transaction;
 use App\Notifications\NewAccount;
 use App\Services\PasswordGenerator;
 use App\Livewire\Concerns\WithNotifications;
@@ -145,11 +146,22 @@ class AddTenantModal extends Component
             ])
             ->first();
 
-        if (!$tenant) {
-            return;
-        }
+        if (!$tenant) return;
 
         $lease = $tenant->leases->first();
+
+        // ── Block transfer if latest billing is not Paid ──────────────────────
+        $latestBilling = Billing::where('lease_id', $lease?->lease_id)
+            ->latest('billing_date')
+            ->first();
+
+        if (!$latestBilling || $latestBilling->status !== 'Paid') {
+            $this->notifyError(
+                'Transfer Not Allowed',
+                'This tenant has an outstanding balance. Please settle the latest billing before transferring.'
+            );
+            return;
+        }
 
         // Pre-fill read-only fields
         $this->transferFromTenantId = $tenant->user_id;
@@ -175,8 +187,8 @@ class AddTenantModal extends Component
             $this->currentDormType  = $unit?->occupants ?? '—';
             $this->currentTerm      = $lease->term ? $lease->term . ' Months' : '—';
             $this->currentShift     = $lease->shift ?? '—';
-            $this->currentStartDate = $lease->start_date ? \Carbon\Carbon::parse($lease->start_date)->format('M d, Y') : '—';
-            $this->currentEndDate   = $lease->end_date ? \Carbon\Carbon::parse($lease->end_date)->format('M d, Y') : '—';
+            $this->currentStartDate = $lease->start_date ? Carbon::parse($lease->start_date)->format('M d, Y') : '—';
+            $this->currentEndDate   = $lease->end_date ? Carbon::parse($lease->end_date)->format('M d, Y') : '—';
             $this->currentRate      = $lease->contract_rate ? '₱ ' . number_format($lease->contract_rate, 0) : '—';
             $this->currentAutoRenew = $lease->auto_renew ?? false;
         }
@@ -369,15 +381,40 @@ class AddTenantModal extends Component
                 'shift'            => $this->shift,
             ]);
 
-            $billingDate = Carbon::parse($this->startDate)->addMonth();
-
-            Billing::create([
+            $billing = Billing::create([
                 'lease_id'     => $lease->lease_id,
-                'billing_date' => $billingDate,
-                'next_billing' => $billingDate->copy()->addMonth(),
+                'billing_date' => Carbon::parse($this->startDate),
+                'next_billing' => Carbon::parse($this->startDate)->addMonth(),
                 'to_pay'       => $this->monthlyRate,
                 'amount'       => $this->monthlyRate,
                 'status'       => 'Unpaid',
+            ]);
+
+            // Deposit
+            $depTransaction = Transaction::create([
+                'billing_id' => $billing->billing_id,
+                'reference_number' => 'placeholder',
+                'transaction_type' => 'Debit',
+                'category' => 'Deposit',
+                'transaction_date' => today(),
+                'amount' => $this->lease->security_deposit ?? 0,
+            ]);
+            $depTransaction->update([
+                'reference_number' => 'DEP' . now()->format('Ymd') . '-' . str_pad($depTransaction->transaction_id, 6, '0', STR_PAD_LEFT),
+            ]);
+
+            // Advance
+            $advTransaction = Transaction::create([
+                'billing_id' => $billing->billing_id,
+                'reference_number' => 'placeholder',
+                'transaction_type' => 'Debit',
+                'category' => 'Advance',
+                'transaction_date' => today(),
+                'amount' => $this->lease->advance_amount ?? 0,
+            ]);
+
+            $advTransaction->update([
+                'reference_number' => 'ADV' . now()->format('Ymd') . '-' . str_pad($advTransaction->transaction_id, 6, '0', STR_PAD_LEFT),
             ]);
 
             Bed::where('bed_id', $this->selectedBed)->update(['status' => 'occupied']);
@@ -395,7 +432,12 @@ class AddTenantModal extends Component
     private function saveTransfer(): void
     {
         DB::transaction(function () {
-            // 1. Close the current lease and vacate the old bed
+            // 1. Get old lease to retrieve its security deposit
+            $oldLease = Lease::find($this->currentLeaseId);
+            $oldSecurityDeposit = $oldLease?->security_deposit ?? 0;
+            $newSecurityDeposit = $this->securityDeposit;
+
+            // 2. Close current lease and vacate old bed
             if ($this->currentLeaseId) {
                 Lease::where('lease_id', $this->currentLeaseId)->update([
                     'status'   => 'Expired',
@@ -407,7 +449,18 @@ class AddTenantModal extends Component
                 Bed::where('bed_id', $this->currentBedId)->update(['status' => 'Vacant']);
             }
 
-            // 2. Create a new lease on the new bed
+            // 3. Resolve security deposit carry-over
+            // If old >= new → keep old deposit as-is (tenant pays nothing extra)
+            // If old <  new → tenant pays the difference
+            $carryOverDeposit  = $oldSecurityDeposit >= $newSecurityDeposit
+                ? $oldSecurityDeposit   // carry the full old amount as new deposit
+                : $newSecurityDeposit;  // new deposit is higher, use new value
+
+            $depositShortfall  = $oldSecurityDeposit < $newSecurityDeposit
+                ? $newSecurityDeposit - $oldSecurityDeposit
+                : 0;
+
+            // 4. Create new lease with resolved deposit
             $endDate = Carbon::parse($this->startDate)->addMonths((int) $this->term ?: 6);
 
             $lease = Lease::create([
@@ -420,28 +473,60 @@ class AddTenantModal extends Component
                 'end_date'         => $endDate,
                 'contract_rate'    => $this->monthlyRate,
                 'advance_amount'   => $this->monthlyRate,
-                'security_deposit' => $this->securityDeposit,
+                'security_deposit' => $carryOverDeposit,
                 'move_in'          => $this->moveInDate,
                 'shift'            => $this->shift,
             ]);
 
-            $billingDate = Carbon::parse($this->startDate)->addMonth();
 
-            Billing::create([
+            $billing = Billing::create([
                 'lease_id'     => $lease->lease_id,
-                'billing_date' => $billingDate,
-                'next_billing' => $billingDate->copy()->addMonth(),
+                'billing_date' => Carbon::parse($this->startDate),
+                'next_billing' => Carbon::parse($this->startDate)->addMonth(),
                 'to_pay'       => $this->monthlyRate,
                 'amount'       => $this->monthlyRate,
                 'status'       => 'Unpaid',
             ]);
 
-            // 3. Mark new bed as occupied
+            // 6. Advance payment transaction (always required on transfer)
+            $advTransaction = Transaction::create([
+                'billing_id' => $billing->billing_id,
+                'reference_number' => 'placeholder',
+                'transaction_type' => 'Debit',
+                'category'         => 'Advance',
+                'transaction_date' => today(),
+                'amount'           => $this->monthlyRate,
+            ]);
+            $advTransaction->update([
+                'reference_number' => 'ADV' . now()->format('Ymd') . '-' . str_pad($advTransaction->transaction_id, 6, '0', STR_PAD_LEFT),
+            ]);
+
+            // 7. Deposit transaction — only charge shortfall if old < new
+            if ($depositShortfall > 0) {
+                $depTransaction = Transaction::create([
+                    'billing_id' => $billing->billing_id,
+                    'reference_number' => 'placeholder',
+                    'transaction_type' => 'Debit',
+                    'category'         => 'Deposit',
+                    'transaction_date' => today(),
+                    'amount'           => $depositShortfall,
+                ]);
+                $depTransaction->update([
+                    'reference_number' => 'DEP' . now()->format('Ymd') . '-' . str_pad($depTransaction->transaction_id, 6, '0', STR_PAD_LEFT),
+                ]);
+            }
+
+            // 8. Mark new bed as occupied
             Bed::where('bed_id', $this->selectedBed)->update(['status' => 'occupied']);
         });
 
-        // Reload the detail panel for the transferred tenant
         $this->dispatch('tenantSelected', tenantId: $this->transferFromTenantId);
+
+        $this->notifySuccess(
+            'Tenant Transferred Successfully!',
+            $this->firstName . ' ' . $this->lastName . ' has been transferred to the new bed.'
+        );
+
         session()->flash('success', 'Tenant transferred successfully!');
     }
 

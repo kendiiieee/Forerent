@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Billing;
 use App\Models\Transaction;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
@@ -11,58 +12,64 @@ class TransactionSeeder extends Seeder
     public function run()
     {
         $transactions = [];
+        $transactionId = Transaction::max('transaction_id') + 1; // avoid ID conflicts if reseeding
 
-        // Generate data from 2021 to now
-        $startDate = Carbon::create(2021, 1, 1);
-        $endDate = Carbon::now();
+        // ── Rent Payment transactions matched to billings ─────────────────
+        $billings = Billing::all();
 
-        $categories = ['Rent Payment', 'Deposit', 'Advance', 'Maintenance', 'Vendor Payment'];
+        foreach ($billings as $billing) {
+            // Only create a transaction for paid billings
+            if ($billing->status !== 'Paid') continue;
+
+            $date = Carbon::parse($billing->billing_date);
+
+            $transactions[] = [
+                'transaction_id'   => $transactionId,
+                'billing_id'       => $billing->billing_id,
+                'name'             => "Rent Payment - Billing #{$billing->billing_id}",
+                'reference_number' => 'RENT' . $date->format('Ymd') . str_pad($transactionId, 6, '0', STR_PAD_LEFT),
+                'transaction_type' => 'Credit',
+                'category'         => 'Rent Payment',
+                'transaction_date' => $date->format('Y-m-d'),
+                'amount'           => $billing->amount,
+                'created_at'       => now(),
+                'updated_at'       => now(),
+            ];
+
+            $transactionId++;
+        }
+
+        // ── Other transactions (Deposit, Advance, Maintenance, Vendor) ────
+        $startDate  = Carbon::create(2021, 1, 1);
+        $endDate    = Carbon::now();
+        $categories = ['Deposit', 'Advance', 'Maintenance', 'Vendor Payment'];
 
         $currentDate = $startDate->copy();
-        $transactionId = 1;
 
         while ($currentDate <= $endDate) {
-            // INCREASED: Generate 150-300 transactions per month to test pagination
             $transactionsPerMonth = rand(3, 6);
 
             for ($i = 0; $i < $transactionsPerMonth; $i++) {
                 $category = $categories[array_rand($categories)];
 
-                // Set amount ranges based on category
-                switch ($category) {
-                    case 'Rent Payment':
-                        $amount = rand(500000, 1200000) / 100; // ₱5,000 - ₱12,000
-                        $type = 'Credit';
-                        break;
-                    case 'Deposit':
-                        $amount = rand(500000, 1000000) / 100; // ₱5,000 - ₱12,000
-                        $type = 'Credit';
-                        break;
-                    case 'Advance':
-                        $amount = rand(1000000, 2000000) / 100; // ₱10,000 - ₱20,000
-                        $type = 'Credit';
-                        break;
-                    case 'Maintenance':
-                        $amount = rand(60000, 1500000) / 100; // ₱600 - ₱8,000
-                        $type = 'Debit';
-                        break;
-                    case 'Vendor Payment':
-                        $amount = rand(30000, 1000000) / 100; // ₱300 - ₱10000
-                        $type = 'Debit';
-                        break;
-                }
+                [$amount, $type] = match ($category) {
+                    'Deposit'        => [rand(500000, 1000000) / 100, 'Credit'],
+                    'Advance'        => [rand(1000000, 2000000) / 100, 'Credit'],
+                    'Maintenance'    => [rand(60000, 1500000) / 100, 'Debit'],
+                    'Vendor Payment' => [rand(30000, 1000000) / 100, 'Debit'],
+                };
 
                 $transactions[] = [
-                    'transaction_id' => $transactionId,
-                    'billing_id' => null,
-                    'name' => "Transaction {$transactionId}",
+                    'transaction_id'   => $transactionId,
+                    'billing_id'       => null,
+                    'name'             => "Transaction {$transactionId}",
                     'reference_number' => $this->generateReferenceNumber($category, $currentDate, $transactionId),
                     'transaction_type' => $type,
-                    'category' => $category,
+                    'category'         => $category,
                     'transaction_date' => $currentDate->copy()->addDays(rand(0, 27))->format('Y-m-d'),
-                    'amount' => $amount,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'amount'           => $amount,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
                 ];
 
                 $transactionId++;
@@ -71,7 +78,6 @@ class TransactionSeeder extends Seeder
             $currentDate->addMonth();
         }
 
-        // Insert in chunks to avoid memory issues
         foreach (array_chunk($transactions, 1000) as $chunk) {
             Transaction::insert($chunk);
         }
@@ -80,11 +86,10 @@ class TransactionSeeder extends Seeder
     private function generateReferenceNumber($category, $date, $id)
     {
         $prefixes = [
-            'Rent Payment' => 'RENT',
-            'Deposit' => 'DEP',
-            'Advance' => 'ADV',
-            'Maintenance' => 'MNT',
-            'Vendor Payment' => 'VEND'
+            'Deposit'        => 'DEP',
+            'Advance'        => 'ADV',
+            'Maintenance'    => 'MNT',
+            'Vendor Payment' => 'VEND',
         ];
 
         $prefix = $prefixes[$category] ?? 'TXN';

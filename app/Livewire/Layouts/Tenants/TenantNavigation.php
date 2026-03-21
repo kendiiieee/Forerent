@@ -120,7 +120,11 @@ class TenantNavigation extends Component
             ->with([
                 'beds.leases' => fn($q) => $q->where('status', 'Active')->with([
                     'tenant' => fn($q) => $q->where('role', 'tenant'),
-                    'billings' => fn($q) => $q->latest()->limit(1)
+                    'billings' => fn($q) => $q                          // ← change this
+                    ->whereMonth('billing_date', now()->month)
+                        ->whereYear('billing_date', now()->year)
+                        ->latest()
+                        ->limit(1)
                 ])
             ])
             ->get()

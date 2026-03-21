@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Layouts\Units;
 
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\On;
@@ -208,11 +209,11 @@ class UnitAccordion extends Component
     {
         if ($this->selectedBuildingId) {
             $query = Unit::where('property_id', $this->selectedBuildingId)
+                ->when(Auth::user()->role === 'manager', fn($q) => $q->where('manager_id', Auth::id())) // ← add this
                 ->with(['property', 'beds.leases' => function ($query) {
                     $query->where('status', 'Active');
                 }]);
 
-            // Apply sort
             if ($this->sortBy === 'oldest') {
                 $query->orderBy('created_at', 'asc');
             } else {
@@ -221,7 +222,6 @@ class UnitAccordion extends Component
 
             $units = $query->paginate(4);
 
-            // Auto-open first unit if none is open (e.g. after building switch)
             if ($this->openUnitId === null && $units->isNotEmpty()) {
                 $firstUnit = $units->first();
                 $this->openUnitId = $firstUnit->unit_id;

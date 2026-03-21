@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Layouts\Financials;
 
+use App\Models\Transaction;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,22 @@ class PaymentReceipts extends Component
                     'amount'     => DB::raw('to_pay'),
                     'updated_at' => now(),
                 ]);
+
+            // Fetch the updated billing record
+            $billing = DB::table('billings')->where('billing_id', $this->billingIdToMarkPaid)->first();
+
+            $transaction = Transaction::create([
+                'billing_id'       => $billing->billing_id,
+                'reference_number' => 'placeholder',
+                'transaction_type' => 'Debit',
+                'category'         => 'Rent Payment',
+                'transaction_date' => today(),
+                'amount'           => $billing->amount ?? 0,
+            ]);
+
+            $transaction->update([
+                'reference_number' => 'RENT' . now()->format('Ymd') . '-' . str_pad($transaction->transaction_id, 6, '0', STR_PAD_LEFT),
+            ]);
 
             $this->dispatch('show-toast', ['message' => 'Payment marked as Paid!']);
             $this->dispatch('close-modal', 'mark-as-paid-confirmation');

@@ -47,7 +47,7 @@
                     :class="hovered ? 'bg-[#EFF6FF] border-blue-200 ring-2 ring-inset ring-blue-300' : 'bg-white border-gray-200'"
                 >
                     <div class="flex items-center gap-3">
-                        <span class="font-semibold text-base">Unit #{{ $unit->unit_id }}</span>
+                        <span class="font-semibold text-base">Unit #{{ $unit->unit_number }}</span>
                         <span class="rounded-full px-3 py-1 text-xs font-semibold flex items-center gap-2 bg-white border border-gray-200">
                             <div class="w-2 h-2 rounded-full {{ $this->getStatusDotClass($status) }}"></div>
                             <span class="{{ $this->getStatusTextClass($status) }}">{{ $status }}</span>
@@ -72,7 +72,7 @@
                                 <p class="text-xs text-blue-100 mb-1">
                                     {{ $unit->property->building_name ?? 'N/A' }} - {{ $this->getFloorSuffix($unit->floor_number) }} Floor
                                 </p>
-                                <h4 class="text-xl font-bold mb-2">Unit #{{ $unit->unit_id }}</h4>
+                                <h4 class="text-xl font-bold mb-2">Unit #{{ $unit->unit_number }}</h4>
                                 <div class="flex items-center gap-1.5 text-sm text-blue-100">
                                     <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
