@@ -13,7 +13,8 @@
       "Read(//c/composer/vendor/**)",
       "Read(//e/reigne/Citispace-Forerent/$USERPROFILE/.config/**)",
       "Read(//e/reigne/Citispace-Forerent/$APPDATA/**)",
-      "Read(//c/ProgramData/**)"
+      "Read(//c/ProgramData/**)",
+      "Bash(ls database/migrations/*transactions*)"
     ]
   }
 }

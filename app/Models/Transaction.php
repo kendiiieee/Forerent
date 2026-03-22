@@ -17,8 +17,10 @@ class Transaction extends Model
         'billing_id',
         'name',
         'reference_number',
+        'or_number',
         'transaction_type',
         'category',
+        'payment_method',
         'transaction_date',
         'amount',
         'is_recurring'

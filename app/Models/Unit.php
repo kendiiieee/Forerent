@@ -42,4 +42,9 @@ class Unit extends Model
     {
         return $this->hasMany(Bed::class, 'unit_id', 'unit_id');
     }
+
+    public function utilityBills()
+    {
+        return $this->hasMany(UtilityBill::class, 'unit_id', 'unit_id');
+    }
 }

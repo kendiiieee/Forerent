@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UnitSeeder::class,
             LeaseSeeder::class,
             BillingSeeder::class,
+            UtilityBillSeeder::class,
             TransactionSeeder::class,
             MaintenanceSeeder::class,
             AnnouncementSeeder::class,

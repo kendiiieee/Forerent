@@ -17,12 +17,15 @@ class BillingFactory extends Factory
     public function definition(): array
     {
         return [
-            'lease_id'      => null,
-            'billing_date'  => now(),
-            'next_billing'  => now()->addMonth(),
-            'to_pay'        => 0,
-            'amount'        => 0,
-            'status'        => 'Pending',
+            'lease_id'         => null,
+            'billing_type'     => 'monthly',
+            'billing_date'     => now(),
+            'next_billing'     => now()->addMonth(),
+            'due_date'         => now()->addDays(5),
+            'to_pay'           => 0,
+            'amount'           => 0,
+            'previous_balance' => 0,
+            'status'           => 'Pending',
         ];
     }
 }

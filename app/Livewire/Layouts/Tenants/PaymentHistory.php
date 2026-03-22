@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Layouts\Tenants;
 
+use App\Models\BillingItem;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
@@ -29,17 +30,28 @@ class PaymentHistory extends Component
             ->join('users as manager', 'units.manager_id', '=', 'manager.user_id')
             ->leftJoin('transactions', function ($join) {
                 $join->on('transactions.billing_id', '=', 'billings.billing_id')
-                    ->where('transactions.category', '=', 'Rent Payment');
+                    ->whereIn('transactions.category', ['Rent Payment', 'Advance', 'Deposit']);
             })
             ->where('billings.billing_id', $billingId)
             ->where('leases.tenant_id', Auth::user()->user_id)
             ->select(
                 'billings.billing_id',
                 'billings.billing_date',
+                'billings.billing_type',
+                'billings.due_date',
                 'billings.to_pay',
+                'billings.previous_balance',
+                'billings.status',
                 'units.unit_number',
+                'units.room_cap',
+                'units.occupants',
+                'units.bed_type',
+                'beds.bed_number',
                 'properties.building_name',
                 'properties.address',
+                'leases.start_date',
+                'leases.end_date',
+                'leases.term',
                 'tenant.first_name as tenant_first_name',
                 'tenant.last_name as tenant_last_name',
                 'tenant.contact as tenant_contact',
@@ -48,35 +60,73 @@ class PaymentHistory extends Component
                 'manager.contact as manager_contact',
                 'transactions.transaction_date as txn_date',
                 'transactions.reference_number as txn_reference',
+                'transactions.payment_method as txn_payment_method',
+                'transactions.or_number as txn_or_number',
             )
             ->first();
 
         if (!$record) return;
 
         $billingDate = Carbon::parse($record->billing_date);
+        $dueDate = $record->due_date
+            ? Carbon::parse($record->due_date)->format('F d, Y')
+            : $billingDate->copy()->addDays(20)->format('F d, Y');
+
+        // Fetch billing items
+        $billingItems = BillingItem::where('billing_id', $billingId)
+            ->whereNull('deleted_at')
+            ->get()
+            ->map(fn ($item) => [
+                'description' => $item->description,
+                'amount'      => $item->amount,
+                'category'    => $item->charge_category,
+                'type'        => $item->charge_type,
+            ])
+            ->toArray();
+
+        // Fallback if no billing items exist (legacy data)
+        if (empty($billingItems)) {
+            $billingItems = [[
+                'description' => 'Unit ' . $record->unit_number . ' - Monthly Rent',
+                'amount'      => $record->to_pay,
+                'category'    => 'recurring',
+                'type'        => 'rent',
+            ]];
+        }
 
         $data = [
-            'invoice_no'  => '20250825-' . str_pad($record->billing_id, 3, '0', STR_PAD_LEFT),
-            'issued_date' => $billingDate->format('F d, Y'),
-            'due_date'    => $billingDate->copy()->addDays(20)->format('F d, Y'),
+            'invoice_no'    => '20250825-' . str_pad($record->billing_id, 3, '0', STR_PAD_LEFT),
+            'issued_date'   => $billingDate->format('F d, Y'),
+            'due_date'      => $dueDate,
+            'status'        => $record->status,
+            'billing_type'  => $record->billing_type ?? 'monthly',
+            'previous_balance' => $record->previous_balance ?? 0,
             'tenant' => [
-                'name'     => $record->tenant_first_name . ' ' . $record->tenant_last_name,
-                'unit'     => 'Unit ' . $record->unit_number,
-                'building' => $record->building_name,
-                'address'  => $record->address,
-                'contact'  => $record->tenant_contact ?? 'N/A',
+                'name'         => $record->tenant_first_name . ' ' . $record->tenant_last_name,
+                'unit_bed'     => 'Unit ' . $record->unit_number . ' — ' . $record->bed_number,
+                'room_type'    => $record->room_cap . '-in-a-Room Bedspace (' . $record->occupants . ')',
+                'building'     => $record->building_name,
+                'location'     => $record->address,
+                'lease_period' => Carbon::parse($record->start_date)->format('M d') . ' — ' . Carbon::parse($record->end_date)->format('M d, Y'),
+                'lease_type'   => $record->term . '-Month Contract',
             ],
             'payment' => [
-                'date_paid'  => $record->txn_date ? Carbon::parse($record->txn_date)->format('F d, Y') : 'Pending',
-                'txn_id'     => $record->txn_reference ?? 'Pending',
-                'lease_type' => 'Monthly',
-                'period'     => $billingDate->format('F Y'),
+                'date_paid'       => $record->txn_date ? Carbon::parse($record->txn_date)->format('F d, Y') : 'Pending',
+                'payment_method'  => $record->txn_payment_method ?? 'Pending',
+                'txn_id'          => $record->txn_payment_method
+                    ? ['GCash' => 'GC', 'Maya' => 'MY', 'Bank Transfer' => 'BT', 'Cash' => 'CS'][$record->txn_payment_method] . '-' . mt_rand(1000000000, 9999999999)
+                    : 'Pending',
+                'reference_no'    => $record->txn_reference ?? 'Pending',
+                'or_number'       => $record->txn_or_number ?? 'Pending',
+                'period'          => $billingDate->format('F Y'),
             ],
             'recipient' => [
                 'name'     => $record->manager_first_name . ' ' . $record->manager_last_name,
                 'position' => 'Property Manager',
                 'contact'  => $record->manager_contact ?? 'N/A',
             ],
+            'items' => $billingItems,
+            'total' => $record->to_pay,
             'financials' => [
                 'description' => 'Unit ' . $record->unit_number . ' - Monthly Rent',
                 'amount'      => $record->to_pay,
@@ -103,6 +153,7 @@ class PaymentHistory extends Component
             ->select(
                 'billings.billing_id',
                 'billings.billing_date',
+                'billings.billing_type',
                 'billings.to_pay',
                 'billings.status',
                 'properties.building_name',
