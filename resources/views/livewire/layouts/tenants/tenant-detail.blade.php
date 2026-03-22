@@ -1,4 +1,4 @@
-<div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
+<div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden" style="font-family: 'Open Sans', sans-serif;">
     @if($currentTenant)
         <div class="flex flex-col h-full">
 
@@ -134,7 +134,7 @@
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50 text-center">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Term</p>
-                            <p class="text-lg font-black text-[#070589]">{{ $currentTenant['rent_details']['lease_term'] }}<span class="text-xs font-medium text-gray-400 ml-0.5">mos</span></p>
+                            <p class="text-lg font-bold text-[#070589]">{{ $currentTenant['rent_details']['lease_term'] }}<span class="text-xs font-medium text-gray-400 ml-0.5">mos</span></p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50 text-center">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Shift</p>
@@ -173,13 +173,13 @@
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Monthly Rate</p>
-                            <p class="text-sm font-black text-[#070589]">&#8369; {{ number_format($currentTenant['move_in_details']['monthly_rate'], 2) }}</p>
+                            <p class="text-sm font-bold text-[#070589]">&#8369; {{ number_format($currentTenant['move_in_details']['monthly_rate'], 2) }}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Security Deposit</p>
-                            <p class="text-sm font-black text-[#070589]">&#8369; {{ number_format($currentTenant['move_in_details']['security_deposit'], 2) }}</p>
+                            <p class="text-sm font-bold text-[#070589]">&#8369; {{ number_format($currentTenant['move_in_details']['security_deposit'], 2) }}</p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Payment Status</p>
@@ -246,7 +246,7 @@
             <div class="text-center max-w-md p-6">
                 <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6" style="background: linear-gradient(135deg, #070589 0%, #2360E8 100%);">
                     <svg class="w-10 h-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                     </svg>
                 </div>
                 <h3 class="text-xl font-bold text-[#070589] mb-2">No Tenant Selected</h3>
@@ -254,8 +254,8 @@
                     Select a tenant from the sidebar to view their details, lease information, and manage their tenancy.
                 </p>
                 <div class="flex items-center justify-center gap-2 text-[#2360E8]">
-                    <svg class="w-5 h-5 animate-bounce -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
                     <span class="font-semibold text-sm">Select a tenant from the left</span>
                 </div>

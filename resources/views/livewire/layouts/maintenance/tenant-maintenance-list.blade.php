@@ -21,8 +21,13 @@
             size="lg"
         />
 
-        {{-- Sort dropdown + Add Request --}}
-        <div class="flex items-center gap-4">
+        {{-- Search, Sort dropdown + Add Request --}}
+        <div class="flex items-center gap-3">
+            <x-ui.search-bar
+                model="search"
+                placeholder="Search..."
+                :suggestions="$suggestions"
+            />
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
 
             <x-ui.button-add

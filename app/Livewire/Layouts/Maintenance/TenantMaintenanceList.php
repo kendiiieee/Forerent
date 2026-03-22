@@ -10,8 +10,8 @@ class TenantMaintenanceList extends Component
 {
     public $activeRequestId = null;
     public $activeTab = 'all';
-    // sort order for requests list (newest or oldest)
     public $sortOrder = 'newest';
+    public $search = '';
 
     public function setTab($tab)
     {
@@ -31,39 +31,52 @@ class TenantMaintenanceList extends Component
         // This empty method triggers a re-render
     }
 
+    public function updatedSearch()
+    {
+        $this->activeRequestId = null;
+    }
+
     public function render()
     {
         $tenantLeaseIds = DB::table('leases')
             ->where('tenant_id', Auth::id())
             ->pluck('lease_id');
 
-        $baseCountQuery = DB::table('maintenance_requests')
+        $baseQuery = DB::table('maintenance_requests')
             ->whereIn('lease_id', $tenantLeaseIds);
 
-        $statusCountsRaw = (clone $baseCountQuery)
+        // Apply search filter
+        if (!empty($this->search)) {
+            $search = '%' . $this->search . '%';
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('ticket_number', 'like', $search)
+                  ->orWhere('category', 'like', $search)
+                  ->orWhere('status', 'like', $search);
+            });
+        }
+
+        $statusCountsRaw = (clone $baseQuery)
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
 
         $counts = [
-            'all'         => (clone $baseCountQuery)->count(),
+            'all'         => (clone $baseQuery)->count(),
             'pending'     => $statusCountsRaw['Pending'] ?? 0,
             'ongoing'     => ($statusCountsRaw['In Progress'] ?? 0) + ($statusCountsRaw['Ongoing'] ?? 0),
             'completed'   => ($statusCountsRaw['Completed'] ?? 0) + ($statusCountsRaw['Resolved'] ?? 0),
         ];
 
-        $query = DB::table('maintenance_requests')
-            ->whereIn('lease_id', $tenantLeaseIds)
-            ->select(
-                'request_id',
-                'status',
-                'urgency',
-                'category',      // <--- ADDED this line earlier
-                'problem',
-                'created_at',
-                'ticket_number'
-            );
+        $query = (clone $baseQuery)->select(
+            'request_id',
+            'status',
+            'urgency',
+            'category',
+            'problem',
+            'created_at',
+            'ticket_number'
+        );
 
         switch ($this->activeTab) {
             case 'pending':
@@ -77,9 +90,21 @@ class TenantMaintenanceList extends Component
                 break;
         }
 
-        // apply sorting direction based on user selection
         $direction = $this->sortOrder === 'newest' ? 'desc' : 'asc';
         $requests = $query->orderBy('created_at', $direction)->get();
+
+        // Build suggestions from all requests (unfiltered)
+        $allRequests = DB::table('maintenance_requests')
+            ->whereIn('lease_id', $tenantLeaseIds)
+            ->select('ticket_number', 'category')
+            ->get();
+
+        $suggestions = collect()
+            ->merge($allRequests->pluck('ticket_number')->filter())
+            ->merge($allRequests->pluck('category')->filter())
+            ->unique()
+            ->values()
+            ->toArray();
 
         return view('livewire.layouts.maintenance.tenant-maintenance-list', [
             'requests' => $requests,
@@ -87,6 +112,7 @@ class TenantMaintenanceList extends Component
             'activeTab' => $this->activeTab,
             'activeRequestId' => $this->activeRequestId,
             'sortOrder' => $this->sortOrder,
+            'suggestions' => $suggestions,
         ]);
     }
 }

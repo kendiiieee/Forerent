@@ -7,6 +7,13 @@
     >
         {{-- FILTERS SLOT --}}
         <x-slot:filters>
+            {{-- Search --}}
+            <x-ui.search-bar
+                model="search"
+                placeholder="Search..."
+                :suggestions="$suggestions"
+            />
+
             {{-- Month Filter --}}
             <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}">
                 <x-dropdown-item wire:click="$set('selectedMonth', null)" @click="open = false">

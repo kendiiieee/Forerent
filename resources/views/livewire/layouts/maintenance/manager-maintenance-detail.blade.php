@@ -200,17 +200,10 @@
                             <button
                                 wire:click="toggleCostForm"
                                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200"
-                                style="{{ $showCostForm
-                                    ? 'background:#f3f4f6; color:#4b5563;'
-                                    : 'background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;' }}"
+                                style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;"
                             >
-                                @if($showCostForm)
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                    Cancel
-                                @else
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                    Add Cost
-                                @endif
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Add Cost
                             </button>
                         @endif
                     </div>
@@ -323,19 +316,28 @@
                                 </div>
                             </div>
 
-                            {{-- Save Button --}}
-                            <button
-                                wire:click="saveCost"
-                                wire:loading.attr="disabled"
-                                wire:target="saveCost"
-                                class="w-full py-2.5 text-white font-bold text-sm rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                                style="background-color: #10b981; box-shadow: 0 1px 3px rgba(16,185,129,0.3);"
-                                onmouseover="this.style.backgroundColor='#059669'" onmouseout="this.style.backgroundColor='#10b981'"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                <span wire:loading.remove wire:target="saveCost">Save Cost Entry</span>
-                                <span wire:loading wire:target="saveCost">Saving...</span>
-                            </button>
+                            {{-- Save & Cancel Buttons --}}
+                            <div class="flex gap-2">
+                                <button
+                                    wire:click="$set('showCostForm', false)"
+                                    class="flex-1 py-2.5 font-bold text-sm rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+                                    style="background:#f3f4f6; color:#4b5563;"
+                                    onmouseover="this.style.backgroundColor='#e5e7eb'" onmouseout="this.style.backgroundColor='#f3f4f6'"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    wire:click="saveCost"
+                                    wire:loading.attr="disabled"
+                                    wire:target="saveCost"
+                                    class="flex-1 py-2.5 text-white font-bold text-sm rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    style="background-color: #10b981; box-shadow: 0 1px 3px rgba(16,185,129,0.3);"
+                                    onmouseover="this.style.backgroundColor='#059669'" onmouseout="this.style.backgroundColor='#10b981'"
+                                >
+                                    <span wire:loading.remove wire:target="saveCost">Save Cost Entry</span>
+                                    <span wire:loading wire:target="saveCost">Saving...</span>
+                                </button>
+                            </div>
                         </div>
                     @endif
 

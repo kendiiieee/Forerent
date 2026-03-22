@@ -20,8 +20,13 @@
             size="lg"
         />
 
-        {{-- Right Side: Sort Dropdown --}}
-        <div class="flex items-center gap-4">
+        {{-- Right Side: Search & Sort --}}
+        <div class="flex items-center gap-3">
+            <x-ui.search-bar
+                model="search"
+                placeholder="Search..."
+                :suggestions="$suggestions"
+            />
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
         </div>
 

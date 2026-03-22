@@ -123,20 +123,14 @@ class ManagerMaintenanceDetail extends Component
             'costDescription.max'      => 'Description cannot exceed 255 characters.',
         ]);
 
-        $data = [
+        DB::table('maintenance_logs')->insert([
             'request_id'      => $this->ticket->request_id,
             'completion_date' => now()->toDateString(),
             'cost'            => round((float) $this->costAmount, 2),
+            'description'     => $this->costDescription,
             'created_at'      => now(),
             'updated_at'      => now(),
-        ];
-
-        // Include description if the column exists
-        if (\Illuminate\Support\Facades\Schema::hasColumn('maintenance_logs', 'description')) {
-            $data['description'] = $this->costDescription;
-        }
-
-        DB::table('maintenance_logs')->insert($data);
+        ]);
 
         $this->costAmount = '';
         $this->costDescription = '';

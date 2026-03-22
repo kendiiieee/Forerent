@@ -15,7 +15,15 @@ class ManagerMaintenanceList extends Component
     // ADDED: Sort order property initialized to 'newest'
     public $sortOrder = 'newest';
 
+    // Search
+    public $search = '';
+
     protected $listeners = ['refreshDashboard' => '$refresh'];
+
+    public function updatedSearch()
+    {
+        $this->activeRequestId = null;
+    }
 
     public function setTab($tab)
     {
@@ -50,7 +58,21 @@ class ManagerMaintenanceList extends Component
                 DB::raw("CONCAT(users.first_name, ' ', users.last_name) as tenant_name")
             );
 
-        // Tab counts
+        // Apply search filter to base query if searching
+        if (!empty($this->search)) {
+            $term = $this->search;
+            $unitTerm = preg_replace('/^Unit\s+/i', '', $term);
+            $search = '%' . $term . '%';
+            $unitSearch = '%' . $unitTerm . '%';
+            $baseQuery->where(function ($q) use ($search, $unitSearch) {
+                $q->where('maintenance_requests.ticket_number', 'like', $search)
+                  ->orWhere('maintenance_requests.category', 'like', $search)
+                  ->orWhere('units.unit_number', 'like', $unitSearch)
+                  ->orWhere(DB::raw("CONCAT(users.first_name, ' ', users.last_name)"), 'like', $search);
+            });
+        }
+
+        // Tab counts (reflect search filter)
         $allCount       = (clone $baseQuery)->count();
         $pendingCount   = (clone $baseQuery)->where('maintenance_requests.status', 'Pending')->count();
         $ongoingCount   = (clone $baseQuery)->where('maintenance_requests.status', 'Ongoing')->count();
@@ -75,6 +97,17 @@ class ManagerMaintenanceList extends Component
         $direction = $this->sortOrder === 'newest' ? 'desc' : 'asc';
         $requests = $listQuery->orderBy('maintenance_requests.created_at', $direction)->get();
 
+        // Build autocomplete suggestions from unfiltered results
+        $allRequests = (clone $baseQuery)->orderBy('maintenance_requests.created_at', 'desc')->limit(200)->get();
+        $suggestions = collect()
+            ->merge($allRequests->pluck('ticket_number')->filter())
+            ->merge($allRequests->pluck('tenant_name')->filter())
+            ->merge($allRequests->map(fn($r) => 'Unit ' . $r->unit_number)->filter())
+            ->merge($allRequests->pluck('category')->filter())
+            ->unique()
+            ->values()
+            ->toArray();
+
         return view('livewire.layouts.maintenance.manager-maintenance-list', [
             'requests' => $requests,
             'counts' => [
@@ -83,8 +116,8 @@ class ManagerMaintenanceList extends Component
                 'ongoing'   => $ongoingCount,
                 'completed' => $completedCount,
             ],
-            // ADDED: Pass the active sort order to the view
             'sortOrder' => $this->sortOrder,
+            'suggestions' => $suggestions,
         ]);
     }
 }

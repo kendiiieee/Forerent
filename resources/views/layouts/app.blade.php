@@ -24,9 +24,8 @@
 
         <section class="flex-1 flex flex-col h-full overflow-hidden relative">
 
-            <div class="flex-shrink-0 z-30 bg-white">
-                <livewire:layouts.top-bar />
-            </div>
+            {{-- Top spacer --}}
+            <div class="flex-shrink-0 h-20 bg-white"></div>
 
             <main class="flex-1 overflow-y-auto ml-8 bg-white">
 

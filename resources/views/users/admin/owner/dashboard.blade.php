@@ -1,3 +1,6 @@
+@section('header-title', 'DASHBOARD')
+@section('header-subtitle', 'Centralized rental property management overview')
+
 <div class="w-full space-y-6">
 
     @include('livewire.layouts.dashboard.admingreeting')

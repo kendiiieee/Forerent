@@ -11,11 +11,18 @@ use Livewire\Attributes\On;
 class TenantNavigation extends Component
 {
     public $tenants = [];
+    public $allTenants = [];
     public $user;
     public $activeTenantId = null;
     public ?int $selectedBuildingId = null;
     public $activeTab = 'current';
     public $sortOrder = 'newest';
+    public $search = '';
+    public $counts = [
+        'current'     => 0,
+        'transferred' => 0,
+        'moved_out'   => 0,
+    ];
 
     public function mount($tenants = null): void
     {
@@ -27,8 +34,8 @@ class TenantNavigation extends Component
 
         if ($firstProperty) {
             $this->selectedBuildingId = $firstProperty->property_id;
-            $this->tenants = $this->loadCurrentTenants();
-            $this->emitCounts();
+            $this->loadTenants();
+            $this->loadCounts();
         }
     }
 
@@ -46,7 +53,6 @@ class TenantNavigation extends Component
 
     private function switchBuilding(int $id): void
     {
-        // Skip if same building already loaded
         if ($this->selectedBuildingId === $id && $this->activeTab === 'current') {
             return;
         }
@@ -54,43 +60,39 @@ class TenantNavigation extends Component
         $this->selectedBuildingId = $id;
         $this->activeTab = 'current';
         $this->activeTenantId = null;
-        $this->tenants = $this->loadCurrentTenants();
-        $this->emitCounts();
-        $this->dispatch('tenantTabReset', tab: 'current');
+        $this->search = '';
+        $this->loadTenants();
+        $this->loadCounts();
     }
 
-    #[On('tenantTabChanged')]
-    public function onTabChanged($tab): void
+    public function setTab($tab): void
     {
         $this->activeTab = $tab;
         $this->activeTenantId = null;
-
-        $this->tenants = match ($tab) {
-            'transferred' => $this->loadTransferredTenants(),
-            'moved_out'   => $this->loadMovedOutTenants(),
-            default       => $this->loadCurrentTenants(),
-        };
+        $this->search = '';
+        $this->loadTenants();
     }
 
-    #[On('tenantSortChanged')]
-    public function onSortChanged($sortOrder): void
+    public function updatedSortOrder(): void
     {
-        $this->sortOrder = $sortOrder;
         $this->tenants = $this->applySorting($this->tenants);
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->activeTenantId = null;
+        $this->loadTenants();
     }
 
     #[On('refresh-tenant-list')]
     public function refreshTenantList(): void
     {
         if ($this->selectedBuildingId) {
-            $this->tenants = match ($this->activeTab) {
-                'transferred' => $this->loadTransferredTenants(),
-                'moved_out'   => $this->loadMovedOutTenants(),
-                default       => $this->loadCurrentTenants(),
-            };
-            $this->emitCounts();
+            $this->loadTenants();
+            $this->loadCounts();
         } else {
             $this->tenants = [];
+            $this->allTenants = [];
         }
     }
 
@@ -110,18 +112,27 @@ class TenantNavigation extends Component
         );
     }
 
-    /**
-     * Current tenants: Active leases in this building's units.
-     */
+    private function loadTenants(): void
+    {
+        $raw = match ($this->activeTab) {
+            'transferred' => $this->loadTransferredTenants(),
+            'moved_out'   => $this->loadMovedOutTenants(),
+            default       => $this->loadCurrentTenants(),
+        };
+
+        $this->allTenants = $raw;
+        $this->tenants = $this->applySorting($this->applySearch($raw));
+    }
+
     private function loadCurrentTenants(): array
     {
-        $tenants = Unit::where('manager_id', Auth::id())
+        return Unit::where('manager_id', Auth::id())
             ->where('property_id', $this->selectedBuildingId)
             ->with([
                 'beds.leases' => fn($q) => $q->where('status', 'Active')->with([
                     'tenant' => fn($q) => $q->where('role', 'tenant'),
-                    'billings' => fn($q) => $q                          // ← change this
-                    ->whereMonth('billing_date', now()->month)
+                    'billings' => fn($q) => $q
+                        ->whereMonth('billing_date', now()->month)
                         ->whereYear('billing_date', now()->year)
                         ->latest()
                         ->limit(1)
@@ -147,8 +158,6 @@ class TenantNavigation extends Component
             ->unique('id')
             ->values()
             ->toArray();
-
-        return $this->applySorting($tenants);
     }
 
     private function getUnitIds()
@@ -158,27 +167,18 @@ class TenantNavigation extends Component
             ->pluck('unit_id');
     }
 
-    /**
-     * Transferred tenants: expired lease here + active lease elsewhere.
-     */
     private function loadTransferredTenants(): array
     {
         $data = $this->loadExpiredSplit();
-        return $this->applySorting($data['transferred']);
+        return $data['transferred'];
     }
 
-    /**
-     * Moved out tenants: expired lease here + no active lease anywhere.
-     */
     private function loadMovedOutTenants(): array
     {
         $data = $this->loadExpiredSplit();
-        return $this->applySorting($data['moved_out']);
+        return $data['moved_out'];
     }
 
-    /**
-     * Load all expired leases for this building and split into transferred vs moved out.
-     */
     private function loadExpiredSplit(): array
     {
         $unitIds = $this->getUnitIds();
@@ -239,21 +239,15 @@ class TenantNavigation extends Component
         return ['transferred' => $transferred, 'moved_out' => $movedOut];
     }
 
-    /**
-     * Emit counts using lightweight queries.
-     */
-    private function emitCounts(): void
+    private function loadCounts(): void
     {
         $unitIds = $this->getUnitIds();
 
         if ($unitIds->isEmpty()) {
-            $this->dispatch('tenantCountsUpdated', counts: [
-                'current' => 0, 'transferred' => 0, 'moved_out' => 0,
-            ]);
+            $this->counts = ['current' => 0, 'transferred' => 0, 'moved_out' => 0];
             return;
         }
 
-        // Current count: just count active leases with tenants in this building
         $currentCount = Lease::where('leases.status', 'Active')
             ->whereIn('bed_id', function ($q) use ($unitIds) {
                 $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
@@ -264,7 +258,6 @@ class TenantNavigation extends Component
             ->distinct('tenant_id')
             ->count('tenant_id');
 
-        // Expired counts: get unique expired tenant IDs, then check which have active leases
         $expiredTenantIds = Lease::where('leases.status', 'Expired')
             ->whereIn('bed_id', function ($q) use ($unitIds) {
                 $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
@@ -286,11 +279,34 @@ class TenantNavigation extends Component
             $movedOutCount = $expiredTenantIds->unique()->count() - $transferredCount;
         }
 
-        $this->dispatch('tenantCountsUpdated', counts: [
+        $this->counts = [
             'current'     => $currentCount,
             'transferred' => $transferredCount,
             'moved_out'   => max(0, $movedOutCount),
-        ]);
+        ];
+    }
+
+    private function applySearch(array $tenants): array
+    {
+        if (empty($this->search)) {
+            return $tenants;
+        }
+
+        $term = strtolower($this->search);
+
+        return array_values(array_filter($tenants, function ($t) use ($term) {
+            $name = strtolower(($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? ''));
+            $unit = strtolower('unit ' . ($t['unit'] ?? ''));
+            $unitNum = strtolower($t['unit'] ?? '');
+            $bed = strtolower('bed ' . ($t['bed_number'] ?? ''));
+            $bedNum = strtolower($t['bed_number'] ?? '');
+
+            return str_contains($name, $term)
+                || str_contains($unit, $term)
+                || str_contains($unitNum, $term)
+                || str_contains($bed, $term)
+                || str_contains($bedNum, $term);
+        }));
     }
 
     private function applySorting(array $tenants): array
@@ -307,6 +323,19 @@ class TenantNavigation extends Component
 
     public function render()
     {
-        return view('livewire.layouts.tenants.tenant-navigation');
+        $suggestions = collect($this->allTenants)
+            ->flatMap(fn($t) => [
+                ($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? ''),
+                'Unit ' . ($t['unit'] ?? ''),
+                'Bed ' . ($t['bed_number'] ?? ''),
+            ])
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return view('livewire.layouts.tenants.tenant-navigation', [
+            'suggestions' => $suggestions,
+        ]);
     }
 }

@@ -19,6 +19,7 @@ class UnitAccordion extends Component
     public $selectedBuildingName = null;
     public $specifications = [];
     public $sortBy = 'newest';
+    public $search = '';
 
     /**
      * Listen for building selection from property.blade.php
@@ -205,14 +206,51 @@ class UnitAccordion extends Component
         return $amenities;
     }
 
+    public function updatedSearch()
+    {
+        $this->resetPage();
+        $this->openUnitId = null;
+        $this->specifications = [];
+    }
+
     public function render()
     {
+        $suggestions = [];
+
         if ($this->selectedBuildingId) {
             $query = Unit::where('property_id', $this->selectedBuildingId)
-                ->when(Auth::user()->role === 'manager', fn($q) => $q->where('manager_id', Auth::id())) // ← add this
+                ->when(Auth::user()->role === 'manager', fn($q) => $q->where('manager_id', Auth::id()))
                 ->with(['property', 'beds.leases' => function ($query) {
                     $query->where('status', 'Active');
                 }]);
+
+            // Build suggestions from unfiltered units
+            $allUnits = (clone $query)->get();
+            $suggestions = $allUnits->flatMap(function ($unit) {
+                $status = $this->calculateUnitStatus($unit);
+                $floor = $this->getFloorSuffix($unit->floor_number ?? 1);
+                return [
+                    'Unit #' . $unit->unit_number,
+                    $status,
+                    $floor . ' Floor',
+                    $unit->room_type,
+                ];
+            })->filter()->unique()->values()->toArray();
+
+            // Apply search filter
+            if (!empty($this->search)) {
+                $term = $this->search;
+                // Strip common prefixes for matching
+                $cleanTerm = preg_replace('/^(Unit\s*#?\s*)/i', '', $term);
+
+                $query->where(function ($q) use ($term, $cleanTerm) {
+                    $search = '%' . $term . '%';
+                    $cleanSearch = '%' . $cleanTerm . '%';
+                    $q->where('unit_number', 'like', $cleanSearch)
+                      ->orWhere('room_type', 'like', $search)
+                      ->orWhere('floor_number', 'like', $cleanSearch);
+                });
+            }
 
             if ($this->sortBy === 'oldest') {
                 $query->orderBy('created_at', 'asc');
@@ -232,7 +270,8 @@ class UnitAccordion extends Component
         }
 
         return view('livewire.layouts.units.unit-accordion', [
-            'units' => $units
+            'units' => $units,
+            'suggestions' => $suggestions,
         ]);
     }
 }

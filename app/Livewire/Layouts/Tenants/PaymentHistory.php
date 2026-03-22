@@ -13,8 +13,10 @@ class PaymentHistory extends Component
     use WithPagination;
 
     public $activeTab = 'all';
+    public $search = '';
 
     public function updatedActiveTab() { $this->resetPage(); }
+    public function updatedSearch() { $this->resetPage(); }
 
     public function viewReceipt($billingId)
     {
@@ -115,6 +117,17 @@ class PaymentHistory extends Component
     {
         $baseQuery = $this->baseQuery();
 
+        // Apply search filter
+        if (!empty($this->search)) {
+            $search = '%' . $this->search . '%';
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('transactions.reference_number', 'like', $search)
+                  ->orWhere('transactions.category', 'like', $search)
+                  ->orWhere('billings.status', 'like', $search)
+                  ->orWhere('properties.building_name', 'like', $search);
+            });
+        }
+
         $counts = [
             'all'      => (clone $baseQuery)->count(),
             'upcoming' => (clone $baseQuery)->where('billings.status', 'Unpaid')->count(),
@@ -133,9 +146,20 @@ class PaymentHistory extends Component
 
         $payments = $query->orderBy('billings.billing_date', 'desc')->paginate(10);
 
+        // Build suggestions from unfiltered data
+        $allRecords = $this->baseQuery()->get();
+        $suggestions = collect()
+            ->merge($allRecords->pluck('reference_number')->filter())
+            ->merge($allRecords->pluck('category')->filter())
+            ->merge($allRecords->pluck('building_name')->filter())
+            ->unique()
+            ->values()
+            ->toArray();
+
         return view('livewire.layouts.tenants.payment-history', [
-            'payments' => $payments,
-            'counts'   => $counts,
+            'payments'    => $payments,
+            'counts'      => $counts,
+            'suggestions' => $suggestions,
         ]);
     }
 }

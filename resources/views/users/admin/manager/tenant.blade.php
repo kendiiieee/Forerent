@@ -18,27 +18,10 @@
         />
     </div>
 
-    {{-- Tenant Sort Controls --}}
+    {{-- Tenant Navigation (tabs, search, sort, list, detail) --}}
     <div class="mt-6">
-        <livewire:layouts.tenants.tenant-sort-controls />
+        <livewire:layouts.tenants.tenant-navigation />
     </div>
-
-    {{-- List and Detail Panels --}}
-    <div class="mt-2">
-        <div class="w-full">
-            <div class="flex flex-col lg:flex-row gap-6 h-[750px]">
-                 <div class="lg:w-[30%]">
-                    <livewire:layouts.tenants.tenant-navigation />
-                </div>
-
-                 <div class="lg:w-[70%]">
-                    <livewire:layouts.tenants.tenant-detail />
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <livewire:layouts.tenants.add-tenant-modal />
 
 @endsection
 

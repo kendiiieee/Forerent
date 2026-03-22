@@ -17,6 +17,11 @@
         wire:model.live="activeTab"
     >
         <x-slot:filters>
+            <x-ui.search-bar
+                model="search"
+                placeholder="Search..."
+                :suggestions="$suggestions"
+            />
         </x-slot:filters>
 
         {{-- TABLE --}}

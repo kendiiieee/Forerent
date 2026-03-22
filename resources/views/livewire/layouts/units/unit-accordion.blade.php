@@ -9,6 +9,11 @@
             @endif
         </h3>
         <div class="flex items-center gap-3">
+            <x-ui.search-bar
+                model="search"
+                placeholder="Search..."
+                :suggestions="$suggestions"
+            />
             <x-ui.sort-dropdown model="sortBy" current="{{ $sortBy }}" />
             @if(auth()->user()->role === 'landlord')
                 <button

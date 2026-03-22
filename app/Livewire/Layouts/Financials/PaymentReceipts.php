@@ -18,10 +18,12 @@ class PaymentReceipts extends Component
     public $selectedMonth = null;
     public $selectedBuilding = null;
     public $billingIdToMarkPaid = null;
+    public $search = '';
 
     public function updatedActiveTab()   { $this->resetPage(); }
     public function updatedSelectedMonth() { $this->resetPage(); }
     public function updatedSelectedBuilding() { $this->resetPage(); }
+    public function updatedSearch() { $this->resetPage(); }
 
     public function confirmPayment($id)
     {
@@ -179,6 +181,16 @@ class PaymentReceipts extends Component
 
         $baseQuery = $this->baseQuery();
 
+        // Apply search filter
+        if (!empty($this->search)) {
+            $search = '%' . $this->search . '%';
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where(DB::raw("CONCAT(users.first_name, ' ', users.last_name)"), 'like', $search)
+                  ->orWhere('billings.status', 'like', $search)
+                  ->orWhere('properties.building_name', 'like', $search);
+            });
+        }
+
         $counts = [
             'all'      => (clone $baseQuery)->count(),
             'upcoming' => (clone $baseQuery)->where('billings.status', 'Unpaid')->count(),
@@ -205,11 +217,25 @@ class PaymentReceipts extends Component
 
         $payments = $query->orderBy('billings.billing_date', 'desc')->paginate(10);
 
+        // Build suggestions from unfiltered data
+        $allRecords = $this->baseQuery()->select(
+            DB::raw("CONCAT(users.first_name, ' ', users.last_name) as tenant_name"),
+            'properties.building_name'
+        )->get();
+
+        $suggestions = collect()
+            ->merge($allRecords->pluck('tenant_name')->filter())
+            ->merge($allRecords->pluck('building_name')->filter())
+            ->unique()
+            ->values()
+            ->toArray();
+
         return view('livewire.layouts.financials.payment-receipts', [
             'payments'        => $payments,
             'counts'          => $counts,
             'monthOptions'    => $monthOptions,
             'buildingOptions' => $buildingOptions,
+            'suggestions'     => $suggestions,
         ]);
     }
 }
