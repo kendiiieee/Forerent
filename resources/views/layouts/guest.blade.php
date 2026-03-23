@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ config('app.name', 'ForeRent') }}</title>
+    <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -61,12 +62,6 @@
 
             </div>
 
-            {{-- Bottom-left version badge --}}
-            <div class="absolute bottom-6 left-8 flex items-center gap-2 text-white/40 text-xs font-semibold tracking-widest uppercase">
-                <span>PMS V2.0</span>
-                <span class="w-1 h-1 rounded-full bg-white/40 inline-block"></span>
-                <span>Bank-Level Security</span>
-            </div>
 
         </div>
 

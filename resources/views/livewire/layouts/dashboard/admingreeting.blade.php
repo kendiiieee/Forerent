@@ -13,12 +13,45 @@
 
         <!-- Left: Greeting -->
         <div class="flex flex-col justify-center">
-            <p class="text-blue-300 text-xs font-semibold uppercase tracking-widest mb-1">Property Owner</p>
+            @php
+                $user = auth()->user();
+                $isTenant = $user && $user->role === 'tenant';
+                $tenantInfo = null;
+                if ($isTenant) {
+                    $lease = $user->leases()->with('bed.unit.property')->where('status', 'active')->latest()->first();
+                    if ($lease && $lease->bed && $lease->bed->unit) {
+                        $bed = $lease->bed;
+                        $unit = $bed->unit;
+                        $property = $unit->property;
+                        $tenantInfo = collect([
+                            $unit->bed_type ?? null,
+                            $bed->bed_number ? 'Bed ' . $bed->bed_number : null,
+                            $unit->unit_number ? 'Unit ' . $unit->unit_number : null,
+                        ])->filter()->implode(' • ');
+                        $locationInfo = collect([
+                            $property->building_name ?? null,
+                            $property->address ?? null,
+                        ])->filter()->implode(', ');
+                        if ($locationInfo) {
+                            $tenantInfo .= ' — ' . $locationInfo;
+                        }
+                    }
+                }
+            @endphp
+            <p class="text-blue-300 text-xs font-semibold uppercase tracking-widest mb-1">
+                {{ $isTenant ? 'Tenant' : 'Property Owner' }}
+            </p>
             <h1 class="text-white text-3xl font-bold leading-tight">
                 Welcome Back,
                 <span class="text-cyan-400">{{ auth()->check() ? strtoupper(auth()->user()->first_name) : 'GUEST' }}!</span>
             </h1>
-            <p class="text-blue-200 text-sm mt-1">Here's what's happening with your properties today</p>
+            <p class="text-blue-200 text-sm mt-1">
+                @if($isTenant && $tenantInfo)
+                    {{ $tenantInfo }}
+                @else
+                    Here's what's happening with your properties today
+                @endif
+            </p>
         </div>
 
         <!-- Right: Time & Date -->
