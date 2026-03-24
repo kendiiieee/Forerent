@@ -2,13 +2,15 @@
 
 namespace App\Livewire\Layouts\Maintenance;
 
-use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use Livewire\Component;
 
 class ProjectedMaintenanceCost extends Component
 {
     public $buildingData = [];
+
     public $chartData = [];
+
     public $chartLabels = [];
 
     // Configuration: Estimated cost per repair ticket
@@ -25,9 +27,12 @@ class ProjectedMaintenanceCost extends Component
         // 1. Setup empty months (Jan-Dec)
         $monthlyCosts = array_fill(1, 12, 0);
 
-        // 2. Query REAL requests from database
+        // 2. Query REAL requests from database using TiDB/MySQL syntax
         $requests = DB::table('maintenance_requests')
-            ->select(DB::raw('EXTRACT(MONTH FROM created_at)::int as month'), DB::raw('COUNT(*) as count'))
+            ->select(
+                DB::raw('MONTH(created_at) as month'),
+                DB::raw('COUNT(*) as count')
+            )
             ->whereYear('created_at', date('Y'))
             ->groupBy('month')
             ->get();
@@ -64,7 +69,7 @@ class ProjectedMaintenanceCost extends Component
                 'name' => $b->building_name,
                 'cost' => $b->ticket_count * $this->avgCostPerTicket,
                 'change' => rand(2, 8), // Placeholder trend (requires last month data comparison)
-                'change_type' => rand(0, 1) ? 'higher' : 'lower'
+                'change_type' => rand(0, 1) ? 'higher' : 'lower',
             ];
         }
 
@@ -74,7 +79,7 @@ class ProjectedMaintenanceCost extends Component
                 'name' => 'No Requests Yet',
                 'cost' => 0,
                 'change' => 0,
-                'change_type' => 'stable'
+                'change_type' => 'stable',
             ];
         }
     }
