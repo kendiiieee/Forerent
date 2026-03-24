@@ -20,6 +20,13 @@ class PropertyDetails extends Component
     public $photos = [];
     public $documents = [];
 
+    public function mount($buildingId = null)
+    {
+        if ($buildingId) {
+            $this->loadPropertyData($buildingId);
+        }
+    }
+
     #[On('buildingSelected')]
     public function onBuildingSelected($buildingId)
     {

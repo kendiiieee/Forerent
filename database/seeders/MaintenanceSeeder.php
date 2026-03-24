@@ -78,6 +78,7 @@ class MaintenanceSeeder extends Seeder
                     'log_date' => $currentDate->format('Y-m-d'),
                     'problem' => $this->generateProblemDescription($category),
                     'urgency' => $urgency,
+                    'category' => $category,
                     'created_at' => $currentDate->format('Y-m-d H:i:s'),
                     'updated_at' => $currentDate->format('Y-m-d H:i:s'),
                 ];
