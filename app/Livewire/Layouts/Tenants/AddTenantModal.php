@@ -397,7 +397,7 @@ class AddTenantModal extends Component
                 'transaction_type' => 'Debit',
                 'category' => 'Deposit',
                 'transaction_date' => today(),
-                'amount' => $this->lease->security_deposit ?? 0,
+                'amount' => $lease->security_deposit ?? 0,
             ]);
             $depTransaction->update([
                 'reference_number' => 'DEP' . now()->format('Ymd') . '-' . str_pad($depTransaction->transaction_id, 6, '0', STR_PAD_LEFT),
@@ -410,7 +410,7 @@ class AddTenantModal extends Component
                 'transaction_type' => 'Debit',
                 'category' => 'Advance',
                 'transaction_date' => today(),
-                'amount' => $this->lease->advance_amount ?? 0,
+                'amount' => $lease->advance_amount ?? 0,
             ]);
 
             $advTransaction->update([
