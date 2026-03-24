@@ -27,7 +27,6 @@ php artisan storage:link
 php artisan config:clear
 php artisan view:clear
 php artisan cache:clear
-php artisan livewire:discover
 
 # Seed in background so supervisord starts immediately
 php artisan db:seed --force &
