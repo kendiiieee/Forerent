@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Faker\Generator;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Bed;
@@ -10,8 +11,12 @@ use Carbon\Carbon;
 
 class LeaseSeeder extends Seeder
 {
+    protected Generator $faker;
+
     public function run(): void
     {
+        $this->faker = app(Generator::class);
+
         $tenants = User::where('role', 'tenant')->get();
         $maleTenants = $tenants->where('gender', 'Male')->values();
         $femaleTenants = $tenants->where('gender', 'Female')->values();
@@ -36,8 +41,8 @@ class LeaseSeeder extends Seeder
             }
 
             $unitPrice = (float) $bed->unit->price;
-            $term = fake()->numberBetween(9, 18);
-            $startDate = Carbon::now()->subMonths(fake()->numberBetween(1, 8))->startOfMonth();
+            $term = $this->faker->numberBetween(9, 18);
+            $startDate = Carbon::now()->subMonths($this->faker->numberBetween(1, 8))->startOfMonth();
             $endDate = $startDate->copy()->addMonths($term);
 
             Lease::factory()->create([

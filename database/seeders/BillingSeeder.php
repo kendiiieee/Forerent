@@ -5,13 +5,18 @@ namespace Database\Seeders;
 use App\Models\Billing;
 use App\Models\BillingItem;
 use App\Models\Lease;
+use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
 class BillingSeeder extends Seeder
 {
+    protected Generator $faker;
+
     public function run(): void
     {
+        $this->faker = app(Generator::class);
+
         $leases = Lease::all();
         $today  = Carbon::now();
 
@@ -58,10 +63,10 @@ class BillingSeeder extends Seeder
 
                 if ($isPast) {
                     $status = $isLastPast
-                        ? fake()->randomElement(['Overdue', 'Paid'])
+                        ? $this->faker->randomElement(['Overdue', 'Paid'])
                         : 'Paid';
                 } else {
-                    $status = fake()->randomElement(['Paid', 'Unpaid']);
+                    $status = $this->faker->randomElement(['Paid', 'Unpaid']);
                 }
 
                 $billing = Billing::factory()->create([
@@ -89,8 +94,8 @@ class BillingSeeder extends Seeder
                 $totalCharges += $contractPrice;
 
                 // A. Recurring: Electricity Share (~70% chance)
-                if (fake()->boolean(70)) {
-                    $electricityShare = fake()->randomFloat(2, 300, 600);
+                if ($this->faker->boolean(70)) {
+                    $electricityShare = $this->faker->randomFloat(2, 300, 600);
                     BillingItem::create([
                         'billing_id'      => $billing->billing_id,
                         'charge_category' => 'recurring',
@@ -102,8 +107,8 @@ class BillingSeeder extends Seeder
                 }
 
                 // A. Recurring: Water Share (~40% chance)
-                if (fake()->boolean(40)) {
-                    $waterShare = fake()->randomFloat(2, 50, 150);
+                if ($this->faker->boolean(40)) {
+                    $waterShare = $this->faker->randomFloat(2, 50, 150);
                     BillingItem::create([
                         'billing_id'      => $billing->billing_id,
                         'charge_category' => 'recurring',
@@ -127,8 +132,8 @@ class BillingSeeder extends Seeder
                 }
 
                 // B. Conditional: Late Payment Fee (~10% chance, only for past months)
-                if ($isPast && fake()->boolean(10)) {
-                    $lateFee = fake()->randomElement([100, 200, 300]);
+                if ($isPast && $this->faker->boolean(10)) {
+                    $lateFee = $this->faker->randomElement([100, 200, 300]);
                     BillingItem::create([
                         'billing_id'      => $billing->billing_id,
                         'charge_category' => 'conditional',
@@ -155,13 +160,13 @@ class BillingSeeder extends Seeder
         $now = Carbon::now();
 
         if ($billingDate->lt($now->copy()->subMonths(2)->startOfMonth())) {
-            return fake()->randomElement(['Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Overdue']);
+            return $this->faker->randomElement(['Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Overdue']);
         }
 
         if ($billingDate->lt($now->startOfMonth())) {
-            return fake()->randomElement(['Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Overdue', 'Unpaid']);
+            return $this->faker->randomElement(['Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Paid', 'Overdue', 'Unpaid']);
         }
 
-        return fake()->randomElement(['Paid', 'Paid', 'Unpaid', 'Overdue']);
+        return $this->faker->randomElement(['Paid', 'Paid', 'Unpaid', 'Overdue']);
     }
 }

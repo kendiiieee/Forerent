@@ -10,8 +10,8 @@ class UserFactory extends Factory
 {
     public function definition(): array
     {
-        $firstName = fake()->firstName();
-        $lastName  = fake()->lastName();
+        $firstName = $this->faker->firstName();
+        $lastName  = $this->faker->lastName();
 
         $email = strtolower($firstName . '.' . $lastName) . '@example.com';
 
@@ -21,9 +21,9 @@ class UserFactory extends Factory
 
             'email' => $email,
 
-            'role' => fake()->randomElement(['tenant', 'manager', 'landlord']),
+            'role' => $this->faker->randomElement(['tenant', 'manager', 'landlord']),
 
-            'contact' => fake()->phoneNumber(),
+            'contact' => $this->faker->phoneNumber(),
 
             'profile_img' => 'https://i.pravatar.cc/150?u=' . $email,
 

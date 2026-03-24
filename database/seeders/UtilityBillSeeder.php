@@ -5,13 +5,18 @@ namespace Database\Seeders;
 use App\Models\Lease;
 use App\Models\Unit;
 use App\Models\UtilityBill;
+use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
 class UtilityBillSeeder extends Seeder
 {
+    protected Generator $faker;
+
     public function run(): void
     {
+        $this->faker = app(Generator::class);
+
         // Get units that have active leases
         $units = Unit::whereHas('beds', function ($q) {
             $q->whereHas('leases', function ($q2) {
@@ -36,7 +41,7 @@ class UtilityBillSeeder extends Seeder
                 $billingPeriod = $today->copy()->subMonths($i)->startOfMonth();
 
                 // Electricity bill
-                $electricityTotal = fake()->randomFloat(2, 1200, 2500);
+                $electricityTotal = $this->faker->randomFloat(2, 1200, 2500);
                 $electricityPerTenant = round($electricityTotal / $activeTenantCount, 2);
 
                 UtilityBill::create([
@@ -50,8 +55,8 @@ class UtilityBillSeeder extends Seeder
                 ]);
 
                 // Water bill (~60% chance per month)
-                if (fake()->boolean(60)) {
-                    $waterTotal = fake()->randomFloat(2, 200, 500);
+                if ($this->faker->boolean(60)) {
+                    $waterTotal = $this->faker->randomFloat(2, 200, 500);
                     $waterPerTenant = round($waterTotal / $activeTenantCount, 2);
 
                     UtilityBill::create([
