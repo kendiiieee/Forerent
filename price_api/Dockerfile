@@ -2,11 +2,13 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY price_api/requirements.txt .
+# Remove the 'price_api/' prefix because Docker is already inside that folder
+COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY price_api/ .
+# Use '.' to copy everything from the current folder into the container
+COPY . .
 
 EXPOSE 8000
 
