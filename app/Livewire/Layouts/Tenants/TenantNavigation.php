@@ -255,7 +255,7 @@ class TenantNavigation extends Component
             ->whereIn('tenant_id', function ($q) {
                 $q->select('user_id')->from('users')->where('role', 'tenant');
             })
-            ->distinct('tenant_id')
+            ->distinct()
             ->count('tenant_id');
 
         $expiredTenantIds = Lease::where('leases.status', 'Expired')
@@ -274,7 +274,7 @@ class TenantNavigation extends Component
         if ($expiredTenantIds->isNotEmpty()) {
             $transferredCount = Lease::where('leases.status', 'Active')
                 ->whereIn('tenant_id', $expiredTenantIds)
-                ->distinct('tenant_id')
+                ->distinct()
                 ->count('tenant_id');
             $movedOutCount = $expiredTenantIds->unique()->count() - $transferredCount;
         }
