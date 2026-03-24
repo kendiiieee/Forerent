@@ -21,15 +21,12 @@ if [ "${APP_ENV}" = "production" ] && [ "${LOG_CHANNEL}" = "stack" ] && [ -z "${
 	export LOG_STACK=stderr
 fi
 
-php artisan migrate:fresh --force
+php artisan migrate --force
 php artisan config:cache
 php artisan storage:link
 php artisan config:clear
 php artisan view:clear
 php artisan cache:clear
-
-# Seed in background so supervisord starts immediately
-php artisan db:seed --force &
 
 # Start nginx and php-fpm immediately
 /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

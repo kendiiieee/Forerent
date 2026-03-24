@@ -17,6 +17,12 @@
         </div>
     @endif
 
+    @if($forecast && ($forecast['is_fallback'] ?? false))
+        <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-3 rounded mb-4">
+            <strong>Notice:</strong> {{ $forecast['warning'] ?? 'Using fallback forecast data.' }}
+        </div>
+    @endif
+
     @if($hasData && $maintenanceStats)
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-6 shadow-sm">
