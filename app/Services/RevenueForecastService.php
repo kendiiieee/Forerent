@@ -79,7 +79,7 @@ class RevenueForecastService
             'amount',
             'reference_number'
         ])
-            ->where('transaction_type', 'CREDIT')
+            ->whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
             ->orderBy('transaction_date')
             ->get();
 
