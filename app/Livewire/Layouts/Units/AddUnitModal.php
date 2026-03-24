@@ -2,12 +2,12 @@
 
 namespace App\Livewire\Layouts\Units;
 
-use Livewire\Component;
 use App\Livewire\Concerns\WithNotifications;
 use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\On;
+use Livewire\Component;
 
 class AddUnitModal extends Component
 {
@@ -17,8 +17,8 @@ class AddUnitModal extends Component
     public $modalId;
     public $editingUnitId = null;
     public $editingUnitNumber = null;
-
     public $currentStep = 1;
+
     public $steps = [
         1 => 'Unit Details',
         2 => 'Model Amenities',
@@ -26,19 +26,33 @@ class AddUnitModal extends Component
     ];
 
     public $properties = [];
+
     public $property_id;
+
     public $floor_number;
+
     public $occupants = 'Co-ed';
+
     public $living_area;
+
     public $furnishing = 'Semi-furnished';
+
     public $bed_type;
+
     public $room_cap;
 
+    public $unit_cap;      
+    public $m_f;          
+    public $room_type;
+
     public $model_amenities = [];
+
     public $amenity_labels = [];
 
     public $predicted_price = null;
+
     public $actual_price;
+
     public $is_predicting = false;
 
     // Fixed the missing comma here
@@ -137,7 +151,7 @@ class AddUnitModal extends Component
             'Induction_Cooker',
             'Washing_Machine',
             'Access_Pool',
-            'Access_Gym'
+            'Access_Gym',
         ];
 
         foreach ($amenity_keys as $key) {
@@ -179,7 +193,7 @@ class AddUnitModal extends Component
     {
         $selectedCount = count(array_filter($this->model_amenities));
         $totalAmenities = count($this->model_amenities);
-        
+
         if ($selectedCount === 0) {
             return 'Bare';
         } elseif ($selectedCount === $totalAmenities) {
@@ -192,10 +206,10 @@ class AddUnitModal extends Component
     private function runPrediction()
     {
         $this->is_predicting = true;
-        
+
         // Auto-calculate furnishing based on amenities
         $this->furnishing = $this->calculateFurnishing();
-        
+
         // Data for API - exclude occupants, furnishing is calculated from amenities
         $dataForModel = [
             'Living Area (sqft)' => (float) $this->living_area,
@@ -217,7 +231,7 @@ class AddUnitModal extends Component
             $this->predicted_price = rand(5000, 15000);
         }
 
-        if (!$this->editingUnitId) {
+        if (! $this->editingUnitId) {
             $this->actual_price = $this->predicted_price;
         }
         $this->is_predicting = false;
@@ -228,11 +242,12 @@ class AddUnitModal extends Component
         $this->validate();
 
         try {
-            if (auth()->user()->role === 'manager' && !$this->editingUnitId) {
+            if (auth()->user()->role === 'manager' && ! $this->editingUnitId) {
                 $this->notifyError(
                     'Authorization Failed',
                     'Managers are not authorized to create new units.'
                 );
+
                 return;
             }
 
@@ -255,16 +270,16 @@ class AddUnitModal extends Component
                 if ($unit) {
                     $unit->update($data);
                     $this->notifySuccess(
-                        'Unit #' . $unit->unit_id . ' Updated Successfully!',
+                        'Unit #'.$unit->unit_id.' Updated Successfully!',
                         'Unit details have been updated.'
                     );
                 }
             } else {
                 $newUnit = Unit::create(array_merge($data, [
-                    'unit_number' => $this->generateUniqueUnitNumber($this->property_id, $this->floor_number)
+                    'unit_number' => $this->generateUniqueUnitNumber($this->property_id, $this->floor_number),
                 ]));
                 $this->notifySuccess(
-                    'Unit #' . $newUnit->unit_id . ' Created Successfully!',
+                    'Unit #'.$newUnit->unit_id.' Created Successfully!',
                     'New unit has been added to your property.'
                 );
             }
@@ -281,10 +296,11 @@ class AddUnitModal extends Component
 
     private function generateUniqueUnitNumber($propertyId, $floorNumber): string
     {
-        $baseNumber = sprintf("F%dU%d", $floorNumber, rand(100, 999));
+        $baseNumber = sprintf('F%dU%d', $floorNumber, rand(100, 999));
         while (Unit::where('property_id', $propertyId)->where('unit_number', $baseNumber)->exists()) {
-            $baseNumber = sprintf("F%dU%d", $floorNumber, rand(1000, 9999));
+            $baseNumber = sprintf('F%dU%d', $floorNumber, rand(1000, 9999));
         }
+
         return $baseNumber;
     }
 
@@ -303,7 +319,7 @@ class AddUnitModal extends Component
             'actual_price',
             'is_predicting',
             'editingUnitId',
-            'editingUnitNumber'
+            'editingUnitNumber',
         ]);
         $this->initializeAmenities();
         $this->occupants = 'Co-ed';

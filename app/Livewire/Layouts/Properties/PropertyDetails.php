@@ -34,10 +34,10 @@ class PropertyDetails extends Component
     }
 
     #[On('buildingSelected')]
-    public function onBuildingSelected($buildingId)
+    public function onBuildingSelected($buildingId = null)
     {
-        if ($this->propertyId == $buildingId) {
-            return; // Skip if same building
+        if (! $buildingId || $this->propertyId == $buildingId) {
+            return;
         }
 
         $this->loadPropertyData($buildingId);
