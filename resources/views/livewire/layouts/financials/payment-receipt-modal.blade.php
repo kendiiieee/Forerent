@@ -250,8 +250,8 @@
 
                 <div class="relative z-10 px-8 pt-5 pb-5 flex flex-col text-white">
 
-                    {{-- CITISPACE DORMS label --}}
-                    <p class="text-[10px] font-semibold uppercase tracking-[1.5px] opacity-75 leading-tight mb-0.5">CITISPACE DORMS</p>
+                    {{-- ABC COMPANY label --}}
+                    <p class="text-[10px] font-semibold uppercase tracking-[1.5px] opacity-75 leading-tight mb-0.5">ABC COMPANY</p>
 
                     {{-- Title + Status Badge --}}
                     <div class="flex items-center gap-3">

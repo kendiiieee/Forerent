@@ -41,7 +41,7 @@ class TenantDashboardOverview extends Component
     // Deposit & Fees
     public $securityDeposit = 0;
     public $advanceAmount = 0;
-    public $activePenalties = [];
+    public $activePenalties;
     public $totalPenalties = 0;
 
     // Lease & Contract
@@ -204,7 +204,6 @@ class TenantDashboardOverview extends Component
                 $this->tenantCount = $water->tenant_count;
             }
         }
-
     }
 
     protected function loadDepositData()
@@ -214,8 +213,8 @@ class TenantDashboardOverview extends Component
 
         // Get active penalties from billing items
         $this->activePenalties = BillingItem::whereHas('billing', function ($q) {
-                $q->where('lease_id', $this->lease->lease_id);
-            })
+            $q->where('lease_id', $this->lease->lease_id);
+        })
             ->where('charge_category', 'conditional')
             ->whereIn('charge_type', ['late_fee', 'violation_fee', 'short_term_premium'])
             ->orderBy('created_at', 'desc')
@@ -303,7 +302,7 @@ class TenantDashboardOverview extends Component
         $this->tenantContractData = [
             'lessor_info' => [
                 'business_name'  => $property?->building_name,
-                'company_name'   => $owner?->company_school ?? 'CPMS Ventures Corporation',
+                'company_name'   => $owner?->company_school ?? 'ABC COMPANY',
                 'address'        => $property?->address,
                 'contact'        => $owner?->contact,
                 'email'          => $owner?->email,
