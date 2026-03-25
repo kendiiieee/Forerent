@@ -6,8 +6,11 @@
 @section('content')
     @include('livewire.layouts.dashboard.admingreeting')
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-        <div class="lg:col-span-1">
+    {{-- Main Content Flex Layout --}}
+    <div class="flex flex-col gap-6">
+
+        {{-- Buildings Section --}}
+        <div>
             <livewire:layouts.properties.building-cards-section
                 :show-add-button="auth()->user()->role === 'landlord'"
                 :stacked="true"
@@ -15,16 +18,17 @@
             />
         </div>
 
-    {{-- Property Details Section --}}
-    <div class="mt-6">
-        <livewire:layouts.properties.property-details />
-    </div>
+        {{-- Property Details Section --}}
+        <div>
+            <livewire:layouts.properties.property-details />
+        </div>
 
-    {{-- Units Section --}}
-    <div class="mt-6">
-        <livewire:layouts.units.unit-accordion
-            :show-add-button="false"
-        />
+        {{-- Units Section --}}
+        <div>
+            <livewire:layouts.units.unit-accordion
+                :show-add-button="false"
+            />
+        </div>
     </div>
 
     <livewire:layouts.properties.add-property-modal modal-id="property-dashboard" />
