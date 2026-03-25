@@ -42,7 +42,7 @@
             {{-- Discard Button (Supports both Route and Livewire Action) --}}
             @if($discardAction)
                 <button
-                    wire:click="{{ $discardAction }}"
+                    @click="show = false; $wire.{{ $discardAction }}()"
                     class="flex-1 bg-[#D6E6FF] hover:bg-[#c3daff] text-[#0C0B50] font-bold py-3 rounded-xl transition-colors text-sm flex items-center justify-center"
                 >
                     {{ $discardText }}

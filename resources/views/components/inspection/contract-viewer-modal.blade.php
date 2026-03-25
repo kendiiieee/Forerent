@@ -10,7 +10,7 @@
         <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
             <div class="bg-[#070589] text-white p-5 flex items-center justify-between flex-shrink-0">
                 <h2 class="text-lg font-bold">{{ $title }}</h2>
-                <button wire:click="{{ $wireCloseMethod }}" class="text-white hover:text-blue-200">
+                <button @click="$el.closest('.fixed').style.display='none'; $wire.{{ $wireCloseMethod }}()" class="text-white hover:text-blue-200">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>

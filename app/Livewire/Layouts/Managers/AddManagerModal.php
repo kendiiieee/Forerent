@@ -170,7 +170,13 @@ class AddManagerModal extends Component
 
     public function validateAndConfirm(): void
     {
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
+
         $this->dispatch('open-modal', 'save-manager-confirmation');
     }
 

@@ -73,7 +73,7 @@
                     <h2 class="text-lg font-bold">{{ $title }}</h2>
                     <p class="text-xs text-blue-200 mt-0.5">{{ $subtitle }}</p>
                 </div>
-                <button wire:click="{{ $wireCloseMethod }}" class="text-white hover:text-blue-200 transition-colors">
+                <button @click="$el.closest('.fixed').style.display='none'; $wire.{{ $wireCloseMethod }}()" class="text-white hover:text-blue-200 transition-colors">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -120,7 +120,7 @@
                     Clear
                 </button>
                 <div class="flex gap-2">
-                    <button wire:click="{{ $wireCloseMethod }}" class="px-5 py-2.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
+                    <button @click="$el.closest('.fixed').style.display='none'; $wire.{{ $wireCloseMethod }}()" class="px-5 py-2.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancel</button>
                     <button @click="submitSignature()" :disabled="isEmpty" class="px-5 py-2.5 text-xs font-bold text-white bg-[#070589] hover:bg-[#000060] rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                         Apply Signature

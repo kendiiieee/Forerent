@@ -36,7 +36,7 @@ class RevenueReports extends Component
         // Revenue/inflow source: credit transactions.
         $monthlyIncome = Transaction::where('transaction_type', 'Credit')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
+            ->selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
             ->groupBy('month')
             ->get();
 
@@ -45,7 +45,7 @@ class RevenueReports extends Component
         }
 
         $monthlyExpenses = MaintenanceLog::whereYear('completion_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM completion_date)::int as month, SUM(cost) as total')
+            ->selectRaw('MONTH(completion_date) as month, SUM(cost) as total')
             ->groupBy('month')
             ->get();
 

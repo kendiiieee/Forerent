@@ -203,7 +203,7 @@ class RevenueForecastService
         $rows = Transaction::whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
             ->where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
+            ->selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
             ->groupBy('month')
             ->get();
 
@@ -219,7 +219,7 @@ class RevenueForecastService
     {
         $rows = Transaction::whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
             ->where('category', 'Rent Payment')
-            ->selectRaw('EXTRACT(YEAR FROM transaction_date)::int as year, EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
+            ->selectRaw('YEAR(transaction_date) as year, MONTH(transaction_date) as month, SUM(amount) as total')
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')

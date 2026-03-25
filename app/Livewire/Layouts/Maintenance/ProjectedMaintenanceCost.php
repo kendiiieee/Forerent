@@ -27,7 +27,7 @@ class ProjectedMaintenanceCost extends Component
 
         // 2. Query REAL requests from database
         $requests = DB::table('maintenance_requests')
-            ->select(DB::raw('EXTRACT(MONTH FROM created_at)::int as month'), DB::raw('COUNT(*) as count'))
+            ->select(DB::raw('MONTH(created_at) as month'), DB::raw('COUNT(*) as count'))
             ->whereYear('created_at', date('Y'))
             ->groupBy('month')
             ->get();

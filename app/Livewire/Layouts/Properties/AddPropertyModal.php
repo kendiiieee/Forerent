@@ -138,6 +138,12 @@ class AddPropertyModal extends Component
         }
     }
 
+    public function updatedBusinessPermit(): void { $this->resetValidation('businessPermit'); }
+    public function updatedBir2303(): void { $this->resetValidation('bir2303'); }
+    public function updatedInspectionReport(): void { $this->resetValidation('inspectionReport'); }
+    public function updatedBarangayClearance(): void { $this->resetValidation('barangayClearance'); }
+    public function updatedOccupancyPermit(): void { $this->resetValidation('occupancyPermit'); }
+
     public function updatedNewPhotos(): void
     {
         $remaining = 5 - count($this->propertyPhotos) - count($this->existingPhotos);
@@ -180,9 +186,21 @@ class AddPropertyModal extends Component
         $this->dispatch('propertyModalClosed');
     }
 
+    public function validateAndConfirm(): void
+    {
+        try {
+            $this->validate();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
+
+        // Validation passed — open the confirmation modal
+        $this->dispatch('open-modal', 'save-property-confirmation');
+    }
+
     public function next(): void
     {
-        $this->validate();
 
         try {
             DB::beginTransaction();
