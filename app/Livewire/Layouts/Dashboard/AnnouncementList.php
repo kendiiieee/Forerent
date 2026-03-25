@@ -35,8 +35,9 @@ class AnnouncementList extends Component
                         });
                 })
                 ->orderBy('created_at', 'desc')
-                ->distinct('announcement_id')
-                ->get();
+                ->get()
+                ->unique('announcement_id')
+                ->values();
             }
             else if ($this->role == "tenant") {
             $propertyIds = Lease::where('tenant_id', Auth::id())
