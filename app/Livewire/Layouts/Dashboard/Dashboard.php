@@ -214,6 +214,7 @@ class Dashboard extends Component
 
         // Get monthly revenue from credit transactions.
         $monthlyBillings = Transaction::where('transaction_type', 'Credit')
+            ->where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
             ->selectRaw('EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
             ->groupBy('month')

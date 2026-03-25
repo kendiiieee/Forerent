@@ -44,6 +44,12 @@
         </div>
     @endif
 
+    @if($warning)
+        <div class="bg-amber-100 border border-amber-300 text-amber-900 px-4 py-3 rounded mb-4">
+            <strong>Notice:</strong> {{ $warning }}
+        </div>
+    @endif
+
     @if(!empty($monthlyForecasts))
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
             <!-- Summary Cards (stacked right) -->

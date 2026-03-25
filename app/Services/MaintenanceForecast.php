@@ -7,15 +7,24 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Client\Response;
+use Throwable;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 
 class MaintenanceForecast
 {
     protected $apiBaseUrl;
+    private int $timeoutSeconds;
+    private int $retryAttempts;
+    private int $retryBaseDelayMs;
 
     public function __construct()
     {
         // Use FASTAPI_URL instead of PYTHON_API_URL
-        $this->apiBaseUrl = env('FASTAPI_URL', 'http://localhost:8000');
+        $this->apiBaseUrl = env('FASTAPI_URL', env('PYTHON_API_URL', 'http://localhost:8000'));
+        $this->timeoutSeconds = (int) env('FORECAST_API_TIMEOUT_SECONDS', 120);
+        $this->retryAttempts = max(1, (int) env('FORECAST_API_RETRY_ATTEMPTS', 3));
+        $this->retryBaseDelayMs = max(100, (int) env('FORECAST_API_RETRY_BASE_DELAY_MS', 400));
         Log::info('API Base URL: ' . $this->apiBaseUrl);
     }
 
@@ -27,7 +36,7 @@ class MaintenanceForecast
             Log::info("Sending maintenance forecast request for year: {$year}");
 
             /** @var Response $response */
-            $response = Http::timeout(120)->post($this->apiBaseUrl . '/api/forecast/maintenance', [
+            $response = $this->postWithRetry('/api/forecast/maintenance', [
                 'csv_data' => $csvData,
                 'year' => $year
             ]);
@@ -47,6 +56,74 @@ class MaintenanceForecast
             // Return a fallback response so the UI remains usable during API outages.
             return $this->buildFallbackForecast((int)$year, (array)$maintenanceData, $e->getMessage());
         }
+    }
+
+    private function postWithRetry(string $endpoint, array $payload): Response
+    {
+        $url = rtrim($this->apiBaseUrl, '/') . '/' . ltrim($endpoint, '/');
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $this->retryAttempts; $attempt++) {
+            try {
+                /** @var Response $response */
+                $response = Http::timeout($this->timeoutSeconds)
+                    ->asJson()
+                    ->post($url, $payload);
+
+                if ($response->successful()) {
+                    return $response;
+                }
+
+                if (!$this->shouldRetryStatus($response->status()) || $attempt === $this->retryAttempts) {
+                    return $response;
+                }
+
+                Log::warning('Transient maintenance forecast API response, retrying', [
+                    'attempt' => $attempt,
+                    'max_attempts' => $this->retryAttempts,
+                    'status' => $response->status(),
+                ]);
+
+                $this->sleepWithBackoff($attempt);
+            } catch (Throwable $exception) {
+                $lastException = $exception;
+
+                if (!$this->shouldRetryException($exception) || $attempt === $this->retryAttempts) {
+                    throw $exception;
+                }
+
+                Log::warning('Transient maintenance forecast API exception, retrying', [
+                    'attempt' => $attempt,
+                    'max_attempts' => $this->retryAttempts,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                $this->sleepWithBackoff($attempt);
+            }
+        }
+
+        if ($lastException instanceof Throwable) {
+            throw $lastException;
+        }
+
+        throw new \RuntimeException('Unable to reach maintenance forecast API after retry attempts.');
+    }
+
+    private function shouldRetryStatus(int $status): bool
+    {
+        return $status === 429 || $status >= 500;
+    }
+
+    private function shouldRetryException(Throwable $exception): bool
+    {
+        return $exception instanceof ConnectionException || $exception instanceof RequestException;
+    }
+
+    private function sleepWithBackoff(int $attempt): void
+    {
+        $exponent = max(0, $attempt - 1);
+        $delayMs = ($this->retryBaseDelayMs * (2 ** $exponent)) + random_int(0, 250);
+        usleep($delayMs * 1000);
     }
 
     private function formatApiError(int $status, string $body): string
