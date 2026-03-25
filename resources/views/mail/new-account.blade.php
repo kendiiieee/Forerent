@@ -1,25 +1,23 @@
 <x-mail::message>
-    # A Warm Welcome to [Your App Name]!
+    # Welcome to {{ config('app.name') }}!
 
-    Hello **{{ $recipientName }}**,
+    Hello {{ $recipientName }},
 
-    We're delighted to let you know that your account as a **{{ $accountType }}** has been set up! You now have full access to [Your App Name] and all the features designed to make your experience smooth and easy.
+    We're excited to let you know that your account as a <strong>{{ $accountType }}</strong> has been created for <strong>{{ config('app.name') }}</strong>.
 
-    To get started, please use the temporary credentials below to log in:
+    Here are your login credentials:
 
-    **Your Login Email:** {{ $email }}
-    **Temporary Password:** {{ $tempPassword }}
+    <strong>Email:</strong> {{ $email }}<br>
+    <strong>Temporary Password:</strong> {{ $tempPassword }}
 
-    **Quick Tip:** For your security, please **change this temporary password** immediately after your first successful login.
-
-    Ready to jump in? Click the button below to head straight to the login page:
+    <em>For your security, please change this temporary password after your first login.</em>
 
     <x-mail::button :url="$loginUrl">
-        Start Using [Your App Name]
+        Login to {{ config('app.name') }}
     </x-mail::button>
 
-    We're truly excited to have you join our community! If anything comes up, please don't hesitate to reach out to the administrator.
+    If you have any questions or need help, feel free to reply to this email or contact our support team.
 
-    Thanks and welcome aboard,<br>
-    The Team at {{ config('app.name') }}
+    Thank you for joining us!<br>
+    <strong>The {{ config('app.name') }} Team</strong>
 </x-mail::message>
