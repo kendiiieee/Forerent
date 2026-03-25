@@ -55,7 +55,10 @@ class BuildingCardsSection extends Component
         if (!empty($this->properties)) {
             $this->selectedBuilding = $this->properties[0]['property_id'];
             $this->dispatch('buildingSelected', buildingId: $this->selectedBuilding);
-            $this->dispatch($this->eventName, id: $this->selectedBuilding);
+
+            if ($this->eventName !== 'buildingSelected') {
+                $this->dispatch($this->eventName, id: $this->selectedBuilding);
+            }
         }
     }
 

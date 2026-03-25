@@ -15,28 +15,32 @@ class AnnouncementList extends Component
 
     public function mount()
     {
-        $this->role = auth()->user()->role;
+        $this->role = Auth::user()->role;
 
         if ($this->role == "landlord") {
-            $this->announcements = Announcement::where('author_id', auth()->id())
+            $this->announcements = Announcement::where('author_id', Auth::id())
                 ->orderBy('created_at', 'desc')
                 ->get();
-        } else if ($this->role == "manager") {
-            $propertyIds = Unit::where('manager_id', auth()->id())->get()
+        }
+        else if ($this->role == "manager") {
+            $propertyIds = Unit::where('manager_id', Auth::id())->get()
                 ->pluck('property_id')
                 ->unique();
 
             $this->announcements = Announcement::where(function ($query) use ($propertyIds) {
-                    $query->where('author_id', auth()->id())
+                    $query->where('author_id', Auth::id())
                         ->orWhere(function ($propertyQuery) use ($propertyIds) {
                             $propertyQuery->whereIn('property_id', $propertyIds)
                                 ->where('recipient_role', 'manager');
                         });
                 })
                 ->orderBy('created_at', 'desc')
-                ->where('recipient_role', 'manager')->get();
-        } else if ($this->role == "tenant") {
-            $propertyIds = Lease::where('tenant_id', auth()->id())
+                ->get()
+                ->unique('announcement_id')
+                ->values();
+            }
+            else if ($this->role == "tenant") {
+            $propertyIds = Lease::where('tenant_id', Auth::id())
                 ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
                 ->join('units', 'beds.unit_id', '=', 'units.unit_id')
                 ->pluck('units.property_id')
@@ -47,16 +51,6 @@ class AnnouncementList extends Component
                 ->where('recipient_role', 'tenant')
                 ->orderBy('created_at', 'desc')
                 ->get();
-        }
-    }
-
-    public function deleteAnnouncement($announcementId)
-    {
-        $announcement = Announcement::find($announcementId);
-        if ($announcement) {
-            $announcement->delete();
-            // Refresh announcements
-            $this->mount();
         }
     }
 

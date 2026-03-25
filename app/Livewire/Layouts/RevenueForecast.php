@@ -17,6 +17,8 @@ class RevenueForecast extends Component
     public $averageMonthlyRevenue = 0;
     public $loading = false;
     public $error = null;
+    public $warning = null;
+    public $isFallback = false;
     public $dataPointsUsed = 0;
 
     protected $revenueForecastService;
@@ -43,6 +45,8 @@ class RevenueForecast extends Component
     {
         $this->loading = true;
         $this->error = null;
+        $this->warning = null;
+        $this->isFallback = false;
         $this->monthlyForecasts = [];
         $this->totalAnnualRevenue = 0;
         $this->totalRemainingRevenue = 0;
@@ -57,9 +61,13 @@ class RevenueForecast extends Component
             $this->totalRemainingRevenue = $result['total_remaining_revenue'];
             $this->averageMonthlyRevenue = $result['average_monthly_revenue'];
             $this->dataPointsUsed = $result['data_points_used'] ?? 0;
+            $this->isFallback = (bool)($result['is_fallback'] ?? false);
+            $this->warning = $result['warning'] ?? null;
             
             // Add actual earnings data to each month
-            $this->monthlyForecasts = $this->enrichForecastWithActualEarnings($this->monthlyForecasts);
+            if (!$this->isFallback) {
+                $this->monthlyForecasts = $this->enrichForecastWithActualEarnings($this->monthlyForecasts);
+            }
             
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
@@ -78,7 +86,8 @@ class RevenueForecast extends Component
                 $startDate = Carbon::create($this->forecastYear, $monthNumber, 1)->startOfMonth();
                 $endDate = $startDate->copy()->endOfMonth();
                 
-                $actualRevenue = Transaction::where('transaction_type', 'CREDIT')
+                $actualRevenue = Transaction::whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
+                    ->where('category', 'Rent Payment')
                     ->whereBetween('transaction_date', [$startDate, $endDate])
                     ->sum('amount');
                 

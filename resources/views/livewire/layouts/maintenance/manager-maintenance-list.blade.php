@@ -1,7 +1,7 @@
 <div class="flex flex-col w-full pb-6" style="font-family: 'Open Sans', sans-serif;">
 
     {{-- 1. TABS & ACTIONS ROW --}}
-    <div class="flex flex-col md:flex-row justify-between items-center mb-6 flex-shrink-0 gap-4">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 flex-shrink-0 gap-4 bg-white border border-gray-200 rounded-2xl p-3 md:p-4">
 
         {{-- Left Side: Sort Tabs --}}
         @php
@@ -21,7 +21,7 @@
         />
 
         {{-- Right Side: Search & Sort --}}
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
             <x-ui.search-bar
                 model="search"
                 placeholder="Search..."

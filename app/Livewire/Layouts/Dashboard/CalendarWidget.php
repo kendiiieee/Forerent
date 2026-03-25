@@ -99,8 +99,9 @@ class CalendarWidget extends Component
                 ->whereDate('notification_date', $this->selectedDate)
                 ->orderBy('notification_date', 'desc')
                 ->orderBy('created_at', 'desc')
-                ->distinct()
-                ->get();
+                ->get()
+                ->unique('announcement_id')
+                ->values();
         }
         else if ($this->role == "tenant") {
             $leases = Lease::with('bed.unit')->where('tenant_id', auth()->id())->get();
