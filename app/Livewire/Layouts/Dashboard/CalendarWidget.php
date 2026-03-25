@@ -99,7 +99,7 @@ class CalendarWidget extends Component
                 ->whereDate('notification_date', $this->selectedDate)
                 ->orderBy('notification_date', 'desc')
                 ->orderBy('created_at', 'desc')
-                ->distinct()
+                ->distinct('announcement_id')
                 ->get();
         }
         else if ($this->role == "tenant") {

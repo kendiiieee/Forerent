@@ -38,10 +38,17 @@
     @endif
 
     @if($forecast && isset($forecast['success']) && $forecast['success'])
-        <!-- Maintenance Chart -->
-        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8">
-            <h3 class="text-lg font-semibold text-gray-800 mb-6">Monthly Maintenance Costs - {{ $year }}</h3>
-            <div id="maintenanceChart" style="height: 400px;"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
+            <div class="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
+                <h3 class="text-lg font-semibold text-gray-800 mb-6">Monthly Maintenance Costs - {{ $year }}</h3>
+                <div id="maintenanceChart" style="height: 400px;"></div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-1 flex flex-col">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Job Count Forecast</h3>
+                <p class="text-sm text-gray-500 mb-4">Estimated maintenance jobs per month</p>
+                <div id="jobCountChart" class="flex-1" style="height: 400px;"></div>
+            </div>
         </div>
 
         <!-- Monthly Forecast Table -->
@@ -54,7 +61,6 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-700">Month</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700">Forecasted Cost</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-700">Est. Jobs</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Urgency Score</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,49 +68,13 @@
                         <tr class="border-b hover:bg-gray-50">
                             <td class="px-4 py-3 font-medium text-gray-900">{{ $monthly['month_name'] ?? '' }}</td>
                             <td class="px-4 py-3 text-gray-700">₱{{ number_format($monthly['forecasted_cost'] ?? 0, 2) }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $monthly['maintenance_count_estimate'] ?? 0 }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ number_format($monthly['urgency_estimate'] ?? 0, 1) }}</td>
+                            <td class="px-4 py-3 text-gray-700">{{ (int) round($monthly['maintenance_count_estimate'] ?? 0) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <!-- Maintenance Schedule -->
-        @if(!empty($forecast['maintenance_schedule']))
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Recommended Maintenance Schedule (Top 5)</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50">
-                        <tr class="border-b">
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Month</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Category</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Priority</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Estimated Cost</th>
-                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach(($forecast['maintenance_schedule'] ?? []) as $schedule)
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3 font-medium text-gray-900">{{ $schedule['month_name'] ?? '' }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $schedule['category'] ?? '' }}</td>
-                            <td class="px-4 py-3">
-                                <span class="inline-flex px-2 py-1 rounded-full text-xs font-semibold {{ ($schedule['priority'] ?? '') == 'High' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800' }}">
-                                    {{ $schedule['priority'] ?? '' }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-700">₱{{ number_format($schedule['estimated_cost'] ?? 0, 2) }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $schedule['reason'] ?? '' }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        @endif
 
         <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
         <script>
@@ -122,6 +92,12 @@
                     {
                         name: 'Forecasted Cost',
                         data: monthlyForecasts.map(f => f.forecasted_cost)
+                    }
+                ];
+                const jobCountSeries = [
+                    {
+                        name: 'Est. Jobs',
+                        data: monthlyForecasts.map(f => Math.round(Number(f.maintenance_count_estimate || 0)))
                     }
                 ];
 
@@ -236,6 +212,10 @@
                     window.maintenanceChartInstance.destroy();
                 }
 
+                if (window.jobCountChartInstance) {
+                    window.jobCountChartInstance.destroy();
+                }
+
                 // Create new chart
                 window.maintenanceChartInstance = new ApexCharts(
                     document.getElementById('maintenanceChart'),
@@ -246,6 +226,80 @@
                 );
                 
                 window.maintenanceChartInstance.render();
+
+                const jobCountOptions = {
+                    chart: {
+                        type: 'bar',
+                        height: 400,
+                        toolbar: {
+                            show: false
+                        },
+                        animations: {
+                            enabled: true,
+                            speed: 700
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            borderRadius: 6,
+                            barHeight: '65%'
+                        }
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function (val) {
+                            return Math.round(val);
+                        }
+                    },
+                    xaxis: {
+                        categories: categories,
+                        labels: {
+                            formatter: function (val) {
+                                return Math.round(val);
+                            }
+                        },
+                        title: {
+                            text: 'Jobs'
+                        }
+                    },
+                    yaxis: {
+                        labels: {
+                            style: {
+                                fontSize: '11px'
+                            }
+                        }
+                    },
+                    stroke: {
+                        width: 1,
+                        colors: ['#ffffff']
+                    },
+                    fill: {
+                        opacity: 0.95
+                    },
+                    colors: ['#2563EB'],
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return Math.round(val) + ' jobs';
+                            }
+                        }
+                    },
+                    grid: {
+                        borderColor: '#E5E7EB',
+                        strokeDashArray: 3
+                    }
+                };
+
+                window.jobCountChartInstance = new ApexCharts(
+                    document.getElementById('jobCountChart'),
+                    {
+                        series: jobCountSeries,
+                        ...jobCountOptions
+                    }
+                );
+
+                window.jobCountChartInstance.render();
             }
         </script>
     @elseif($isGenerating)
