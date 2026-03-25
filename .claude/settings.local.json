@@ -53,7 +53,8 @@
       "Bash(\"D:/Xampp/php/php.exe\" composer.phar update barryvdh/laravel-dompdf --with-all-dependencies --ignore-platform-reqs)",
       "Bash(ls \"C:/laragon/bin/php/\"*\"/php.exe\")",
       "Bash(ls \"C:/wamp64/bin/php/\"*\"/php.exe\")",
-      "Read(//c//**)"
+      "Read(//c//**)",
+      "Bash(wc -l \"e:/reigne/Citispace-Forerent/app/Livewire/Concerns/WithESignature.php\" \"e:/reigne/Citispace-Forerent/resources/views/components/inspection/\"*.blade.php)"
     ]
   }
 }

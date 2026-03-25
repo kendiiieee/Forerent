@@ -3,17 +3,29 @@
     Matches the official Dorm_Move_Out_Contract.pdf template exactly.
 
     Required variables:
-    - $t                    : tenant data array (lessor_info, personal_info, contact_info, rent_details, move_in_details, move_out_details)
-    - $deposit              : security deposit amount
-    - $moveOutChecklist     : array of move-out checklist items (optional, defaults to [])
-    - $itemsReturned        : array of returned items (optional, defaults to [])
-    - $inspectionChecklist  : array of move-in checklist items for comparison (optional, defaults to [])
+    - $t                         : tenant data array
+    - $deposit                   : security deposit amount
+    - $moveOutChecklist          : array of move-out checklist items (optional)
+    - $itemsReturned             : array of returned items (optional)
+    - $inspectionChecklist       : array of move-in checklist items for comparison (optional)
+    - $moveOutTenantSignature    : move-out tenant signature path (nullable)
+    - $moveOutOwnerSignature     : move-out owner signature path (nullable)
+    - $moveOutTenantSignedAt     : formatted date string (nullable)
+    - $moveOutOwnerSignedAt      : formatted date string (nullable)
+    - $moveOutContractAgreed     : bool
+    - $signatureMode             : 'manager' (interactive sign buttons) or 'tenant' (read-only display)
 --}}
 
 @php
     $moveOutChecklist = $moveOutChecklist ?? [];
     $itemsReturned = $itemsReturned ?? [];
     $inspectionChecklist = $inspectionChecklist ?? [];
+    $moveOutTenantSignature = $moveOutTenantSignature ?? null;
+    $moveOutOwnerSignature = $moveOutOwnerSignature ?? null;
+    $moveOutTenantSignedAt = $moveOutTenantSignedAt ?? null;
+    $moveOutOwnerSignedAt = $moveOutOwnerSignedAt ?? null;
+    $moveOutContractAgreed = $moveOutContractAgreed ?? false;
+    $signatureMode = $signatureMode ?? 'tenant';
 @endphp
 
 {{-- Page Header --}}
@@ -290,19 +302,76 @@
     <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 9 — Agreement and Signatures</h3>
     <p class="text-xs text-gray-700 mb-6">By signing below, both parties confirm that the move-out inspection has been conducted, all balances have been accounted for, and they voluntarily agree to the deposit settlement terms stated herein.</p>
 
-    {{-- Signature lines (print-ready, no e-signature) --}}
-    <div class="grid grid-cols-2 gap-12 mt-8">
+    {{-- Signature display --}}
+    <div class="grid grid-cols-2 gap-8 mt-4">
+        {{-- Tenant Signature --}}
         <div class="text-center">
-            <div class="border-b border-gray-400 pb-1 mb-1 h-16"></div>
-            <p class="text-xs font-semibold text-gray-800">Tenant's Signature Over Printed Name</p>
-            <p class="text-xs text-gray-400 mt-2">Date: ___________________</p>
+            @if($moveOutTenantSignature)
+                <div class="border-2 border-emerald-200 bg-emerald-50/50 rounded-xl h-24 mb-2 flex items-center justify-center p-2">
+                    <img src="{{ asset('storage/' . $moveOutTenantSignature) }}" class="max-h-full max-w-full object-contain" alt="Tenant Signature">
+                </div>
+                <div class="border-b border-gray-400 mb-1"></div>
+                <p class="text-xs font-semibold text-gray-800">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
+                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
+            @else
+                @if($signatureMode === 'manager')
+                    <button
+                        wire:click="openMoveOutSignatureModal('tenant')"
+                        class="w-full border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer group no-print"
+                    >
+                        <svg class="w-6 h-6 text-blue-400 group-hover:text-blue-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                        <span class="text-[10px] font-semibold text-blue-500 group-hover:text-blue-600">Click to Sign</span>
+                    </button>
+                @else
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
+                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
+                    </div>
+                @endif
+                <div class="border-b border-gray-400 mb-1"></div>
+                <p class="text-xs font-semibold text-gray-500">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
+                <p class="text-[10px] text-gray-400 mt-1">Tenant's Signature Over Printed Name</p>
+            @endif
+            <p class="text-xs text-gray-400 mt-2">Date: {{ $moveOutTenantSignedAt ?? '___________________' }}</p>
         </div>
+
+        {{-- Owner/Manager Signature --}}
         <div class="text-center">
-            <div class="border-b border-gray-400 pb-1 mb-1 h-16"></div>
-            <p class="text-xs font-semibold text-gray-800">Lessor / Authorized Representative<br>Signature Over Printed Name</p>
-            <p class="text-xs text-gray-400 mt-2">Date: ___________________</p>
+            @if($moveOutOwnerSignature)
+                <div class="border-2 border-emerald-200 bg-emerald-50/50 rounded-xl h-24 mb-2 flex items-center justify-center p-2">
+                    <img src="{{ asset('storage/' . $moveOutOwnerSignature) }}" class="max-h-full max-w-full object-contain" alt="Owner Signature">
+                </div>
+                <div class="border-b border-gray-400 mb-1"></div>
+                <p class="text-xs font-semibold text-gray-800">{{ $t['lessor_info']['representative'] }}</p>
+                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutOwnerSignedAt }}</p>
+            @else
+                @if($signatureMode === 'manager')
+                    <button
+                        wire:click="openMoveOutSignatureModal('owner')"
+                        class="w-full border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-indigo-50 hover:border-indigo-400 transition-all cursor-pointer group no-print"
+                    >
+                        <svg class="w-6 h-6 text-indigo-400 group-hover:text-indigo-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                        <span class="text-[10px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
+                    </button>
+                @else
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
+                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
+                    </div>
+                @endif
+                <div class="border-b border-gray-400 mb-1"></div>
+                <p class="text-xs font-semibold text-gray-500">{{ $t['lessor_info']['representative'] }}</p>
+                <p class="text-[10px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
+            @endif
+            <p class="text-xs text-gray-400 mt-2">Date: {{ $moveOutOwnerSignedAt ?? '___________________' }}</p>
         </div>
     </div>
+
+    {{-- Contract Status --}}
+    @if($moveOutContractAgreed)
+        <div class="mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+            <span class="text-sm font-bold text-emerald-700">Move-Out Contract Fully Signed</span>
+            <p class="text-[10px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
+        </div>
+    @endif
 
     {{-- Witnesses --}}
     <p class="text-xs font-bold text-gray-700 mt-8 mb-4">Witnessed by:</p>
