@@ -53,6 +53,42 @@ class SettingsForm extends Component
         $this->existingGovernmentIdImage = $user->government_id_image;
     }
 
+    public function getExistingProfileImgUrlProperty(): ?string
+    {
+        return $this->resolvePublicFileUrl($this->existingProfileImg);
+    }
+
+    public function getExistingGovernmentIdImageUrlProperty(): ?string
+    {
+        return $this->resolvePublicFileUrl($this->existingGovernmentIdImage);
+    }
+
+    private function resolvePublicFileUrl(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        $normalized = $this->normalizeStoragePath($path);
+
+        if (!Storage::disk('public')->exists($normalized)) {
+            return null;
+        }
+
+        return Storage::url($normalized);
+    }
+
+    private function normalizeStoragePath(string $path): string
+    {
+        $normalized = ltrim(trim($path), '/');
+
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        return $normalized;
+    }
+
     public function removeProfilePicture()
     {
         $this->profilePicture = null;

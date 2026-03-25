@@ -33,8 +33,8 @@
                 <label class="cursor-pointer group relative block w-24 h-24">
                     @if ($profilePicture)
                         <img src="{{ $profilePicture->temporaryUrl() }}" class="w-full h-full rounded-full object-cover border-4 border-[#001B5E]">
-                    @elseif ($existingProfileImg)
-                        <img src="{{ asset('storage/' . $existingProfileImg) }}" class="w-full h-full rounded-full object-cover border-4 border-[#001B5E]">
+                    @elseif ($this->existingProfileImgUrl)
+                        <img src="{{ $this->existingProfileImgUrl }}" class="w-full h-full rounded-full object-cover border-4 border-[#001B5E]">
                     @else
                         <div class="w-full h-full rounded-full bg-[#001B5E] flex items-center justify-center">
                             <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
@@ -77,8 +77,9 @@
                     <input
                         type="text"
                         id="first_name"
-                        wire:model.lazy="firstName"
-                        placeholder="Juan"
+                        wire:model.defer="firstName"
+                        value="{{ $firstName ?? '' }}"
+                        placeholder="Enter first name"
                         class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
                 </div>
@@ -91,8 +92,9 @@
                     <input
                         type="text"
                         id="last_name"
-                        wire:model.lazy="lastName"
-                        placeholder="Dela Cruz"
+                        wire:model.defer="lastName"
+                        value="{{ $lastName ?? '' }}"
+                        placeholder="Enter last name"
                         class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
                 </div>
@@ -115,12 +117,13 @@
                     <input
                         type="tel"
                         id="phone_number"
-                        wire:model.lazy="phoneNumber"
+                        wire:model.defer="phoneNumber"
+                        value="{{ $phoneNumber ?? '' }}"
                         inputmode="numeric"
                         maxlength="10"
                         pattern="[0-9]{10}"
                         oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"
-                        placeholder="9123456789"
+                        placeholder="Enter phone number"
                         class="w-full border-0 bg-transparent px-3 text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
                 </div>
@@ -133,8 +136,9 @@
                     <input
                         type="email"
                         id="email"
-                        wire:model.lazy="email"
-                        placeholder="juan.delacruz@example.com"
+                        wire:model.defer="email"
+                        value="{{ $email ?? '' }}"
+                        placeholder="Enter email address"
                         class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
                 </div>
@@ -161,9 +165,9 @@
                         <img src="{{ $governmentIdImage->temporaryUrl() }}" class="w-full max-h-48 object-contain rounded-xl border border-gray-200 shadow-sm">
                         <button type="button" wire:click="removeGovernmentIdImage" class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-red-500 text-xs font-bold text-white shadow-md hover:bg-red-600">&times;</button>
                     </div>
-                @elseif ($existingGovernmentIdImage)
+                @elseif ($this->existingGovernmentIdImageUrl)
                     <div class="relative inline-block w-full max-w-md">
-                        <img src="{{ asset('storage/' . $existingGovernmentIdImage) }}" class="w-full max-h-48 object-contain rounded-xl border border-gray-200 shadow-sm">
+                        <img src="{{ $this->existingGovernmentIdImageUrl }}" class="w-full max-h-48 object-contain rounded-xl border border-gray-200 shadow-sm">
                         <button type="button" wire:click="removeGovernmentIdImage" class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-red-500 text-xs font-bold text-white shadow-md hover:bg-red-600">&times;</button>
                     </div>
                 @else
