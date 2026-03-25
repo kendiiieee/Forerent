@@ -251,101 +251,13 @@
                 <div class="space-y-3 pt-1 pb-2">
 
                     {{-- Move-In Inspection Expandable Card --}}
-                    <div
-                        x-data="{
-                            open: false,
-                            animating: false,
-                            height: '0',
-                            init() {
-                            },
-                            toggle() {
-                                if (this.open) { this.close(); } else { this.openCard(); }
-                            },
-                            openCard() {
-                                this.open = true;
-                                this.animating = true;
-                                const el = this.$refs.content;
-                                el.style.height = '0px';
-                                el.style.overflow = 'hidden';
-                                this.$nextTick(() => {
-                                    el.style.height = el.scrollHeight + 'px';
-                                    setTimeout(() => {
-                                        if (this.open) {
-                                            el.style.height = 'auto';
-                                            el.style.overflow = 'visible';
-                                        }
-                                        this.animating = false;
-                                    }, 500);
-                                });
-                            },
-                            close() {
-                                this.animating = true;
-                                const el = this.$refs.content;
-                                el.style.height = el.scrollHeight + 'px';
-                                el.style.overflow = 'hidden';
-                                requestAnimationFrame(() => {
-                                    el.style.height = '0px';
-                                    setTimeout(() => {
-                                        this.open = false;
-                                        this.animating = false;
-                                    }, 500);
-                                });
-                            }
-                        }"
-                        class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm transition-all overflow-hidden"
-                        :class="open ? 'border-emerald-200 shadow-md' : 'hover:shadow-md hover:border-emerald-200'"
+                    <x-inspection.expandable-card
+                        title="Move-In Inspection"
+                        subtitle="Record room condition and items received"
+                        :saved="$inspectionSaved"
+                        accentColor="emerald"
+                        contentRef="moveInContent"
                     >
-                        {{-- Trigger Header --}}
-                        <button
-                            type="button"
-                            @click="toggle()"
-                            class="w-full p-4 text-left group"
-                        >
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
-                                         :class="open ? 'bg-emerald-100' : 'bg-emerald-50 group-hover:bg-emerald-100'">
-                                        <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm font-bold text-[#070589]">Move-In Inspection</p>
-                                            @if($inspectionSaved)
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                                    Completed
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                                                    Pending
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <p class="text-[10px] text-gray-400">Record room condition and items received</p>
-                                    </div>
-                                </div>
-                                {{-- Animated chevron --}}
-                                <svg
-                                    class="w-5 h-5 text-gray-300 transition-all duration-300 ease-out"
-                                    :class="open ? 'rotate-90 text-emerald-500' : 'group-hover:text-emerald-500'"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-                                >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                                </svg>
-                            </div>
-                        </button>
-
-                        {{-- Expandable Content --}}
-                        <div
-                            x-ref="content"
-                            class="transition-[height] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                            style="height: 0px; overflow: hidden;"
-                        >
-                            <div class="px-4 pb-5 space-y-5">
-                                {{-- Divider --}}
-                                <div class="border-t border-gray-100"></div>
 
                                 @if($inspectionSaved)
                                     {{-- ===== READ-ONLY VIEW ===== --}}
@@ -566,109 +478,19 @@
                                         </button>
                                     </div>
                                 @endif
-                            </div>
-                        </div>
-                    </div>
+                    </x-inspection.expandable-card>
 
                     {{-- Move-Out Inspection & Contract (only visible after move-out) --}}
                     @if($currentTenant['move_out_details']['move_out_date'] ?? null)
 
                     {{-- Move-Out Inspection Expandable Card --}}
-                    <div
-                        x-data="{
-                            open: false,
-                            animating: false,
-                            height: '0',
-                            init() {
-                            },
-                            toggle() {
-                                if (this.open) { this.close(); } else { this.openCard(); }
-                            },
-                            openCard() {
-                                this.open = true;
-                                this.animating = true;
-                                const el = this.$refs.moveOutContent;
-                                el.style.height = '0px';
-                                el.style.overflow = 'hidden';
-                                this.$nextTick(() => {
-                                    el.style.height = el.scrollHeight + 'px';
-                                    setTimeout(() => {
-                                        if (this.open) {
-                                            el.style.height = 'auto';
-                                            el.style.overflow = 'visible';
-                                        }
-                                        this.animating = false;
-                                    }, 500);
-                                });
-                            },
-                            close() {
-                                this.animating = true;
-                                const el = this.$refs.moveOutContent;
-                                el.style.height = el.scrollHeight + 'px';
-                                el.style.overflow = 'hidden';
-                                requestAnimationFrame(() => {
-                                    el.style.height = '0px';
-                                    setTimeout(() => {
-                                        this.open = false;
-                                        this.animating = false;
-                                    }, 500);
-                                });
-                            }
-                        }"
-                        class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm transition-all overflow-hidden"
-                        :class="open ? 'border-red-200 shadow-md' : 'hover:shadow-md hover:border-red-200'"
+                    <x-inspection.expandable-card
+                        title="Move-Out Inspection"
+                        subtitle="Record room condition and items returned"
+                        :saved="$moveOutInspectionSaved"
+                        accentColor="red"
+                        contentRef="moveOutContent"
                     >
-                        {{-- Trigger Header --}}
-                        <button
-                            type="button"
-                            @click="toggle()"
-                            class="w-full p-4 text-left group"
-                        >
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
-                                         :class="open ? 'bg-red-100' : 'bg-red-50 group-hover:bg-red-100'">
-                                        <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm font-bold text-[#070589]">Move-Out Inspection</p>
-                                            @if($moveOutInspectionSaved)
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                                    Completed
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                                                    Pending
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <p class="text-[10px] text-gray-400">Record room condition and items returned</p>
-                                    </div>
-                                </div>
-                                {{-- Animated chevron --}}
-                                <svg
-                                    class="w-5 h-5 text-gray-300 transition-all duration-300 ease-out"
-                                    :class="open ? 'rotate-90 text-red-500' : 'group-hover:text-red-500'"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-                                >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                                </svg>
-                            </div>
-                        </button>
-
-                        {{-- Expandable Content --}}
-                        <div
-                            x-ref="moveOutContent"
-                            class="transition-[height] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                            style="height: 0px; overflow: hidden;"
-                        >
-                            <div class="px-4 pb-5 space-y-5">
-                                {{-- Divider --}}
-                                <div class="border-t border-gray-100"></div>
 
                                 @if($moveOutInspectionSaved)
                                     {{-- ===== READ-ONLY VIEW ===== --}}
@@ -889,9 +711,7 @@
                                         </button>
                                     </div>
                                 @endif
-                            </div>
-                        </div>
-                    </div>
+                    </x-inspection.expandable-card>
 
                     @endif {{-- end move-out conditional --}}
 
@@ -1026,6 +846,12 @@
                             'moveOutChecklist' => $moveOutChecklist,
                             'itemsReturned' => $itemsReturned,
                             'inspectionChecklist' => $inspectionChecklist,
+                            'moveOutTenantSignature' => $moveOutTenantSignature,
+                            'moveOutOwnerSignature' => $moveOutOwnerSignature,
+                            'moveOutTenantSignedAt' => $moveOutTenantSignedAt,
+                            'moveOutOwnerSignedAt' => $moveOutOwnerSignedAt,
+                            'moveOutContractAgreed' => $moveOutContractAgreed,
+                            'signatureMode' => 'manager',
                         ])
 
                     </div>
@@ -1061,166 +887,30 @@
         </div>
     @endif
 
-    {{-- ═══════════════════════════════════════════════
-         E-SIGNATURE PAD MODAL
-    ═══════════════════════════════════════════════ --}}
-    @if($showSignatureModal)
-        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
-             x-data="{
-                pad: null,
-                isEmpty: true,
-                libLoaded: false,
+    {{-- E-SIGNATURE PAD MODALS (Move-In & Move-Out) --}}
+    <x-inspection.signature-pad-modal
+        :show="$showSignatureModal"
+        :title="($signatureRole === 'tenant' ? 'Tenant' : 'Lessor') . ' E-Signature'"
+        subtitle="Move-In Contract — Draw your signature below"
+        :signerName="$signatureRole === 'tenant' ? (($currentTenant['personal_info']['first_name'] ?? '') . ' ' . ($currentTenant['personal_info']['last_name'] ?? '')) : ($currentTenant['lessor_info']['representative'] ?? '')"
+        :signerRole="$signatureRole === 'tenant' ? 'Lessee / Tenant' : 'Lessor / Authorized Representative'"
+        legalText="By clicking &quot;Apply Signature&quot;, I confirm that I have read and agree to all terms in this Move-In Contract. This electronic signature is legally binding under RA 8792 (Electronic Commerce Act of 2000)."
+        wireCloseMethod="closeSignatureModal"
+        wireSaveMethod="saveSignature"
+        canvasRef="sigCanvasMoveIn"
+    />
 
-                init() {
-                    this.loadLibrary().then(() => {
-                        this.libLoaded = true;
-                        this.setupCanvas();
-                    });
-                },
-
-                loadLibrary() {
-                    return new Promise((resolve) => {
-                        if (window.SignaturePad) {
-                            resolve();
-                            return;
-                        }
-                        const script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js';
-                        script.onload = () => resolve();
-                        document.head.appendChild(script);
-                    });
-                },
-
-                setupCanvas() {
-                    this.$nextTick(() => {
-                        setTimeout(() => {
-                            const canvas = this.$refs.signatureCanvas;
-                            if (!canvas) return;
-
-                            const rect = canvas.getBoundingClientRect();
-                            if (rect.width === 0 || rect.height === 0) {
-                                setTimeout(() => this.setupCanvas(), 150);
-                                return;
-                            }
-
-                            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                            canvas.width = rect.width * ratio;
-                            canvas.height = rect.height * ratio;
-                            canvas.getContext('2d').scale(ratio, ratio);
-
-                            this.pad = new SignaturePad(canvas, {
-                                backgroundColor: 'rgba(255, 255, 255, 0)',
-                                penColor: '#000000',
-                                minWidth: 1,
-                                maxWidth: 2.5,
-                            });
-
-                            this.pad.addEventListener('beginStroke', () => {
-                                this.isEmpty = false;
-                            });
-                        }, 100);
-                    });
-                },
-
-                clearPad() {
-                    if (this.pad) {
-                        this.pad.clear();
-                        this.isEmpty = true;
-                    }
-                },
-
-                submitSignature() {
-                    if (!this.pad || this.pad.isEmpty()) return;
-                    const dataUrl = this.pad.toDataURL('image/png');
-                    $wire.call('saveSignature', dataUrl);
-                }
-             }"
-        >
-            <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl">
-                {{-- Header --}}
-                <div class="bg-gradient-to-r from-[#070589] to-[#2360E8] text-white p-5 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-lg font-bold">
-                            {{ $signatureRole === 'tenant' ? 'Tenant' : 'Lessor' }} E-Signature
-                        </h2>
-                        <p class="text-xs text-blue-200 mt-0.5">Draw your signature below using your mouse or finger</p>
-                    </div>
-                    <button wire:click="closeSignatureModal" class="text-white hover:text-blue-200 transition-colors">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-
-                {{-- Signer info --}}
-                <div class="px-5 pt-4 pb-2">
-                    <div class="bg-gray-50 rounded-xl p-3 flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-[#EEF2FF] flex items-center justify-center">
-                            <svg class="w-4 h-4 text-[#2360E8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-800">
-                                @if($signatureRole === 'tenant')
-                                    {{ $currentTenant['personal_info']['first_name'] ?? '' }} {{ $currentTenant['personal_info']['last_name'] ?? '' }}
-                                @else
-                                    {{ $currentTenant['lessor_info']['representative'] ?? '' }}
-                                @endif
-                            </p>
-                            <p class="text-[10px] text-gray-500">Signing as {{ $signatureRole === 'tenant' ? 'Lessee / Tenant' : 'Lessor / Authorized Representative' }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Canvas --}}
-                <div class="px-5 py-3">
-                    <div class="border-2 border-gray-200 rounded-xl overflow-hidden bg-white relative" style="touch-action: none;">
-                        <canvas
-                            x-ref="signatureCanvas"
-                            class="w-full cursor-crosshair"
-                            style="height: 200px; display: block;"
-                        ></canvas>
-                        {{-- Signature line hint --}}
-                        <div class="absolute bottom-10 left-8 right-8 border-b border-dashed border-gray-200 pointer-events-none"></div>
-                        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none">
-                            <span class="text-[9px] text-gray-300 uppercase tracking-wider" x-show="isEmpty">Sign here</span>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Legal notice --}}
-                <div class="px-5 pb-3">
-                    <p class="text-[10px] text-gray-400 leading-relaxed">
-                        By clicking "Apply Signature", I confirm that I have read and agree to all terms in this Move-In Contract. This electronic signature is legally binding under RA 8792 (Electronic Commerce Act of 2000).
-                    </p>
-                </div>
-
-                {{-- Actions --}}
-                <div class="px-5 pb-5 flex items-center justify-between">
-                    <button
-                        @click="clearPad()"
-                        class="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>
-                        Clear
-                    </button>
-                    <div class="flex gap-2">
-                        <button
-                            wire:click="closeSignatureModal"
-                            class="px-5 py-2.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            @click="submitSignature()"
-                            :disabled="isEmpty"
-                            class="px-5 py-2.5 text-xs font-bold text-white bg-[#070589] hover:bg-[#000060] rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                            Apply Signature
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
+    <x-inspection.signature-pad-modal
+        :show="$showMoveOutSignatureModal"
+        :title="($moveOutSignatureRole === 'tenant' ? 'Tenant' : 'Lessor') . ' E-Signature'"
+        subtitle="Move-Out Contract — Draw your signature below"
+        :signerName="$moveOutSignatureRole === 'tenant' ? (($currentTenant['personal_info']['first_name'] ?? '') . ' ' . ($currentTenant['personal_info']['last_name'] ?? '')) : ($currentTenant['lessor_info']['representative'] ?? '')"
+        :signerRole="$moveOutSignatureRole === 'tenant' ? 'Lessee / Tenant' : 'Lessor / Authorized Representative'"
+        legalText="By clicking &quot;Apply Signature&quot;, I confirm that I have read and agree to all terms in this Move-Out Clearance &amp; Deposit Settlement Agreement. This electronic signature is legally binding under RA 8792 (Electronic Commerce Act of 2000)."
+        wireCloseMethod="closeMoveOutSignatureModal"
+        wireSaveMethod="saveMoveOutSignature"
+        canvasRef="sigCanvasMoveOut"
+    />
 
     <x-ui.modal-confirm
         name="move-out-confirmation"

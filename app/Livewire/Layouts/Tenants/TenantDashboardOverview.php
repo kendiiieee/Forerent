@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Layouts\Tenants;
 
+use App\Livewire\Concerns\WithESignature;
 use App\Models\Billing;
 use App\Models\BillingItem;
 use App\Models\Lease;
@@ -16,6 +17,7 @@ use Livewire\Component;
 
 class TenantDashboardOverview extends Component
 {
+    use WithESignature;
     // Payment & Billing
     public $currentBilling = null;
     public $amountDue = 0;
@@ -85,14 +87,32 @@ class TenantDashboardOverview extends Component
     public $moveOutChecklist = [];
     public $moveOutInspectionChecklist = []; // move-in checklist for comparison
 
+    // Move-out e-signature (independent from move-in)
+    public $showMoveOutSignatureModal = false;
+    public $moveOutTenantSignature = null;
+    public $moveOutTenantSignedAt = null;
+    public $moveOutOwnerSignature = null;
+    public $moveOutOwnerSignedAt = null;
+    public $moveOutContractAgreed = false;
+
     public function mount()
     {
         $user = Auth::user();
+
+        // Try active lease first, then fall back to latest expired lease
         $this->lease = Lease::with(['bed.unit.property', 'billings.items'])
             ->where('tenant_id', $user->user_id)
             ->where('status', 'Active')
             ->latest()
             ->first();
+
+        if (!$this->lease) {
+            $this->lease = Lease::with(['bed.unit.property', 'billings.items'])
+                ->where('tenant_id', $user->user_id)
+                ->where('status', 'Expired')
+                ->latest()
+                ->first();
+        }
 
         if ($this->lease) {
             $this->loadBillingData();
@@ -379,32 +399,10 @@ class TenantDashboardOverview extends Component
     {
         if (!$this->lease) return;
 
-        $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $signatureData);
-        $imageData = base64_decode($imageData);
-
-        $filename = "signatures/{$this->lease->lease_id}_tenant_" . time() . '.png';
-        Storage::disk('public')->put($filename, $imageData);
-
-        // Delete old signature file if exists
-        if ($this->lease->tenant_signature) {
-            Storage::disk('public')->delete($this->lease->tenant_signature);
-        }
-
-        $this->lease->update([
-            'tenant_signature' => $filename,
-            'tenant_signed_at' => now(),
-            'tenant_signed_ip' => request()->ip(),
-        ]);
-
-        $this->lease->refresh();
-        $this->tenantSignature = $filename;
-        $this->tenantSignedAt = now()->format('M d, Y h:i A');
-
-        // Check if both signed
-        if ($this->lease->tenant_signature && $this->lease->owner_signature) {
-            $this->lease->update(['contract_agreed' => true]);
-            $this->contractAgreed = true;
-        }
+        $result = $this->saveLeaseSignature($this->lease, $signatureData, 'tenant', 'movein');
+        $this->tenantSignature = $result['signature'];
+        $this->tenantSignedAt = $result['signedAt'];
+        $this->contractAgreed = $result['agreed'];
 
         $this->closeSignatureModal();
         $this->dispatch('signature-saved');
@@ -443,6 +441,13 @@ class TenantDashboardOverview extends Component
 
     protected function loadItemsReturned()
     {
+        // Load move-out signature state
+        $this->moveOutTenantSignature = $this->lease->moveout_tenant_signature;
+        $this->moveOutTenantSignedAt = $this->lease->moveout_tenant_signed_at?->format('M d, Y h:i A');
+        $this->moveOutOwnerSignature = $this->lease->moveout_owner_signature;
+        $this->moveOutOwnerSignedAt = $this->lease->moveout_owner_signed_at?->format('M d, Y h:i A');
+        $this->moveOutContractAgreed = (bool) $this->lease->moveout_contract_agreed;
+
         $moveOutInspections = MoveOutInspection::where('lease_id', $this->lease->lease_id)->get();
 
         // Items returned
@@ -506,6 +511,29 @@ class TenantDashboardOverview extends Component
     public function toggleMoveOutContract(): void
     {
         $this->showMoveOutContract = !$this->showMoveOutContract;
+    }
+
+    public function openMoveOutSignatureModal(): void
+    {
+        $this->showMoveOutSignatureModal = true;
+    }
+
+    public function closeMoveOutSignatureModal(): void
+    {
+        $this->showMoveOutSignatureModal = false;
+    }
+
+    public function saveMoveOutTenantSignature(string $signatureData): void
+    {
+        if (!$this->lease) return;
+
+        $result = $this->saveLeaseSignature($this->lease, $signatureData, 'tenant', 'moveout');
+        $this->moveOutTenantSignature = $result['signature'];
+        $this->moveOutTenantSignedAt = $result['signedAt'];
+        $this->moveOutContractAgreed = $result['agreed'];
+
+        $this->closeMoveOutSignatureModal();
+        $this->dispatch('moveout-signature-saved');
     }
 
     public function render()

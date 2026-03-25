@@ -8,11 +8,14 @@ use App\Models\MoveOutInspection;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
+use App\Livewire\Concerns\WithESignature;
 use Livewire\Component;
 use Livewire\Attributes\On;
 
 class TenantDetail extends Component
 {
+    use WithESignature;
+
     public $currentTenantId = null;
     public $currentTenant = null;
     public $viewingTab = 'current';
@@ -210,12 +213,19 @@ class TenantDetail extends Component
             ],
         ];
 
-        // Load signature state
+        // Load move-in signature state
         $this->tenantSignature = $lease?->tenant_signature;
         $this->ownerSignature = $lease?->owner_signature;
         $this->tenantSignedAt = $lease?->tenant_signed_at?->format('M d, Y h:i A');
         $this->ownerSignedAt = $lease?->owner_signed_at?->format('M d, Y h:i A');
         $this->contractAgreed = (bool) $lease?->contract_agreed;
+
+        // Load move-out signature state (independent)
+        $this->moveOutTenantSignature = $lease?->moveout_tenant_signature;
+        $this->moveOutOwnerSignature = $lease?->moveout_owner_signature;
+        $this->moveOutTenantSignedAt = $lease?->moveout_tenant_signed_at?->format('M d, Y h:i A');
+        $this->moveOutOwnerSignedAt = $lease?->moveout_owner_signed_at?->format('M d, Y h:i A');
+        $this->moveOutContractAgreed = (bool) $lease?->moveout_contract_agreed;
 
         $this->loadInspectionData($lease);
         $this->loadMoveOutInspectionData($lease);
@@ -525,6 +535,11 @@ class TenantDetail extends Component
         $this->moveOutChecklist = [];
         $this->itemsReturned = [];
         $this->moveOutInspectionSaved = false;
+        $this->moveOutTenantSignature = null;
+        $this->moveOutOwnerSignature = null;
+        $this->moveOutTenantSignedAt = null;
+        $this->moveOutOwnerSignedAt = null;
+        $this->moveOutContractAgreed = false;
     }
 
     public function editTenant(): void
@@ -615,49 +630,25 @@ class TenantDetail extends Component
         $lease = Lease::find($this->currentLeaseId);
         if (!$lease) return;
 
-        // Decode base64 signature and store as image file
-        $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $signatureData);
-        $imageData = base64_decode($imageData);
-
-        $filename = "signatures/{$lease->lease_id}_{$this->signatureRole}_" . time() . '.png';
-        Storage::disk('public')->put($filename, $imageData);
-
-        $ip = request()->ip();
+        $result = $this->saveLeaseSignature($lease, $signatureData, $this->signatureRole, 'movein');
 
         if ($this->signatureRole === 'tenant') {
-            // Delete old signature file if exists
-            if ($lease->tenant_signature) {
-                Storage::disk('public')->delete($lease->tenant_signature);
-            }
-            $lease->update([
-                'tenant_signature' => $filename,
-                'tenant_signed_at' => now(),
-                'tenant_signed_ip' => $ip,
-            ]);
-            $this->tenantSignature = $filename;
-            $this->tenantSignedAt = now()->format('M d, Y h:i A');
+            $this->tenantSignature = $result['signature'];
+            $this->tenantSignedAt = $result['signedAt'];
         } else {
-            if ($lease->owner_signature) {
-                Storage::disk('public')->delete($lease->owner_signature);
-            }
-            $lease->update([
-                'owner_signature' => $filename,
-                'owner_signed_at' => now(),
-                'owner_signed_ip' => $ip,
-            ]);
-            $this->ownerSignature = $filename;
-            $this->ownerSignedAt = now()->format('M d, Y h:i A');
+            $this->ownerSignature = $result['signature'];
+            $this->ownerSignedAt = $result['signedAt'];
         }
+        $this->contractAgreed = $result['agreed'];
 
-        // If both signatures exist, mark contract as agreed and generate PDF
-        $lease->refresh();
-        if ($lease->tenant_signature && $lease->owner_signature) {
-            $lease->update(['contract_agreed' => true]);
-            $this->contractAgreed = true;
+        // If both signatures exist, generate PDF
+        if ($result['agreed']) {
+            $lease->refresh();
             $this->generateSignedPdf($lease);
         }
 
         // Update signature_info in currentTenant
+        $lease->refresh();
         $this->currentTenant['signature_info'] = [
             'tenant_signature'      => $lease->tenant_signature,
             'tenant_signed_at'      => $lease->tenant_signed_at?->format('M d, Y h:i A'),
@@ -720,6 +711,42 @@ class TenantDetail extends Component
             $lease->signed_contract_path,
             'Move-In-Contract-' . ($this->currentTenant['personal_info']['last_name'] ?? 'Tenant') . '.pdf'
         );
+    }
+
+    // ===== MOVE-OUT E-SIGNATURE METHODS (independent from move-in) =====
+
+    public function openMoveOutSignatureModal(string $role): void
+    {
+        $this->moveOutSignatureRole = $role;
+        $this->showMoveOutSignatureModal = true;
+    }
+
+    public function closeMoveOutSignatureModal(): void
+    {
+        $this->showMoveOutSignatureModal = false;
+        $this->moveOutSignatureRole = '';
+    }
+
+    public function saveMoveOutSignature(string $signatureData): void
+    {
+        if (!$this->currentLeaseId || !$this->moveOutSignatureRole) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease) return;
+
+        $result = $this->saveLeaseSignature($lease, $signatureData, $this->moveOutSignatureRole, 'moveout');
+
+        if ($this->moveOutSignatureRole === 'tenant') {
+            $this->moveOutTenantSignature = $result['signature'];
+            $this->moveOutTenantSignedAt = $result['signedAt'];
+        } else {
+            $this->moveOutOwnerSignature = $result['signature'];
+            $this->moveOutOwnerSignedAt = $result['signedAt'];
+        }
+        $this->moveOutContractAgreed = $result['agreed'];
+
+        $this->closeMoveOutSignatureModal();
+        $this->dispatch('moveout-signature-saved');
     }
 
     public function render()
