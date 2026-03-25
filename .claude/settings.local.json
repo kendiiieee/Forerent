@@ -50,7 +50,10 @@
       "Bash(\"D:/Xampp/php/php.exe\" composer.phar require barryvdh/laravel-dompdf)",
       "Bash(\"D:/Xampp/php/php.exe\" composer.phar require barryvdh/laravel-dompdf --no-update)",
       "Bash(\"D:/Xampp/php/php.exe\" composer.phar update barryvdh/laravel-dompdf --with-all-dependencies)",
-      "Bash(\"D:/Xampp/php/php.exe\" composer.phar update barryvdh/laravel-dompdf --with-all-dependencies --ignore-platform-reqs)"
+      "Bash(\"D:/Xampp/php/php.exe\" composer.phar update barryvdh/laravel-dompdf --with-all-dependencies --ignore-platform-reqs)",
+      "Bash(ls \"C:/laragon/bin/php/\"*\"/php.exe\")",
+      "Bash(ls \"C:/wamp64/bin/php/\"*\"/php.exe\")",
+      "Read(//c//**)"
     ]
   }
 }

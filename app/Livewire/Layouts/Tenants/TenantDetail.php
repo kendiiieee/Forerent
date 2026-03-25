@@ -4,6 +4,7 @@ namespace App\Livewire\Layouts\Tenants;
 
 use App\Models\Lease;
 use App\Models\MoveInInspection;
+use App\Models\MoveOutInspection;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +21,7 @@ class TenantDetail extends Component
     public $showMoveInContract = false;
     public $showMoveOutContract = false;
 
-    // E-signature fields
+    // E-signature fields (move-in)
     public $showSignatureModal = false;
     public $signatureRole = ''; // 'tenant' or 'owner'
     public $tenantSignature = null;
@@ -28,6 +29,15 @@ class TenantDetail extends Component
     public $tenantSignedAt = null;
     public $ownerSignedAt = null;
     public $contractAgreed = false;
+
+    // E-signature fields (move-out) — independent from move-in
+    public $showMoveOutSignatureModal = false;
+    public $moveOutSignatureRole = '';
+    public $moveOutTenantSignature = null;
+    public $moveOutOwnerSignature = null;
+    public $moveOutTenantSignedAt = null;
+    public $moveOutOwnerSignedAt = null;
+    public $moveOutContractAgreed = false;
 
     // Move-out form fields
     public $forwardingAddress = '';
@@ -40,6 +50,11 @@ class TenantDetail extends Component
     public $itemsReceived = [];
     public $inspectionSaved = false;
     public $currentLeaseId = null;
+
+    // Move-out inspection form
+    public $moveOutChecklist = [];
+    public $itemsReturned = [];
+    public $moveOutInspectionSaved = false;
 
     // Default checklist items
     public const CHECKLIST_ITEMS = [
@@ -58,6 +73,14 @@ class TenantDetail extends Component
         'Unit Key(s)',
         'Building Access Card / Fob',
         'Wi-Fi Password / Credentials',
+        'Air Conditioning Remote',
+        'Cabinet Key',
+    ];
+
+    // Items that should be returned at move-out (same as received items)
+    public const RETURNED_ITEMS = [
+        'Unit Key(s)',
+        'Building Access Card / Fob',
         'Air Conditioning Remote',
         'Cabinet Key',
     ];
@@ -88,6 +111,7 @@ class TenantDetail extends Component
                         ->latest('billing_date')
                         ->limit(1),
                     'moveInInspections',
+                    'moveOutInspections',
                 ])
                 ->first();
         } else {
@@ -99,6 +123,7 @@ class TenantDetail extends Component
                         ->latest('billing_date')
                         ->limit(1),
                     'moveInInspections',
+                    'moveOutInspections',
                 ]);
 
             if ($buildingId) {
@@ -193,6 +218,7 @@ class TenantDetail extends Component
         $this->contractAgreed = (bool) $lease?->contract_agreed;
 
         $this->loadInspectionData($lease);
+        $this->loadMoveOutInspectionData($lease);
     }
 
     private function loadInspectionData($lease): void
@@ -342,6 +368,152 @@ class TenantDetail extends Component
         $this->dispatch('inspection-cancelled');
     }
 
+    // ===== MOVE-OUT INSPECTION METHODS =====
+
+    private function loadMoveOutInspectionData($lease): void
+    {
+        $existingInspections = $lease?->moveOutInspections ?? collect();
+
+        $savedChecklist = $existingInspections->where('type', 'checklist');
+        $savedItems = $existingInspections->where('type', 'item_returned');
+
+        $this->moveOutInspectionSaved = $savedChecklist->isNotEmpty() || $savedItems->isNotEmpty();
+
+        // Build checklist array (same items as move-in for comparison)
+        $this->moveOutChecklist = [];
+        foreach (self::CHECKLIST_ITEMS as $item) {
+            $saved = $savedChecklist->firstWhere('item_name', $item);
+            $this->moveOutChecklist[] = [
+                'item_name' => $item,
+                'condition' => $saved?->condition ?? '',
+                'remarks'   => $saved?->remarks ?? '',
+            ];
+        }
+
+        // Build items returned array
+        $this->itemsReturned = [];
+        foreach (self::RETURNED_ITEMS as $item) {
+            $saved = $savedItems->firstWhere('item_name', $item);
+            $this->itemsReturned[] = [
+                'item_name'        => $item,
+                'quantity'         => $saved?->quantity ?? '',
+                'condition'        => $saved?->remarks ?? '',
+                'tenant_confirmed' => $saved?->tenant_confirmed ?? false,
+            ];
+        }
+    }
+
+    public function updatedMoveOutChecklist($value, $key): void
+    {
+        $parts = explode('.', $key);
+        if (count($parts) === 2 && $parts[1] === 'condition') {
+            $this->resetErrorBag("moveOutChecklist.{$parts[0]}.condition");
+        }
+    }
+
+    public function updatedItemsReturned($value, $key): void
+    {
+        $parts = explode('.', $key);
+        if (count($parts) < 2) return;
+
+        $index = $parts[0];
+        $field = $parts[1];
+
+        if ($field === 'quantity') {
+            $cleaned = preg_replace('/[^0-9]/', '', (string) $value);
+            $this->itemsReturned[$index]['quantity'] = $cleaned;
+
+            $this->resetErrorBag("itemsReturned.{$index}.quantity");
+            if ($cleaned === '' || $cleaned === null) {
+                $this->addError("itemsReturned.{$index}.quantity", 'Required');
+            } elseif ((int) $cleaned < 1) {
+                $this->addError("itemsReturned.{$index}.quantity", 'Min 1');
+            }
+        }
+
+        if ($field === 'condition') {
+            $this->resetErrorBag("itemsReturned.{$index}.condition");
+            if (empty(trim((string) $value))) {
+                $this->addError("itemsReturned.{$index}.condition", 'Required');
+            }
+        }
+    }
+
+    public function saveMoveOutInspection(): void
+    {
+        if (!$this->currentLeaseId) return;
+
+        // Validate all checklist items have a condition selected
+        $errors = [];
+        foreach ($this->moveOutChecklist as $index => $item) {
+            if (empty($item['condition'])) {
+                $errors["moveOutChecklist.{$index}.condition"] = "Select a condition for \"{$item['item_name']}\".";
+            }
+        }
+
+        // Validate all items returned have quantity and condition
+        foreach ($this->itemsReturned as $index => $item) {
+            if ($item['quantity'] === '' || $item['quantity'] === null) {
+                $errors["itemsReturned.{$index}.quantity"] = "Enter quantity for \"{$item['item_name']}\".";
+            } elseif (!is_numeric($item['quantity']) || (int) $item['quantity'] < 1) {
+                $errors["itemsReturned.{$index}.quantity"] = "Quantity must be at least 1.";
+            }
+            if (empty(trim($item['condition'] ?? ''))) {
+                $errors["itemsReturned.{$index}.condition"] = "Enter condition for \"{$item['item_name']}\".";
+            }
+        }
+
+        if (!empty($errors)) {
+            foreach ($errors as $key => $message) {
+                $this->addError($key, $message);
+            }
+            return;
+        }
+
+        // Delete existing move-out inspection data for this lease
+        MoveOutInspection::where('lease_id', $this->currentLeaseId)->delete();
+
+        // Save checklist items
+        foreach ($this->moveOutChecklist as $item) {
+            if (!empty($item['condition'])) {
+                MoveOutInspection::create([
+                    'lease_id'  => $this->currentLeaseId,
+                    'type'      => 'checklist',
+                    'item_name' => $item['item_name'],
+                    'condition' => $item['condition'],
+                    'remarks'   => $item['remarks'] ?? null,
+                ]);
+            }
+        }
+
+        // Save items returned
+        foreach ($this->itemsReturned as $item) {
+            if (!empty($item['quantity']) || !empty($item['condition']) || $item['tenant_confirmed']) {
+                MoveOutInspection::create([
+                    'lease_id'         => $this->currentLeaseId,
+                    'type'             => 'item_returned',
+                    'item_name'        => $item['item_name'],
+                    'quantity'         => $item['quantity'] ?: null,
+                    'remarks'          => $item['condition'] ?? null,
+                    'tenant_confirmed' => $item['tenant_confirmed'] ?? false,
+                ]);
+            }
+        }
+
+        $this->moveOutInspectionSaved = true;
+        $this->dispatch('moveout-inspection-saved');
+        $this->dispatch('notify', type: 'success', title: 'Inspection Saved', description: 'Move-out inspection data has been saved.');
+    }
+
+    public function cancelMoveOutInspection(): void
+    {
+        if ($this->currentLeaseId) {
+            $lease = Lease::with('moveOutInspections')->find($this->currentLeaseId);
+            $this->loadMoveOutInspectionData($lease);
+        }
+        $this->dispatch('moveout-inspection-cancelled');
+    }
+
     private function resetTenantData(): void
     {
         $this->currentTenantId = null;
@@ -350,6 +522,9 @@ class TenantDetail extends Component
         $this->inspectionChecklist = [];
         $this->itemsReceived = [];
         $this->inspectionSaved = false;
+        $this->moveOutChecklist = [];
+        $this->itemsReturned = [];
+        $this->moveOutInspectionSaved = false;
     }
 
     public function editTenant(): void

@@ -7,6 +7,7 @@ use App\Models\BillingItem;
 use App\Models\Lease;
 use App\Models\MaintenanceRequest;
 use App\Models\MoveInInspection;
+use App\Models\MoveOutInspection;
 use App\Models\UtilityBill;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -71,10 +72,18 @@ class TenantDashboardOverview extends Component
     public $signedContractPath = null;
     public $showContract = false;
     public $contractData = [];
+    public $tenantContractData = []; // full data for the contract modal template
 
     // Items received confirmation
     public $itemsReceived = [];
     public $itemsConfirmedByTenant = false;
+
+    // Items returned confirmation (move-out)
+    public $itemsReturned = [];
+    public $itemsReturnedConfirmedByTenant = false;
+    public $showMoveOutContract = false;
+    public $moveOutChecklist = [];
+    public $moveOutInspectionChecklist = []; // move-in checklist for comparison
 
     public function mount()
     {
@@ -94,6 +103,7 @@ class TenantDashboardOverview extends Component
             $this->loadMaintenanceData();
             $this->loadContractData();
             $this->loadItemsReceived();
+            $this->loadItemsReturned();
         }
     }
 
@@ -249,11 +259,12 @@ class TenantDashboardOverview extends Component
         $this->contractAgreed = (bool) $this->lease->contract_agreed;
         $this->signedContractPath = $this->lease->signed_contract_path;
 
-        // Build contract display data
+        $user = Auth::user();
         $bed = $this->lease->bed;
         $unit = $bed?->unit;
         $property = $unit?->property;
         $owner = $property?->owner;
+        $billing = $this->lease->billings->first();
 
         $this->contractData = [
             'lessor' => $owner ? ($owner->first_name . ' ' . $owner->last_name) : '—',
@@ -266,6 +277,68 @@ class TenantDashboardOverview extends Component
             'monthly_rate' => $this->lease->contract_rate,
             'security_deposit' => $this->lease->security_deposit,
             'term' => $this->lease->term,
+        ];
+
+        // Full data structure matching what the contract modal template expects
+        $this->tenantContractData = [
+            'lessor_info' => [
+                'business_name'  => $property?->building_name,
+                'company_name'   => $owner?->company_school ?? 'CPMS Ventures Corporation',
+                'address'        => $property?->address,
+                'contact'        => $owner?->contact,
+                'email'          => $owner?->email,
+                'representative' => $owner ? ($owner->first_name . ' ' . $owner->last_name) : '—',
+            ],
+            'personal_info' => [
+                'first_name'       => $user->first_name,
+                'last_name'        => $user->last_name,
+                'gender'           => $user->gender,
+                'address'          => $property?->address,
+                'property'         => $property?->building_name,
+                'unit'             => $unit?->unit_number,
+                'permanent_address' => $user->permanent_address,
+                'government_id_type'   => $user->government_id_type,
+                'government_id_number' => $user->government_id_number,
+                'government_id_image'  => $user->government_id_image,
+                'company_school'       => $user->company_school,
+                'position_course'      => $user->position_course,
+                'emergency_contact_name'         => $user->emergency_contact_name,
+                'emergency_contact_relationship' => $user->emergency_contact_relationship,
+                'emergency_contact_number'       => $user->emergency_contact_number,
+            ],
+            'contact_info' => [
+                'contact_number' => $user->contact,
+                'email'          => $user->email,
+            ],
+            'rent_details' => [
+                'bed_number'       => $bed?->bed_number,
+                'dorm_type'        => $unit?->occupants,
+                'floor'            => $unit?->floor_number,
+                'room_type'        => $unit?->room_type,
+                'lease_start_date' => $this->lease->start_date?->format('Y-m-d'),
+                'lease_end_date'   => $this->lease->end_date?->format('Y-m-d'),
+                'lease_term'       => $this->lease->term,
+                'shift'            => $this->lease->shift,
+                'auto_renew'       => $this->lease->auto_renew,
+            ],
+            'move_in_details' => [
+                'move_in_date'          => $this->lease->move_in?->format('Y-m-d'),
+                'monthly_rate'          => $this->lease->contract_rate,
+                'security_deposit'      => $this->lease->security_deposit,
+                'payment_status'        => $billing?->status ?? 'No billing',
+                'monthly_due_date'      => $this->lease->monthly_due_date,
+                'late_payment_penalty'  => $this->lease->late_payment_penalty,
+                'short_term_premium'    => $this->lease->short_term_premium,
+                'reservation_fee_paid'  => $this->lease->reservation_fee_paid,
+                'early_termination_fee' => $this->lease->early_termination_fee,
+            ],
+            'move_out_details' => [
+                'move_out_date'          => $this->lease->move_out?->format('Y-m-d'),
+                'forwarding_address'     => $this->lease->forwarding_address,
+                'reason_for_vacating'    => $this->lease->reason_for_vacating,
+                'deposit_refund_method'  => $this->lease->deposit_refund_method,
+                'deposit_refund_account' => $this->lease->deposit_refund_account,
+            ],
         ];
     }
 
@@ -364,6 +437,75 @@ class TenantDashboardOverview extends Component
             $item['tenant_confirmed'] = true;
         }
         $this->itemsConfirmedByTenant = true;
+    }
+
+    // ===== MOVE-OUT ITEMS RETURNED =====
+
+    protected function loadItemsReturned()
+    {
+        $moveOutInspections = MoveOutInspection::where('lease_id', $this->lease->lease_id)->get();
+
+        // Items returned
+        $returnedItems = $moveOutInspections->where('type', 'item_returned');
+        $this->itemsReturned = $returnedItems->map(fn($i) => [
+            'item_name' => $i->item_name,
+            'quantity' => $i->quantity,
+            'condition' => $i->remarks,
+            'tenant_confirmed' => (bool) $i->tenant_confirmed,
+        ])->toArray();
+
+        $this->itemsReturnedConfirmedByTenant = count($this->itemsReturned) > 0
+            && collect($this->itemsReturned)->every(fn($item) => $item['tenant_confirmed']);
+
+        // Move-out checklist for contract display
+        $checklistItems = $moveOutInspections->where('type', 'checklist');
+        $this->moveOutChecklist = $checklistItems->map(fn($i) => [
+            'item_name' => $i->item_name,
+            'condition' => $i->condition,
+            'remarks' => $i->remarks,
+        ])->toArray();
+
+        // Move-in checklist for comparison
+        $moveInChecklist = MoveInInspection::where('lease_id', $this->lease->lease_id)
+            ->where('type', 'checklist')
+            ->get();
+        $this->moveOutInspectionChecklist = $moveInChecklist->map(fn($i) => [
+            'item_name' => $i->item_name,
+            'condition' => $i->condition,
+            'remarks' => $i->remarks,
+        ])->toArray();
+    }
+
+    public function confirmItemReturned(int $index): void
+    {
+        if (!isset($this->itemsReturned[$index])) return;
+
+        $this->itemsReturned[$index]['tenant_confirmed'] = true;
+
+        MoveOutInspection::where('lease_id', $this->lease->lease_id)
+            ->where('type', 'item_returned')
+            ->where('item_name', $this->itemsReturned[$index]['item_name'])
+            ->update(['tenant_confirmed' => true]);
+
+        $this->itemsReturnedConfirmedByTenant = collect($this->itemsReturned)
+            ->every(fn($item) => $item['tenant_confirmed']);
+    }
+
+    public function confirmAllReturned(): void
+    {
+        MoveOutInspection::where('lease_id', $this->lease->lease_id)
+            ->where('type', 'item_returned')
+            ->update(['tenant_confirmed' => true]);
+
+        foreach ($this->itemsReturned as &$item) {
+            $item['tenant_confirmed'] = true;
+        }
+        $this->itemsReturnedConfirmedByTenant = true;
+    }
+
+    public function toggleMoveOutContract(): void
+    {
+        $this->showMoveOutContract = !$this->showMoveOutContract;
     }
 
     public function render()

@@ -37,6 +37,14 @@ class Lease extends Model
         'reason_for_vacating',
         'deposit_refund_method',
         'deposit_refund_account',
+        'moveout_tenant_signature',
+        'moveout_tenant_signed_at',
+        'moveout_tenant_signed_ip',
+        'moveout_owner_signature',
+        'moveout_owner_signed_at',
+        'moveout_owner_signed_ip',
+        'moveout_contract_agreed',
+        'moveout_signed_contract_path',
     ];
 
     protected $casts = [
@@ -56,6 +64,9 @@ class Lease extends Model
         'tenant_signed_at' => 'datetime',
         'owner_signed_at' => 'datetime',
         'contract_agreed' => 'boolean',
+        'moveout_tenant_signed_at' => 'datetime',
+        'moveout_owner_signed_at' => 'datetime',
+        'moveout_contract_agreed' => 'boolean',
     ];
 
     public function tenant()
@@ -81,5 +92,10 @@ class Lease extends Model
     public function moveInInspections()
     {
         return $this->hasMany(MoveInInspection::class, 'lease_id', 'lease_id');
+    }
+
+    public function moveOutInspections()
+    {
+        return $this->hasMany(MoveOutInspection::class, 'lease_id', 'lease_id');
     }
 }
