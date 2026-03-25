@@ -36,7 +36,7 @@ class RevenueReports extends Component
         // Revenue/inflow source: credit transactions.
         $monthlyIncome = Transaction::where('transaction_type', 'Credit')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
+            ->selectRaw('CAST(EXTRACT(MONTH FROM transaction_date) AS UNSIGNED) as month, SUM(amount) as total')
             ->groupBy('month')
             ->get();
 
