@@ -303,7 +303,7 @@ class TenantDashboardOverview extends Component
         $this->tenantContractData = [
             'lessor_info' => [
                 'business_name'  => $property?->building_name,
-                'company_name'   => $owner?->company_school ?? 'CPMS Ventures Corporation',
+                'company_name'   => $owner?->company_school ?? 'ForeRent',
                 'address'        => $property?->address,
                 'contact'        => $owner?->contact,
                 'email'          => $owner?->email,

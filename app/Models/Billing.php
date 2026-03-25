@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 class Billing extends Model
 {
@@ -61,7 +64,7 @@ class Billing extends Model
 
         $transactionDate = optional($this->billing_date)->toDateString() ?? now()->toDateString();
 
-        $this->transactions()->create([
+        $payload = [
             'name' => 'Billing Payment #' . $this->billing_id,
             'reference_number' => sprintf('BILL-%d-%s', $this->billing_id, now()->format('YmdHis')),
             'transaction_type' => 'Credit',
@@ -69,7 +72,40 @@ class Billing extends Model
             'transaction_date' => $transactionDate,
             'amount' => $amount,
             'is_recurring' => false,
-        ]);
+        ];
+
+        $this->createCreditTransactionWithRetry($payload);
+    }
+
+    private function createCreditTransactionWithRetry(array $payload): void
+    {
+        try {
+            $this->transactions()->create($payload);
+            return;
+        } catch (UniqueConstraintViolationException|QueryException $exception) {
+            if (!$this->isPostgresTransactionPrimaryKeyConflict($exception)) {
+                throw $exception;
+            }
+        }
+
+        $this->syncTransactionIdSequence();
+        $this->transactions()->create($payload);
+    }
+
+    private function isPostgresTransactionPrimaryKeyConflict(QueryException $exception): bool
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return false;
+        }
+
+        return str_contains(strtolower($exception->getMessage()), 'transactions_pkey');
+    }
+
+    private function syncTransactionIdSequence(): void
+    {
+        DB::statement(
+            "SELECT setval(pg_get_serial_sequence('transactions', 'transaction_id'), COALESCE(MAX(transaction_id), 0) + 1, false) FROM transactions"
+        );
     }
 
     public function lease()
