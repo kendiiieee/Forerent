@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Broadcasting\SendGridChannel;
 use App\Models\Announcement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,7 +28,7 @@ class NewAnnouncement extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return [SendGridChannel::class];
     }
 
     /**
