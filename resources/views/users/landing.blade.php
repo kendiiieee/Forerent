@@ -5,235 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ForeRent – Predict Your Property Success</title>
     <link rel="icon" href="{{ asset('images/favicon.svg') }}" type="image/svg+xml">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    <link rel="preload" href="/images/Landing_Page_Bg.webp" as="image" type="image/webp">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    opacity: { '85': '0.85' }
+                    fontFamily: {
+                        sans: ['Open Sans', 'sans-serif'],
+                    },
+                    opacity: { '85': '0.85' },
                 }
             }
         }
     </script>
-    <style>
-        /* Base resets — cannot be done in Tailwind CDN */
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; font-family: 'Open Sans', sans-serif; overflow-x: hidden; }
-
-        /* Navbar — FIXED so it stays on all scroll */
-        .navbar-glass {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 999;
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
-            transition: box-shadow 0.35s ease, background 0.35s ease;
-        }
-        .navbar-glass.scrolled {
-            background: rgba(255,255,255,0.38) !important;
-            box-shadow: 0 4px 32px rgba(0,0,0,0.14);
-        }
-
-        /* Push page content below fixed nav */
-        body > section:first-of-type { padding-top: 0; }
-        #hero-section { margin-top: 0; }
-
-        /* Nav link — clean underline slide animation, no rounded corners */
-        .nav-link {
-            position: relative;
-            padding: 8px 4px;
-            font-weight: 600;
-            font-size: 0.92rem;
-            letter-spacing: 0.4px;
-            text-decoration: none;
-            color: rgba(255,255,255,0.82);
-            transition: color 0.22s ease;
-            display: inline-block;
-        }
-        /* Bottom underline that slides in from left */
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0;
-            width: 100%; height: 2px;
-            background: #fff;
-            transform: scaleX(0);
-            transform-origin: left center;
-            transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .nav-link:hover { color: #fff; }
-        .nav-link:hover::after { transform: scaleX(1); }
-
-        /* Active — always show underline + bright white */
-        .nav-link.active {
-            color: #fff;
-            font-weight: 700;
-        }
-        .nav-link.active::after {
-            transform: scaleX(1);
-            background: #fff;
-            height: 2.5px;
-        }
-
-        /* Log In shimmer */
-        .login-btn { position: relative; overflow: hidden; transition: all 0.25s ease; }
-        .login-btn::after {
-            content: '';
-            position: absolute; top: -50%; left: -75%;
-            width: 50%; height: 200%;
-            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.30), transparent);
-            transform: skewX(-20deg);
-            transition: left 0.5s ease;
-        }
-        .login-btn:hover::after { left: 130%; }
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,63,191,0.52); }
-
-        /* Navbar theme transitions */
-        #mainNav { transition: background 0.35s ease, box-shadow 0.35s ease; }
-        #mainNav .nav-link,
-        #mainNav .nav-logo-text { transition: color 0.3s ease; }
-        #mainNav .nav-link::after { transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.3s ease; }
-
-        /* DARK theme — white text (over dark/hero backgrounds) */
-        #mainNav.nav-dark .nav-link { color: rgba(255,255,255,0.85); }
-        #mainNav.nav-dark .nav-link:hover { color: #fff; }
-        #mainNav.nav-dark .nav-link.active { color: #fff; }
-        #mainNav.nav-dark .nav-link::after { background: #fff; }
-        #mainNav.nav-dark { border-bottom-color: rgba(255,255,255,0.28); }
-
-        /* LIGHT theme — dark navy text (over white/light backgrounds) */
-        #mainNav.nav-light { background: rgba(255,255,255,0.92) !important; box-shadow: 0 2px 24px rgba(0,0,0,0.12); border-bottom-color: rgba(0,0,0,0.08); }
-        #mainNav.nav-light .nav-link { color: #1a3fbf !important; }
-        #mainNav.nav-light .nav-link:hover { color: #0b1f6b !important; }
-        #mainNav.nav-light .nav-link.active { color: #0b1f6b !important; font-weight: 700; }
-        #mainNav.nav-light .nav-link::after { background: #1a3fbf !important; }
-        #mainNav.nav-light .nav-logo-text { color: #0b1f6b; }
-
-        /* Page transition overlay */
-        #page-transition {
-            position: fixed; inset: 0; z-index: 9999;
-            background: linear-gradient(135deg, #0b1f6b 0%, #1a3fbf 100%);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.35s ease;
-        }
-        #page-transition.active { opacity: 1; pointer-events: all; }
-
-        /* Hero card glassmorphism backdrop */
-        .hero-card-glass {
-            backdrop-filter: blur(28px) saturate(160%);
-            -webkit-backdrop-filter: blur(28px) saturate(160%);
-        }
-
-        /* Search bar select — remove native appearance */
-        .search-field select,
-        .search-field input {
-            border: none; outline: none;
-            font-family: 'Open Sans', sans-serif;
-            font-size: 0.88rem; color: #374151;
-            background: transparent; width: 100%;
-            cursor: pointer; appearance: none; -webkit-appearance: none;
-        }
-        .search-field select option { color: #374151; }
-
-        /* Neural section radial glow pseudo-element */
-        .neural-section::before {
-            content: '';
-            position: absolute; top: -40%; right: -10%;
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, rgba(96,165,250,0.08) 0%, transparent 70%);
-            border-radius: 50%; pointer-events: none;
-        }
-
-        /* Module card hover shimmer */
-        .module-card::before {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(135deg, rgba(96,165,250,0.15), rgba(139,92,246,0.15));
-            opacity: 0; transition: opacity 0.35s ease;
-            pointer-events: none; border-radius: 16px;
-        }
-        .module-card:hover::before { opacity: 1; }
-        .module-card:hover .module-dot-first { background: #60a5fa; }
-        .module-card:hover .module-arrow-btn {
-            background: #60a5fa; color: #0f172a; transform: translateX(4px);
-        }
-
-        /* Eco-card pseudo-elements (CSS vars & ::before/::after) */
-        .eco-card::before {
-            content: ''; position: absolute; inset: 0;
-            background-image: var(--card-bg-image);
-            background-size: cover; background-position: center;
-            opacity: 0.35; filter: blur(0px);
-            transition: opacity 0.5s ease, filter 0.5s ease; z-index: 1;
-        }
-        .eco-card.active::before { opacity: 0.7; filter: blur(5px) brightness(1.05); }
-        .eco-card::after {
-            content: ''; position: absolute; inset: 0;
-            background: rgba(255,255,255,0.55);
-            backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-            opacity: 1; transition: opacity 0.5s ease, backdrop-filter 0.5s ease;
-            z-index: 2; pointer-events: none;
-        }
-        .eco-card.active::after {
-            background: linear-gradient(160deg, var(--card-gradient-start) 0%, var(--card-gradient-end) 100%);
-            opacity: 0.8; backdrop-filter: none; -webkit-backdrop-filter: none;
-        }
-        .eco-card-features li::before {
-            content: '✓'; display: inline-flex; align-items: center; justify-content: center;
-            width: 18px; height: 18px; min-width: 18px;
-            background: rgba(255,255,255,0.25); border-radius: 50%;
-            color: #fff; font-size: 0.72rem; font-weight: 700;
-        }
-        .eco-card.owner   { --card-bg-image: url('/images/Owner.svg');   --card-gradient-start: #1a2847; --card-gradient-end: #0f1a2e; }
-        .eco-card.manager { --card-bg-image: url('/images/Manager.svg'); --card-gradient-start: #1a3fbf; --card-gradient-end: #0a2878; }
-        .eco-card.tenant  { --card-bg-image: url('/images/Tenant.svg');  --card-gradient-start: #0a1c4d; --card-gradient-end: #051028; }
-    </style>
 </head>
-<body>
+<body class="h-full font-sans overflow-x-hidden">
 
-<!-- Page transition overlay -->
-<div id="page-transition"></div>
 
-<!-- ═══════════════════════════════════════════════════════════════
+{{-- ═══════════════════════════════════════════════════════════════
      HERO
-═══════════════════════════════════════════════════════════════ -->
-<section id="hero-section" class="relative w-full min-h-screen flex flex-col" style="padding-top: 80px;">
+═══════════════════════════════════════════════════════════════ --}}
+<section id="hero-section" class="relative w-full min-h-screen flex flex-col pt-[80px]">
 
-    <!-- Background: your uploaded SVG -->
-    <img src="/images/Landing_Page_Bg.svg" alt="Landing Page Background" class="absolute inset-0 w-full h-full object-cover object-center z-0">
+    {{-- Background --}}
+    <img src="/images/Landing_Page_Bg.webp" alt="Landing Page Background"
+         class="absolute inset-0 w-full h-full object-cover object-center z-0"
+         fetchpriority="high" decoding="async">
 
-    <!-- Navbar -->
-    <nav id="mainNav" class="navbar-glass flex items-center justify-between px-16 py-4 border-b border-white/[0.28]" style="background: rgba(255,255,255,0.22);">
+    {{-- Navbar --}}
+    <nav id="mainNav"
+         class="group fixed inset-x-0 top-0 z-[999] flex items-center justify-between px-16 py-4
+                border-b border-white/[0.28] bg-white/[0.22]
+                backdrop-blur-[20px] backdrop-saturate-[180%]
+                transition-[box-shadow,background] duration-[350ms] ease-in-out
+                will-change-[background,box-shadow]
+                [&.scrolled]:bg-white/[0.38] [&.scrolled]:shadow-[0_4px_32px_rgba(0,0,0,0.14)]
+                [&.nav-dark]:border-b-white/[0.28]
+                [&.nav-light]:!bg-white/[0.92] [&.nav-light]:shadow-[0_2px_24px_rgba(0,0,0,0.12)] [&.nav-light]:!border-b-black/[0.08]">
 
-        <!-- Logo -->
-        <a href="#" class="flex items-center gap-3 no-underline group" style="flex-shrink:0;">
+        {{-- Logo --}}
+        <a href="#" class="flex items-center gap-3 no-underline shrink-0">
             <img src="/images/ForeRent_Logo.svg" alt="ForeRent Logo"
-                 style="height: 56px; width: auto; transition: transform 0.3s ease; filter: drop-shadow(0 2px 8px rgba(26,63,191,0.18));"
-                 onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                 class="h-14 w-auto transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(26,63,191,0.18)] hover:scale-[1.06]">
         </a>
 
-        <!-- Nav Links -->
+        {{-- Nav Links --}}
         <ul class="flex items-center gap-10 list-none">
-            <li><a href="#" class="nav-link active">Home</a></li>
-            <li><a href="#features" class="nav-link">Features</a></li>
-            <li><a href="#about" class="nav-link">About</a></li>
-            <li><a href="#contact" class="nav-link">Contacts</a></li>
+            <li>
+                <a href="#" class="nav-link active relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
+                                   text-white/[0.82] transition-colors duration-200 hover:text-white
+                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
+                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
+                                   hover:after:scale-x-100
+                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
+                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
+                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
+                                   group-[.nav-light]:after:!bg-[#1a3fbf]
+                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">Home</a>
+            </li>
+            <li>
+                <a href="#features" class="nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
+                                   text-white/[0.82] transition-colors duration-200 hover:text-white
+                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
+                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
+                                   hover:after:scale-x-100
+                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
+                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
+                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
+                                   group-[.nav-light]:after:!bg-[#1a3fbf]
+                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">Features</a>
+            </li>
+            <li>
+                <a href="#about" class="nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
+                                   text-white/[0.82] transition-colors duration-200 hover:text-white
+                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
+                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
+                                   hover:after:scale-x-100
+                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
+                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
+                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
+                                   group-[.nav-light]:after:!bg-[#1a3fbf]
+                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">About</a>
+            </li>
+            <li>
+                <a href="#contact" class="nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
+                                   text-white/[0.82] transition-colors duration-200 hover:text-white
+                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
+                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
+                                   hover:after:scale-x-100
+                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
+                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
+                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
+                                   group-[.nav-light]:after:!bg-[#1a3fbf]
+                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">Contacts</a>
+            </li>
         </ul>
 
-        <!-- CTA -->
-        <div class="flex items-center" style="flex-shrink:0;">
+        {{-- CTA --}}
+        <div class="flex items-center shrink-0">
             <a href="/login"
-               class="login-btn px-7 py-[10px] rounded-full text-white text-[0.9rem] font-bold no-underline transition-all duration-300 cursor-pointer"
-               style="background: linear-gradient(135deg, #1a3fbf, #0b1f6b); box-shadow: 0 4px 16px rgba(26,63,191,0.38);">
+               class="relative overflow-hidden px-7 py-[10px] rounded-full text-white text-[0.9rem] font-bold no-underline
+                      transition-all duration-300 cursor-pointer
+                      bg-[linear-gradient(135deg,#1a3fbf,#0b1f6b)] shadow-[0_4px_16px_rgba(26,63,191,0.38)]
+                      after:content-[''] after:absolute after:top-[-50%] after:left-[-75%] after:w-1/2 after:h-[200%]
+                      after:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.3),transparent)]
+                      after:-skew-x-[20deg] after:transition-[left] after:duration-500
+                      hover:after:left-[130%] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(26,63,191,0.52)]">
                 Log In
             </a>
         </div>
     </nav>
 
-    <!-- Hero body -->
+    {{-- Hero body --}}
     <div class="relative z-[2] flex-1 flex items-center justify-end px-16 pt-16 pb-32">
-        <div class="hero-card-glass w-full max-w-[490px] bg-white/[0.22] border border-white/[0.30] rounded-[20px] px-11 py-12 shadow-[0_8px_32px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.35)]">
+        <div class="w-full max-w-[490px] bg-white/[0.22] border border-white/[0.30] rounded-[20px] px-11 py-12
+                    shadow-[0_8px_32px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.35)]
+                    backdrop-blur-[16px] backdrop-saturate-150">
             <h1 class="text-[2.25rem] font-extrabold text-white leading-tight mb-4">
                 Let's Predict Your<br>
                 Property Success
@@ -243,18 +135,25 @@
                 by creating the smartest way to predict.
             </p>
             <div class="flex gap-3.5 flex-wrap">
-                <a href="/login" class="inline-flex items-center gap-2 px-8 py-[13px] rounded-[10px] text-white text-[0.92rem] font-bold no-underline transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(26,63,191,0.55)] shadow-[0_4px_18px_rgba(26,63,191,0.45)] cursor-pointer" style="background: linear-gradient(135deg, #1a3fbf 0%, #0b1f6b 100%);">Get Started <span class="text-lg">→</span></a>
+                <a href="/login"
+                   class="inline-flex items-center gap-2 px-8 py-[13px] rounded-[10px] text-white text-[0.92rem] font-bold
+                          no-underline transition-all duration-200 cursor-pointer
+                          bg-[linear-gradient(135deg,#1a3fbf_0%,#0b1f6b_100%)]
+                          shadow-[0_4px_18px_rgba(26,63,191,0.45)]
+                          hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(26,63,191,0.55)]">
+                    Get Started <span class="text-lg">&rarr;</span>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Floating search bar -->
+    {{-- Floating search bar --}}
     <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-20 w-[calc(100%-120px)] max-w-[1100px]">
         <div class="flex items-center bg-white rounded-[14px] shadow-[0_12px_40px_rgba(0,0,0,0.22)] pl-5 pr-2.5 py-2.5 gap-0">
 
-            <div class="search-field flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">City <span class="text-gray-400">∨</span></span>
-                <select class="font-semibold text-gray-800">
+            <div class="flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">City <span class="text-gray-400">&or;</span></span>
+                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
                     <option value="" disabled selected>Choose Location</option>
                     <option>Manila</option>
                     <option>Cebu City</option>
@@ -266,9 +165,9 @@
                 </select>
             </div>
 
-            <div class="search-field flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Dormitory Type <span class="text-gray-400">∨</span></span>
-                <select class="font-semibold text-gray-800">
+            <div class="flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Dormitory Type <span class="text-gray-400">&or;</span></span>
+                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
                     <option value="all-female" selected>All Female</option>
                     <option>All Male</option>
                     <option>Mixed</option>
@@ -277,43 +176,47 @@
                 </select>
             </div>
 
-            <div class="search-field flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Price <span class="text-gray-400">∨</span></span>
-                <select class="font-semibold text-gray-800">
-                    <option value="24000" selected>₱ 24,000</option>
-                    <option>₱1,000 – ₱3,000</option>
-                    <option>₱3,000 – ₱6,000</option>
-                    <option>₱6,000 – ₱10,000</option>
-                    <option>₱10,000 – ₱20,000</option>
-                    <option>₱20,000+</option>
+            <div class="flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Price <span class="text-gray-400">&or;</span></span>
+                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
+                    <option value="24000" selected>&peso; 24,000</option>
+                    <option>&peso;1,000 &ndash; &peso;3,000</option>
+                    <option>&peso;3,000 &ndash; &peso;6,000</option>
+                    <option>&peso;6,000 &ndash; &peso;10,000</option>
+                    <option>&peso;10,000 &ndash; &peso;20,000</option>
+                    <option>&peso;20,000+</option>
                 </select>
             </div>
 
-            <div class="search-field flex-1 flex flex-col px-5 py-2 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Unit Size <span class="text-gray-400">∨</span></span>
-                <select class="font-semibold text-gray-800">
-                    <option value="24000" selected>₱ 24,000</option>
-                    <option>Small (≤ 20 sqm)</option>
-                    <option>Medium (21–40 sqm)</option>
-                    <option>Large (41–70 sqm)</option>
+            <div class="flex-1 flex flex-col px-5 py-2 min-w-0">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Unit Size <span class="text-gray-400">&or;</span></span>
+                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
+                    <option value="24000" selected>&peso; 24,000</option>
+                    <option>Small (&le; 20 sqm)</option>
+                    <option>Medium (21&ndash;40 sqm)</option>
+                    <option>Large (41&ndash;70 sqm)</option>
                     <option>Extra Large (70+ sqm)</option>
                 </select>
             </div>
 
-            <button class="flex-shrink-0 ml-3 w-14 h-14 rounded-[10px] border-none text-white flex items-center justify-center transition-all duration-200 hover:opacity-90 cursor-pointer" style="background: linear-gradient(135deg, #1a3fbf 0%, #0b1f6b 100%);">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/></svg>
+            <button class="shrink-0 ml-3 w-14 h-14 rounded-[10px] border-none text-white flex items-center justify-center
+                           transition-all duration-200 hover:opacity-90 cursor-pointer
+                           bg-[linear-gradient(135deg,#1a3fbf_0%,#0b1f6b_100%)]">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/>
+                </svg>
             </button>
         </div>
     </div>
 
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════
+{{-- ═══════════════════════════════════════════════════════════════
      BELOW HERO
-═══════════════════════════════════════════════════════════════ -->
+═══════════════════════════════════════════════════════════════ --}}
 <div class="pt-[90px] bg-[#f8faff]">
 
-    <!-- Stats -->
+    {{-- Stats --}}
     <div class="flex justify-center max-w-[1100px] mx-auto px-16 pt-14 pb-12">
         <div class="flex-1 text-center px-8 border-r border-[#dde3f0]">
             <div class="text-[2.4rem] font-extrabold text-[#0b1f6b] leading-none mb-1.5">12<span class="text-[#1a3fbf]">K+</span></div>
@@ -333,16 +236,17 @@
         </div>
     </div>
 
-    <!-- Neural Architecture Section -->
-    <section id="about" class="neural-section relative overflow-hidden py-20 px-16"
-             style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);">
+    {{-- Neural Architecture Section --}}
+    <section id="about" class="relative overflow-hidden py-20 px-16 bg-[linear-gradient(135deg,#0f172a_0%,#1e3a5f_100%)]">
+
+        {{-- Radial glow (replaces ::before) --}}
+        <div class="absolute -top-[40%] -right-[10%] w-[500px] h-[500px] rounded-full pointer-events-none
+                    bg-[radial-gradient(circle,rgba(96,165,250,0.08)_0%,transparent_70%)]"></div>
 
         <div class="max-w-[1100px] mx-auto relative z-[1]">
 
             {{-- Header --}}
             <div class="flex items-end justify-between gap-16 mb-[68px]">
-
-                {{-- Left: eyebrow + title --}}
                 <div class="flex-none">
                     <div class="inline-block text-[0.70rem] font-bold tracking-[2px] uppercase text-[#60a5fa] mb-4">
                         Neural Architecture
@@ -352,8 +256,6 @@
                         <span class="text-[#60a5fa] italic">Pure Intelligence.</span>
                     </h2>
                 </div>
-
-                {{-- Right: subtitle with left border --}}
                 <div class="flex-none pl-12 border-l border-[rgba(96,165,250,0.3)] pb-2">
                     <p class="text-[0.95rem] text-white/70 leading-relaxed max-w-[420px]">
                         Our proprietary Intelligence Layer transforms raw property
@@ -366,76 +268,87 @@
             <div class="grid grid-cols-3 gap-8">
 
                 {{-- Module S1 --}}
-                <div class="module-card relative overflow-hidden rounded-2xl p-10 cursor-pointer
-                            border border-[rgba(96,165,250,0.2)]
-                            bg-[rgba(30,58,95,0.6)]
+                <div class="group/card relative overflow-hidden rounded-2xl p-10 cursor-pointer
+                            border border-[rgba(96,165,250,0.2)] bg-[rgba(30,58,95,0.6)]
                             transition-all duration-300 ease-in-out
                             hover:bg-[rgba(96,165,250,0.15)] hover:border-[rgba(96,165,250,0.5)]
                             hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(96,165,250,0.2)]">
-                    {{-- Icon --}}
-                    <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]"
-                         style="background: linear-gradient(135deg, #60a5fa, #3b82f6);">🏗️</div>
-                    <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S1</span>
-                    <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Hierarchical Clustering</h3>
-                    <p class="text-[0.88rem] text-white/70 leading-[1.68]">Group similar properties or maintenance requests to optimize resource allocation and enable proactive maintenance planning.</p>
-                    {{-- Nav --}}
-                    <div class="flex justify-between items-center mt-6 pt-6 border-t border-[rgba(96,165,250,0.15)]">
-                        <div class="flex gap-1.5">
-                            <span class="module-dot-first w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)] transition-colors duration-300"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                    {{-- Hover shimmer (replaces ::before) --}}
+                    <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.15),rgba(139,92,246,0.15))]
+                                opacity-0 group-hover/card:opacity-100 transition-opacity duration-[350ms] pointer-events-none rounded-2xl"></div>
+                    <div class="relative z-[1]">
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]
+                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">🏗️</div>
+                        <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S1</span>
+                        <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Hierarchical Clustering</h3>
+                        <p class="text-[0.88rem] text-white/70 leading-[1.68]">Group similar properties or maintenance requests to optimize resource allocation and enable proactive maintenance planning.</p>
+                        <div class="flex justify-between items-center mt-6 pt-6 border-t border-[rgba(96,165,250,0.15)]">
+                            <div class="flex gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)] transition-colors duration-300 group-hover/card:bg-[#60a5fa]"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                            </div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
+                                        bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
+                                        transition-all duration-300 cursor-pointer
+                                        group-hover/card:bg-[#60a5fa] group-hover/card:text-[#0f172a] group-hover/card:translate-x-1">&rarr;</div>
                         </div>
-                        <div class="module-arrow-btn w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
-                                    bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
-                                    transition-all duration-300 cursor-pointer">→</div>
                     </div>
                 </div>
 
                 {{-- Module S2 --}}
-                <div class="module-card relative overflow-hidden rounded-2xl p-10 cursor-pointer
-                            border border-[rgba(96,165,250,0.2)]
-                            bg-[rgba(30,58,95,0.6)]
+                <div class="group/card relative overflow-hidden rounded-2xl p-10 cursor-pointer
+                            border border-[rgba(96,165,250,0.2)] bg-[rgba(30,58,95,0.6)]
                             transition-all duration-300 ease-in-out
                             hover:bg-[rgba(96,165,250,0.15)] hover:border-[rgba(96,165,250,0.5)]
                             hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(96,165,250,0.2)]">
-                    <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]"
-                         style="background: linear-gradient(135deg, #60a5fa, #3b82f6);">🎯</div>
-                    <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S2</span>
-                    <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Rental Price Prediction</h3>
-                    <p class="text-[0.88rem] text-white/70 leading-[1.68]">Utilize Multiple Regression to suggest optimal rental prices based on area, bedrooms, and location attributes.</p>
-                    <div class="flex justify-between items-center mt-6 pt-6 border-t border-[rgba(96,165,250,0.15)]">
-                        <div class="flex gap-1.5">
-                            <span class="module-dot-first w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)] transition-colors duration-300"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                    <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.15),rgba(139,92,246,0.15))]
+                                opacity-0 group-hover/card:opacity-100 transition-opacity duration-[350ms] pointer-events-none rounded-2xl"></div>
+                    <div class="relative z-[1]">
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]
+                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">🎯</div>
+                        <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S2</span>
+                        <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Rental Price Prediction</h3>
+                        <p class="text-[0.88rem] text-white/70 leading-[1.68]">Utilize Multiple Regression to suggest optimal rental prices based on area, bedrooms, and location attributes.</p>
+                        <div class="flex justify-between items-center mt-6 pt-6 border-t border-[rgba(96,165,250,0.15)]">
+                            <div class="flex gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)] transition-colors duration-300 group-hover/card:bg-[#60a5fa]"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                            </div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
+                                        bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
+                                        transition-all duration-300 cursor-pointer
+                                        group-hover/card:bg-[#60a5fa] group-hover/card:text-[#0f172a] group-hover/card:translate-x-1">&rarr;</div>
                         </div>
-                        <div class="module-arrow-btn w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
-                                    bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
-                                    transition-all duration-300 cursor-pointer">→</div>
                     </div>
                 </div>
 
                 {{-- Module S3 --}}
-                <div class="module-card relative overflow-hidden rounded-2xl p-10 cursor-pointer
-                            border border-[rgba(96,165,250,0.2)]
-                            bg-[rgba(30,58,95,0.6)]
+                <div class="group/card relative overflow-hidden rounded-2xl p-10 cursor-pointer
+                            border border-[rgba(96,165,250,0.2)] bg-[rgba(30,58,95,0.6)]
                             transition-all duration-300 ease-in-out
                             hover:bg-[rgba(96,165,250,0.15)] hover:border-[rgba(96,165,250,0.5)]
                             hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(96,165,250,0.2)]">
-                    <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]"
-                         style="background: linear-gradient(135deg, #60a5fa, #3b82f6);">📈</div>
-                    <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S3</span>
-                    <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Financial Forecasting</h3>
-                    <p class="text-[0.88rem] text-white/70 leading-[1.68]">Institutional-grade estimates for future rental income and maintenance costs so drive data-driven decisions.</p>
-                    <div class="flex justify-between items-center mt-6 pt-6 border-t border-[rgba(96,165,250,0.15)]">
-                        <div class="flex gap-1.5">
-                            <span class="module-dot-first w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)] transition-colors duration-300"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                    <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.15),rgba(139,92,246,0.15))]
+                                opacity-0 group-hover/card:opacity-100 transition-opacity duration-[350ms] pointer-events-none rounded-2xl"></div>
+                    <div class="relative z-[1]">
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]
+                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">📈</div>
+                        <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S3</span>
+                        <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Financial Forecasting</h3>
+                        <p class="text-[0.88rem] text-white/70 leading-[1.68]">Institutional-grade estimates for future rental income and maintenance costs so drive data-driven decisions.</p>
+                        <div class="flex justify-between items-center mt-6 pt-6 border-t border-[rgba(96,165,250,0.15)]">
+                            <div class="flex gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)] transition-colors duration-300 group-hover/card:bg-[#60a5fa]"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
+                            </div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
+                                        bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
+                                        transition-all duration-300 cursor-pointer
+                                        group-hover/card:bg-[#60a5fa] group-hover/card:text-[#0f172a] group-hover/card:translate-x-1">&rarr;</div>
                         </div>
-                        <div class="module-arrow-btn w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
-                                    bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
-                                    transition-all duration-300 cursor-pointer">→</div>
                     </div>
                 </div>
 
@@ -443,7 +356,7 @@
         </div>
     </section>
 
-    <!-- Unified Ecosystem Section -->
+    {{-- Unified Ecosystem Section --}}
     <section class="bg-[#f8faff] py-20 px-16 relative overflow-hidden">
         <div class="max-w-[1100px] mx-auto">
 
@@ -462,34 +375,53 @@
             <div id="ecosystemCards" class="flex gap-6 items-stretch h-[520px] justify-start">
 
                 {{-- The Visionary Owner --}}
-                <div class="eco-card owner active relative rounded-[20px] overflow-hidden cursor-pointer
+                <div class="eco-card active relative rounded-[20px] overflow-hidden cursor-pointer
                             flex flex-col justify-end p-8 min-h-[520px] shadow-[0_8px_24px_rgba(0,0,0,0.1)]
                             bg-gradient-to-br from-[#f5f5f7] to-[#eeeff2]
                             [flex:0_0_18%] opacity-85
                             [transition:flex_0.5s_ease-in-out,opacity_0.5s_ease-in-out]
                             [&.active]:[flex:0_0_60%] [&.active]:opacity-100"
                      data-card="owner">
+                    {{-- BG image layer (replaces ::before) --}}
+                    <div class="eco-bg absolute inset-0 bg-cover bg-center opacity-35 transition-all duration-500 z-[1]
+                                [.active_&]:opacity-70 [.active_&]:blur-[5px] [.active_&]:brightness-105"
+                         data-bg="/images/Owner.webp"></div>
+                    {{-- Overlay layer (replaces ::after) --}}
+                    <div class="eco-overlay absolute inset-0 bg-white/65 opacity-100 transition-opacity duration-500 z-[2] pointer-events-none
+                                [.active_&]:opacity-80 [.active_&]:bg-[linear-gradient(160deg,#1a2847_0%,#0f1a2e_100%)]"></div>
                     <div class="relative z-[3] flex flex-col h-full">
-                        <span class="eco-card-pill inline-block text-[0.65rem] font-bold tracking-[1.5px] uppercase
+                        <span class="inline-block text-[0.65rem] font-bold tracking-[1.5px] uppercase
                                      px-[14px] py-[6px] rounded-full bg-white/20 text-white mb-4 w-fit
                                      opacity-0 transition-opacity duration-500 delay-100
                                      [.active_&]:opacity-100">
                             PROPERTY OWNER
                         </span>
-                        <h3 class="eco-card-title text-[1.4rem] font-extrabold text-[#1a1a1a] leading-tight mb-4
+                        <h3 class="text-[1.4rem] font-extrabold text-[#1a1a1a] leading-tight mb-4
                                    transition-all duration-500
                                    [.active_&]:text-white [.active_&]:text-[1.9rem]">
                             The Visionary<br>Owner
                         </h3>
-                        <ul class="eco-card-features list-none flex flex-col gap-3 flex-1 mt-auto mb-4
+                        <ul class="list-none flex flex-col gap-3 flex-1 mt-auto mb-4
                                    opacity-0 transition-opacity duration-500 delay-150
                                    [.active_&]:opacity-100">
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">AI-powered financial performance dashboard.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Secure centralized document vault.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Manager assignment and oversight controls.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Occupancy trend visualization and tracking.</li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                AI-powered financial performance dashboard.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Secure centralized document vault.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Manager assignment and oversight controls.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Occupancy trend visualization and tracking.
+                            </li>
                         </ul>
-                        <a href="#" class="eco-card-expand text-[0.75rem] font-bold tracking-[1px] uppercase
+                        <a href="#" class="text-[0.75rem] font-bold tracking-[1px] uppercase
                                            text-[#1a3fbf] no-underline transition-opacity duration-500
                                            [.active_&]:opacity-0 [.active_&]:pointer-events-none">
                             Expand Module +
@@ -498,34 +430,51 @@
                 </div>
 
                 {{-- The Strategic Manager --}}
-                <div class="eco-card manager relative rounded-[20px] overflow-hidden cursor-pointer
+                <div class="eco-card relative rounded-[20px] overflow-hidden cursor-pointer
                             flex flex-col justify-end p-8 min-h-[520px] shadow-[0_8px_24px_rgba(0,0,0,0.1)]
                             bg-gradient-to-br from-[#f5f5f7] to-[#eeeff2]
                             [flex:0_0_18%] opacity-85
                             [transition:flex_0.5s_ease-in-out,opacity_0.5s_ease-in-out]
                             [&.active]:[flex:0_0_60%] [&.active]:opacity-100"
                      data-card="manager">
+                    <div class="eco-bg absolute inset-0 bg-cover bg-center opacity-35 transition-all duration-500 z-[1]
+                                [.active_&]:opacity-70 [.active_&]:blur-[5px] [.active_&]:brightness-105"
+                         data-bg="/images/Manager.webp"></div>
+                    <div class="eco-overlay absolute inset-0 bg-white/65 opacity-100 transition-opacity duration-500 z-[2] pointer-events-none
+                                [.active_&]:opacity-80 [.active_&]:bg-[linear-gradient(160deg,#1a3fbf_0%,#0a2878_100%)]"></div>
                     <div class="relative z-[3] flex flex-col h-full">
-                        <span class="eco-card-pill inline-block text-[0.65rem] font-bold tracking-[1.5px] uppercase
+                        <span class="inline-block text-[0.65rem] font-bold tracking-[1.5px] uppercase
                                      px-[14px] py-[6px] rounded-full bg-white/20 text-white mb-4 w-fit
                                      opacity-0 transition-opacity duration-500 delay-100
                                      [.active_&]:opacity-100">
                             PROPERTY MANAGER
                         </span>
-                        <h3 class="eco-card-title text-[1.4rem] font-extrabold text-[#1a1a1a] leading-tight mb-4
+                        <h3 class="text-[1.4rem] font-extrabold text-[#1a1a1a] leading-tight mb-4
                                    transition-all duration-500
                                    [.active_&]:text-white [.active_&]:text-[1.9rem]">
                             The Strategic<br>Manager
                         </h3>
-                        <ul class="eco-card-features list-none flex flex-col gap-3 flex-1 mt-auto mb-4
+                        <ul class="list-none flex flex-col gap-3 flex-1 mt-auto mb-4
                                    opacity-0 transition-opacity duration-500 delay-150
                                    [.active_&]:opacity-100">
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Full tenant lifecycle management tools.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Integrated real-time messenger system.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Maintenance ticket &amp; technician tracking.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Rent collection &amp; automated reminders.</li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Full tenant lifecycle management tools.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Integrated real-time messenger system.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Maintenance ticket &amp; technician tracking.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Rent collection &amp; automated reminders.
+                            </li>
                         </ul>
-                        <a href="#" class="eco-card-expand text-[0.75rem] font-bold tracking-[1px] uppercase
+                        <a href="#" class="text-[0.75rem] font-bold tracking-[1px] uppercase
                                            text-[#1a3fbf] no-underline transition-opacity duration-500
                                            [.active_&]:opacity-0 [.active_&]:pointer-events-none">
                             Expand Module +
@@ -534,34 +483,51 @@
                 </div>
 
                 {{-- The Empowered Tenant --}}
-                <div class="eco-card tenant relative rounded-[20px] overflow-hidden cursor-pointer
+                <div class="eco-card relative rounded-[20px] overflow-hidden cursor-pointer
                             flex flex-col justify-end p-8 min-h-[520px] shadow-[0_8px_24px_rgba(0,0,0,0.1)]
                             bg-gradient-to-br from-[#f5f5f7] to-[#eeeff2]
                             [flex:0_0_18%] opacity-85
                             [transition:flex_0.5s_ease-in-out,opacity_0.5s_ease-in-out]
                             [&.active]:[flex:0_0_60%] [&.active]:opacity-100"
                      data-card="tenant">
+                    <div class="eco-bg absolute inset-0 bg-cover bg-center opacity-35 transition-all duration-500 z-[1]
+                                [.active_&]:opacity-70 [.active_&]:blur-[5px] [.active_&]:brightness-105"
+                         data-bg="/images/Tenant.webp"></div>
+                    <div class="eco-overlay absolute inset-0 bg-white/65 opacity-100 transition-opacity duration-500 z-[2] pointer-events-none
+                                [.active_&]:opacity-80 [.active_&]:bg-[linear-gradient(160deg,#0a1c4d_0%,#051028_100%)]"></div>
                     <div class="relative z-[3] flex flex-col h-full">
-                        <span class="eco-card-pill inline-block text-[0.65rem] font-bold tracking-[1.5px] uppercase
+                        <span class="inline-block text-[0.65rem] font-bold tracking-[1.5px] uppercase
                                      px-[14px] py-[6px] rounded-full bg-white/20 text-white mb-4 w-fit
                                      opacity-0 transition-opacity duration-500 delay-100
                                      [.active_&]:opacity-100">
                             TENANT
                         </span>
-                        <h3 class="eco-card-title text-[1.4rem] font-extrabold text-[#1a1a1a] leading-tight mb-4
+                        <h3 class="text-[1.4rem] font-extrabold text-[#1a1a1a] leading-tight mb-4
                                    transition-all duration-500
                                    [.active_&]:text-white [.active_&]:text-[1.9rem]">
                             The Empowered<br>Tenant
                         </h3>
-                        <ul class="eco-card-features list-none flex flex-col gap-3 flex-1 mt-auto mb-4
+                        <ul class="list-none flex flex-col gap-3 flex-1 mt-auto mb-4
                                    opacity-0 transition-opacity duration-500 delay-150
                                    [.active_&]:opacity-100">
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">One-click payment history &amp; receipt access.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Submit and track maintenance live status.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Instant broadcast announcements receiver.</li>
-                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">Direct chat with property management staff.</li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                One-click payment history &amp; receipt access.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Submit and track maintenance live status.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Instant broadcast announcements receiver.
+                            </li>
+                            <li class="flex items-center gap-2.5 text-[0.88rem] text-white/85">
+                                <span class="inline-flex items-center justify-center w-[18px] h-[18px] min-w-[18px] bg-white/25 rounded-full text-white text-[0.72rem] font-bold">&check;</span>
+                                Direct chat with property management staff.
+                            </li>
                         </ul>
-                        <a href="#" class="eco-card-expand text-[0.75rem] font-bold tracking-[1px] uppercase
+                        <a href="#" class="text-[0.75rem] font-bold tracking-[1px] uppercase
                                            text-[#1a3fbf] no-underline transition-opacity duration-500
                                            [.active_&]:opacity-0 [.active_&]:pointer-events-none">
                             Expand Module +
@@ -573,8 +539,7 @@
         </div>
     </section>
 
-    <!-- Features -->
-    <!-- Features / Why ForeRent Section -->
+    {{-- Features / Why ForeRent Section --}}
     <section id="features" class="bg-[#f0f4ff] py-16 px-16">
         <div class="max-w-[1100px] mx-auto">
 
@@ -593,9 +558,8 @@
                 {{-- AI-Powered Predictions --}}
                 <div class="bg-white border border-[#e8edf7] rounded-2xl p-9 transition-all duration-200
                             hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(11,31,107,0.10)]">
-                    <div class="w-13 h-13 rounded-xl flex items-center justify-center mb-5
-                                bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]"
-                         style="width:52px;height:52px;">
+                    <div class="w-[52px] h-[52px] rounded-xl flex items-center justify-center mb-5
+                                bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]">
                         <svg class="w-[26px] h-[26px] text-[#1a3fbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                         </svg>
@@ -607,8 +571,7 @@
                 {{-- Location Intelligence --}}
                 <div class="bg-white border border-[#e8edf7] rounded-2xl p-9 transition-all duration-200
                             hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(11,31,107,0.10)]">
-                    <div class="flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]"
-                         style="width:52px;height:52px;">
+                    <div class="w-[52px] h-[52px] flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]">
                         <svg class="w-[26px] h-[26px] text-[#1a3fbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                             <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -621,8 +584,7 @@
                 {{-- Verified Listings --}}
                 <div class="bg-white border border-[#e8edf7] rounded-2xl p-9 transition-all duration-200
                             hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(11,31,107,0.10)]">
-                    <div class="flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]"
-                         style="width:52px;height:52px;">
+                    <div class="w-[52px] h-[52px] flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]">
                         <svg class="w-[26px] h-[26px] text-[#1a3fbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                         </svg>
@@ -634,8 +596,7 @@
                 {{-- Price Fairness Score --}}
                 <div class="bg-white border border-[#e8edf7] rounded-2xl p-9 transition-all duration-200
                             hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(11,31,107,0.10)]">
-                    <div class="flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]"
-                         style="width:52px;height:52px;">
+                    <div class="w-[52px] h-[52px] flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]">
                         <svg class="w-[26px] h-[26px] text-[#1a3fbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -647,8 +608,7 @@
                 {{-- Real-Time Alerts --}}
                 <div class="bg-white border border-[#e8edf7] rounded-2xl p-9 transition-all duration-200
                             hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(11,31,107,0.10)]">
-                    <div class="flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]"
-                         style="width:52px;height:52px;">
+                    <div class="w-[52px] h-[52px] flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]">
                         <svg class="w-[26px] h-[26px] text-[#1a3fbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
@@ -660,8 +620,7 @@
                 {{-- Market Reports --}}
                 <div class="bg-white border border-[#e8edf7] rounded-2xl p-9 transition-all duration-200
                             hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(11,31,107,0.10)]">
-                    <div class="flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]"
-                         style="width:52px;height:52px;">
+                    <div class="w-[52px] h-[52px] flex items-center justify-center rounded-xl mb-5 bg-gradient-to-br from-[#dbeafe] to-[#eff6ff]">
                         <svg class="w-[26px] h-[26px] text-[#1a3fbf]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
@@ -674,12 +633,274 @@
         </div>
     </section>
 
+    {{-- FAQ Section --}}
+    <section id="faq" class="bg-white py-24 px-16">
+        <div class="max-w-[1100px] mx-auto">
+            <div class="flex gap-20 items-start">
+
+                {{-- Left column: header --}}
+                <div class="w-[380px] shrink-0 sticky top-32 pt-4">
+                    <div class="flex items-center gap-2 mb-6">
+                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#eef2ff] text-[#1a3fbf]">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-[0.8rem] font-semibold">Got questions? We've got answers</span>
+                        </span>
+                    </div>
+
+                    <h2 class="text-[2.6rem] font-extrabold text-[#0b1f6b] leading-[1.15] mb-5">
+                        Frequently asked<br>
+                        <span class="text-[#1a3fbf] italic">questions</span>
+                    </h2>
+
+                    <p class="text-[0.95rem] text-gray-400 leading-[1.7] max-w-[340px]">
+                        Choose a plan that fits your property needs and budget. No hidden fees, no surprises &mdash; just straightforward tools for powerful property management.
+                    </p>
+                </div>
+
+                {{-- Right column: accordion --}}
+                <div id="faqAccordion" class="flex-1 flex flex-col gap-4">
+
+                    {{-- Q1 --}}
+                    <div class="faq-item bg-[#f8faff] border border-[#e8edf7] rounded-2xl overflow-hidden transition-shadow duration-300">
+                        <button class="faq-trigger w-full flex items-center justify-between px-7 py-5 text-left cursor-pointer bg-transparent border-none">
+                            <span class="text-[0.95rem] font-bold text-[#0b1f6b] pr-4">What is ForeRent?</span>
+                            <span class="faq-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 bg-[#e8edf7] text-[#1a3fbf]">
+                                <svg class="faq-chevron w-4 h-4 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-panel" hidden>
+                            <div class="px-7 pb-6 text-[0.88rem] text-gray-500 leading-[1.75]">
+                                ForeRent is an AI-driven property management platform that connects property owners, managers, and tenants in one unified ecosystem. It uses machine learning to predict rental prices, forecast financial performance, and streamline day-to-day property operations.
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Q2 --}}
+                    <div class="faq-item bg-[#f8faff] border border-[#e8edf7] rounded-2xl overflow-hidden transition-shadow duration-300">
+                        <button class="faq-trigger w-full flex items-center justify-between px-7 py-5 text-left cursor-pointer bg-transparent border-none">
+                            <span class="text-[0.95rem] font-bold text-[#0b1f6b] pr-4">How does the AI rental price prediction work?</span>
+                            <span class="faq-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 bg-[#e8edf7] text-[#1a3fbf]">
+                                <svg class="faq-chevron w-4 h-4 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-panel" hidden>
+                            <div class="px-7 pb-6 text-[0.88rem] text-gray-500 leading-[1.75]">
+                                Our system uses Multiple Regression analysis to suggest optimal rental prices based on property attributes such as floor area, number of bedrooms, location, and nearby amenities. The model is continuously trained on real market data to ensure high prediction accuracy.
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Q3 --}}
+                    <div class="faq-item bg-[#f8faff] border border-[#e8edf7] rounded-2xl overflow-hidden transition-shadow duration-300">
+                        <button class="faq-trigger w-full flex items-center justify-between px-7 py-5 text-left cursor-pointer bg-transparent border-none">
+                            <span class="text-[0.95rem] font-bold text-[#0b1f6b] pr-4">Who is ForeRent designed for?</span>
+                            <span class="faq-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 bg-[#e8edf7] text-[#1a3fbf]">
+                                <svg class="faq-chevron w-4 h-4 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-panel" hidden>
+                            <div class="px-7 pb-6 text-[0.88rem] text-gray-500 leading-[1.75]">
+                                ForeRent serves three key user roles: <strong>Property Owners</strong> who want AI-powered financial dashboards and oversight controls, <strong>Property Managers</strong> who handle tenant lifecycle, maintenance tickets, and rent collection, and <strong>Tenants</strong> who need easy access to payments, maintenance requests, and direct communication with management.
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Q4 --}}
+                    <div class="faq-item bg-[#f8faff] border border-[#e8edf7] rounded-2xl overflow-hidden transition-shadow duration-300">
+                        <button class="faq-trigger w-full flex items-center justify-between px-7 py-5 text-left cursor-pointer bg-transparent border-none">
+                            <span class="text-[0.95rem] font-bold text-[#0b1f6b] pr-4">Is my data secure on ForeRent?</span>
+                            <span class="faq-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 bg-[#e8edf7] text-[#1a3fbf]">
+                                <svg class="faq-chevron w-4 h-4 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-panel" hidden>
+                            <div class="px-7 pb-6 text-[0.88rem] text-gray-500 leading-[1.75]">
+                                Absolutely. ForeRent uses secure authentication, role-based access control, and encrypted data storage to protect all user information. Property documents are stored in a centralized vault accessible only to authorized users, and all financial transactions are processed through secure channels.
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Q5 --}}
+                    <div class="faq-item bg-[#f8faff] border border-[#e8edf7] rounded-2xl overflow-hidden transition-shadow duration-300">
+                        <button class="faq-trigger w-full flex items-center justify-between px-7 py-5 text-left cursor-pointer bg-transparent border-none">
+                            <span class="text-[0.95rem] font-bold text-[#0b1f6b] pr-4">How do tenants submit maintenance requests?</span>
+                            <span class="faq-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 bg-[#e8edf7] text-[#1a3fbf]">
+                                <svg class="faq-chevron w-4 h-4 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-panel" hidden>
+                            <div class="px-7 pb-6 text-[0.88rem] text-gray-500 leading-[1.75]">
+                                Tenants can submit maintenance requests directly through their dashboard with a description and photos of the issue. Once submitted, they can track the live status of their request as it moves through review, assignment to a technician, and resolution. Managers receive instant notifications for every new ticket.
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Q6 --}}
+                    <div class="faq-item bg-[#f8faff] border border-[#e8edf7] rounded-2xl overflow-hidden transition-shadow duration-300">
+                        <button class="faq-trigger w-full flex items-center justify-between px-7 py-5 text-left cursor-pointer bg-transparent border-none">
+                            <span class="text-[0.95rem] font-bold text-[#0b1f6b] pr-4">Can I manage multiple properties on ForeRent?</span>
+                            <span class="faq-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 bg-[#e8edf7] text-[#1a3fbf]">
+                                <svg class="faq-chevron w-4 h-4 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="faq-panel" hidden>
+                            <div class="px-7 pb-6 text-[0.88rem] text-gray-500 leading-[1.75]">
+                                Yes. Property owners can register multiple buildings and units under a single account. Each property can be assigned its own manager, and the owner dashboard provides a consolidated view of financial performance, occupancy rates, and maintenance activity across all properties.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </section>
+
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════
+{{-- ═══════════════════════════════════════════════════════════════
+     LOCATIONS / MAP
+═══════════════════════════════════════════════════════════════ --}}
+<section id="locations" class="bg-[#f0f4ff] py-24 px-16">
+    <div class="max-w-[1100px] mx-auto">
+
+        {{-- Header --}}
+        <div class="text-center mb-14">
+            <span class="inline-block text-[0.72rem] font-bold tracking-[2.5px] uppercase text-[#1a3fbf] mb-3">Featured Properties</span>
+            <h2 class="text-[2rem] font-extrabold text-[#0b1f6b] leading-tight">
+                Our managed<br>
+                <span class="text-[#1a3fbf]">dormitories</span>
+            </h2>
+            <p class="text-[0.95rem] text-gray-500 leading-relaxed max-w-[480px] mx-auto mt-3">
+                Explore our managed dormitory buildings across Metro Manila, designed for comfort, security, and convenience.
+            </p>
+        </div>
+
+        {{-- Two location cards --}}
+        <div class="grid grid-cols-2 gap-8">
+
+            {{-- BGC Office --}}
+            <div class="bg-white rounded-2xl overflow-hidden border border-[#e8edf7] shadow-[0_4px_20px_rgba(11,31,107,0.06)] transition-all duration-300 hover:shadow-[0_8px_32px_rgba(11,31,107,0.12)]">
+                {{-- Map embed --}}
+                <div class="w-full h-[240px] bg-gray-100">
+                    <iframe
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=121.0430%2C14.5470%2C121.0580%2C14.5580&layer=mapnik&marker=14.5525%2C121.0505"
+                        class="w-full h-full border-none"
+                        loading="lazy"
+                        title="BGC Office Location">
+                    </iframe>
+                </div>
+                {{-- Info --}}
+                <div class="p-7">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                                    bg-[linear-gradient(135deg,#1a3fbf,#3b82f6)]">
+                            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="text-[1.05rem] font-bold text-[#0b1f6b]">BGC Dormitory</h3>
+                            <span class="text-[0.75rem] font-semibold text-[#1a3fbf] uppercase tracking-[1px]">Taguig City</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-4 h-4 text-[#1a3fbf] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span class="text-[0.88rem] text-gray-500 leading-snug">26th St., Bonifacio Global City, Taguig City</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span class="text-[0.88rem] text-gray-500">48 Units &middot; Mixed Dormitory</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-[0.88rem] text-gray-500">Starting at &peso;5,500 / month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Makati Office --}}
+            <div class="bg-white rounded-2xl overflow-hidden border border-[#e8edf7] shadow-[0_4px_20px_rgba(11,31,107,0.06)] transition-all duration-300 hover:shadow-[0_8px_32px_rgba(11,31,107,0.12)]">
+                {{-- Map embed --}}
+                <div class="w-full h-[240px] bg-gray-100">
+                    <iframe
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=121.0140%2C14.5510%2C121.0310%2C14.5630&layer=mapnik&marker=14.5570%2C121.0225"
+                        class="w-full h-full border-none"
+                        loading="lazy"
+                        title="Makati Office Location">
+                    </iframe>
+                </div>
+                {{-- Info --}}
+                <div class="p-7">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                                    bg-[linear-gradient(135deg,#1a3fbf,#3b82f6)]">
+                            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h3 class="text-[1.05rem] font-bold text-[#0b1f6b]">Makati Dormitory</h3>
+                            <span class="text-[0.75rem] font-semibold text-[#1a3fbf] uppercase tracking-[1px]">Makati City</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-4 h-4 text-[#1a3fbf] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span class="text-[0.88rem] text-gray-500 leading-snug">Ayala Ave., Legazpi Village, Makati City</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span class="text-[0.88rem] text-gray-500">36 Units &middot; All Female Dormitory</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-[0.88rem] text-gray-500">Starting at &peso;4,800 / month</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+{{-- ═══════════════════════════════════════════════════════════════
      FOOTER
-═══════════════════════════════════════════════════════════════ -->
-<footer style="background: linear-gradient(135deg, #0a0f1e 0%, #0d1b3e 100%);" class="text-white">
+═══════════════════════════════════════════════════════════════ --}}
+<footer id="contact" class="text-white bg-[linear-gradient(135deg,#0a0f1e_0%,#0d1b3e_100%)]">
 
     {{-- Main footer body --}}
     <div class="max-w-[1200px] mx-auto px-16 pt-16 pb-12">
@@ -687,40 +908,32 @@
 
             {{-- Brand column --}}
             <div class="flex-none w-64">
-                {{-- Logo --}}
-                <a href="#" class="flex items-center gap-3 no-underline mb-5">
-                    <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                         style="background: linear-gradient(135deg, #1a3fbf, #3b82f6);">
-                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <span class="text-white font-extrabold text-xl tracking-wider uppercase">ForeRent</span>
+                <a href="#" class="flex items-center no-underline mb-5">
+                    <img src="/images/white_logo.svg" alt="ForeRent Logo" class="h-14 w-auto">
                 </a>
 
-                {{-- Tagline --}}
                 <p class="text-white/50 text-[0.88rem] leading-relaxed mb-8">
-                    Pioneering AI-driven property management solutions for the modern enterprise.
+                    AI-powered dormitory and property management platform for owners, managers, and tenants.
                 </p>
 
                 {{-- Social icon buttons --}}
                 <div class="flex gap-3">
-                    {{-- Settings / Owner Portal --}}
+                    {{-- Facebook --}}
                     <a href="#" class="w-10 h-10 rounded-full border border-white/20 bg-white/[0.06] hover:bg-white/[0.14] hover:border-[#3b82f6] flex items-center justify-center transition-all duration-200">
-                        <svg class="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                         </svg>
                     </a>
-                    {{-- Team / Tenants --}}
+                    {{-- Instagram --}}
                     <a href="#" class="w-10 h-10 rounded-full border border-white/20 bg-white/[0.06] hover:bg-white/[0.14] hover:border-[#3b82f6] flex items-center justify-center transition-all duration-200">
-                        <svg class="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <svg class="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
                         </svg>
                     </a>
-                    {{-- Chat / Support --}}
+                    {{-- Email --}}
                     <a href="#" class="w-10 h-10 rounded-full border border-white/20 bg-white/[0.06] hover:bg-white/[0.14] hover:border-[#3b82f6] flex items-center justify-center transition-all duration-200">
                         <svg class="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
                     </a>
                 </div>
@@ -728,39 +941,32 @@
 
             {{-- Nav columns --}}
             <div class="flex-1 grid grid-cols-3 gap-8 pt-1">
-
-                {{-- Platform --}}
                 <div>
-                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Platform</h4>
+                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Navigate</h4>
                     <ul class="list-none flex flex-col gap-4">
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Owner Portal</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Manager Suite</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Tenant App</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">AI Insights</a></li>
+                        <li><a href="#hero-section" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Home</a></li>
+                        <li><a href="#about" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">About</a></li>
+                        <li><a href="#features" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Features</a></li>
+                        <li><a href="#faq" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">FAQ</a></li>
+                        <li><a href="#locations" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Locations</a></li>
                     </ul>
                 </div>
-
-                {{-- Company --}}
                 <div>
-                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Company</h4>
+                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Contact</h4>
                     <ul class="list-none flex flex-col gap-4">
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Our Vision</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Methodology</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Support</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Contact</a></li>
+                        <li><span class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55">info@forerent.com</span></li>
+                        <li><span class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55">(02) 8123-4567</span></li>
+                        <li><span class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55">Metro Manila, PH</span></li>
                     </ul>
                 </div>
-
-                {{-- Enterprise --}}
                 <div>
-                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Enterprise</h4>
+                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Legal</h4>
                     <ul class="list-none flex flex-col gap-4">
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Data Privacy</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Terms of Use</a></li>
-                        <li><a href="#" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Security</a></li>
+                        <li><a href="/privacy-policy" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Privacy Policy</a></li>
+                        <li><a href="/terms-of-service" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Terms of Service</a></li>
+                        <li><a href="/data-protection" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Data Protection</a></li>
                     </ul>
                 </div>
-
             </div>
         </div>
     </div>
@@ -768,12 +974,12 @@
     {{-- Bottom bar --}}
     <div class="border-t border-white/[0.08] max-w-[1200px] mx-auto px-16 py-5 flex items-center justify-between">
         <span class="text-[0.68rem] font-bold tracking-[2px] uppercase text-white/35">
-            &copy; {{ date('Y') }} ForeRent Inc. Built for Scale.
+            &copy; {{ date('Y') }} ForeRent. All rights reserved.
         </span>
         <div class="flex items-center gap-8">
+            <a href="#" class="text-[0.68rem] font-bold tracking-[2px] uppercase text-white/35 hover:text-white no-underline transition-colors duration-200">Facebook</a>
             <a href="#" class="text-[0.68rem] font-bold tracking-[2px] uppercase text-white/35 hover:text-white no-underline transition-colors duration-200">Instagram</a>
-            <a href="#" class="text-[0.68rem] font-bold tracking-[2px] uppercase text-white/35 hover:text-white no-underline transition-colors duration-200">LinkedIn</a>
-            <a href="#" class="text-[0.68rem] font-bold tracking-[2px] uppercase text-white/35 hover:text-white no-underline transition-colors duration-200">Twitter</a>
+            <a href="#" class="text-[0.68rem] font-bold tracking-[2px] uppercase text-white/35 hover:text-white no-underline transition-colors duration-200">Email</a>
         </div>
     </div>
 
@@ -782,11 +988,12 @@
 @vite('resources/js/app.js')
 
 <script>
-    // ─── NAVBAR THEME: Light vs Dark based on scroll position ───────────────
-    // We use explicit section color mapping — much more reliable than
-    // getComputedStyle (which returns transparent for most sections).
+    // ─── Set eco-card background images from data attributes ──────────────
+    document.querySelectorAll('.eco-bg[data-bg]').forEach(el => {
+        el.style.backgroundImage = `url('${el.dataset.bg}')`;
+    });
 
-    // Sections that have a DARK background (white text is fine)
+    // ─── NAVBAR THEME: Light vs Dark based on scroll position ─────────────
     const DARK_SECTION_IDS = ['hero-section', 'about'];
 
     function updateNavTheme() {
@@ -794,31 +1001,26 @@
         const scrollY = window.scrollY;
         const navBottom = nav.offsetHeight + scrollY;
 
-        // Scrolled glass effect
         if (scrollY > 30) nav.classList.add('scrolled');
         else nav.classList.remove('scrolled');
 
-        let isDark = true; // default: assume dark (hero)
+        let isDark = true;
 
-        // Check every tracked section
         document.querySelectorAll('section[id], #hero-section').forEach(section => {
             const rect = section.getBoundingClientRect();
             const top = rect.top + scrollY;
             const bottom = rect.bottom + scrollY;
-            // Is the navbar bottom edge inside this section?
             if (navBottom >= top && navBottom <= bottom) {
                 isDark = DARK_SECTION_IDS.includes(section.id);
             }
         });
 
-        // Also check the light wrapper div (stats + features area)
         const lightWrapper = document.querySelector('div.pt-\\[90px\\]');
         if (lightWrapper) {
             const r = lightWrapper.getBoundingClientRect();
             const top = r.top + scrollY;
             const bottom = r.bottom + scrollY;
             if (navBottom >= top && navBottom <= bottom) {
-                // Check if we're NOT inside a dark sub-section
                 let insideDarkSub = false;
                 DARK_SECTION_IDS.forEach(id => {
                     const el = document.getElementById(id);
@@ -842,56 +1044,63 @@
         }
     }
 
-    window.addEventListener('scroll', updateNavTheme, { passive: true });
+    let ticking = false;
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            requestAnimationFrame(function() {
+                updateNavTheme();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
     window.addEventListener('load', updateNavTheme);
     document.addEventListener('DOMContentLoaded', updateNavTheme);
 
-    // ─── SMOOTH SCROLL WITH PAGE FLASH ANIMATION ────────────────────────────
-    const overlay = document.getElementById('page-transition');
-
+    // ─── SMOOTH SCROLL ─────────────────────────────────────────────────
     function animatedScrollTo(targetEl, linkEl) {
         if (!targetEl) return;
 
-        // Set active link
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         if (linkEl) linkEl.classList.add('active');
 
-        // Flash overlay in
-        overlay.classList.add('active');
+        const yOffset = -document.getElementById('mainNav').offsetHeight;
+        const targetY = targetEl.getBoundingClientRect().top + window.scrollY + yOffset;
+        const startY = window.scrollY;
+        const distance = targetY - startY;
+        const duration = 1200;
+        let startTime = null;
 
-        setTimeout(() => {
-            // Scroll to target
-            const yOffset = -document.getElementById('mainNav').offsetHeight;
-            const y = targetEl.getBoundingClientRect().top + window.scrollY + yOffset;
-            window.scrollTo({ top: y, behavior: 'instant' });
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
 
-            // Fade overlay out
-            setTimeout(() => {
-                overlay.classList.remove('active');
-            }, 80);
-        }, 280);
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            window.scrollTo(0, startY + distance * easeInOutCubic(progress));
+            if (progress < 1) requestAnimationFrame(step);
+        }
+
+        requestAnimationFrame(step);
     }
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        // Home link → hero section
         document.querySelectorAll('.nav-link').forEach(link => {
             const href = link.getAttribute('href');
 
             if (href === '#' || href === '' || link.textContent.trim() === 'Home') {
                 link.addEventListener('click', function (e) {
                     e.preventDefault();
-                    const hero = document.getElementById('hero-section');
-                    animatedScrollTo(hero, this);
+                    animatedScrollTo(document.getElementById('hero-section'), this);
                 });
-
             } else if (href === '#about' || link.textContent.trim() === 'About') {
                 link.addEventListener('click', function (e) {
                     e.preventDefault();
-                    const about = document.getElementById('about');
-                    animatedScrollTo(about, this);
+                    animatedScrollTo(document.getElementById('about'), this);
                 });
-
             } else if (href && href.startsWith('#')) {
                 link.addEventListener('click', function (e) {
                     e.preventDefault();
@@ -901,13 +1110,102 @@
             }
         });
 
-        // ─── ECOSYSTEM CARD INTERACTIONS ────────────────────────────────────
+        // ─── ECOSYSTEM CARD INTERACTIONS ──────────────────────────────────
         const ecoCards = document.querySelectorAll('.eco-card');
         ecoCards.forEach(card => {
             card.addEventListener('click', function (e) {
                 e.preventDefault();
                 ecoCards.forEach(c => c.classList.remove('active'));
                 this.classList.add('active');
+            });
+        });
+
+        // ─── FAQ ACCORDION (MUI-style) ───────────────────────────────────
+        const faqItems = document.querySelectorAll('#faqAccordion .faq-item');
+
+        function collapsePanel(item) {
+            const panel = item.querySelector('.faq-panel');
+            const icon = item.querySelector('.faq-icon');
+            const chevron = item.querySelector('.faq-chevron');
+
+            // Animate height to 0
+            panel.style.height = panel.scrollHeight + 'px';
+            panel.offsetHeight; // force reflow
+            panel.style.transition = 'height 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease';
+            panel.style.height = '0px';
+            panel.style.opacity = '0';
+            panel.style.overflow = 'hidden';
+
+            // Reset icon
+            icon.classList.remove('bg-[#1a3fbf]', 'text-white', 'shadow-[0_4px_12px_rgba(26,63,191,0.35)]');
+            icon.classList.add('bg-[#e8edf7]', 'text-[#1a3fbf]');
+            chevron.classList.remove('rotate-180');
+
+            // Reset card shadow
+            item.classList.remove('shadow-[0_4px_24px_rgba(26,63,191,0.10)]');
+
+            panel.addEventListener('transitionend', function handler(e) {
+                if (e.propertyName === 'height') {
+                    panel.hidden = true;
+                    panel.style.transition = '';
+                    panel.style.height = '';
+                    panel.style.opacity = '';
+                    panel.style.overflow = '';
+                    panel.removeEventListener('transitionend', handler);
+                }
+            });
+        }
+
+        function expandPanel(item) {
+            const panel = item.querySelector('.faq-panel');
+            const icon = item.querySelector('.faq-icon');
+            const chevron = item.querySelector('.faq-chevron');
+
+            // Reveal and measure
+            panel.hidden = false;
+            panel.style.height = '0px';
+            panel.style.opacity = '0';
+            panel.style.overflow = 'hidden';
+            panel.offsetHeight; // force reflow
+
+            const targetHeight = panel.scrollHeight;
+            panel.style.transition = 'height 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease 80ms';
+            panel.style.height = targetHeight + 'px';
+            panel.style.opacity = '1';
+
+            // Active icon
+            icon.classList.remove('bg-[#e8edf7]', 'text-[#1a3fbf]');
+            icon.classList.add('bg-[#1a3fbf]', 'text-white', 'shadow-[0_4px_12px_rgba(26,63,191,0.35)]');
+            chevron.classList.add('rotate-180');
+
+            // Card shadow
+            item.classList.add('shadow-[0_4px_24px_rgba(26,63,191,0.10)]');
+
+            panel.addEventListener('transitionend', function handler(e) {
+                if (e.propertyName === 'height') {
+                    panel.style.transition = '';
+                    panel.style.height = '';
+                    panel.style.overflow = '';
+                    panel.removeEventListener('transitionend', handler);
+                }
+            });
+        }
+
+        faqItems.forEach(item => {
+            item.querySelector('.faq-trigger').addEventListener('click', function () {
+                const isOpen = !item.querySelector('.faq-panel').hidden;
+
+                // Collapse all open panels
+                faqItems.forEach(other => {
+                    if (!other.querySelector('.faq-panel').hidden) {
+                        collapsePanel(other);
+                    }
+                });
+
+                // If it wasn't open, expand it
+                if (!isOpen) {
+                    expandPanel(item);
+                }
             });
         });
     });

@@ -15,6 +15,18 @@ Route::get('/', function () {
     return view('users.landing');
 })->name('landing');
 
+Route::get('/privacy-policy', function () {
+    return view('users.privacy-policy');
+})->name('privacy-policy');
+
+Route::get('/terms-of-service', function () {
+    return view('users.terms-of-service');
+})->name('terms-of-service');
+
+Route::get('/data-protection', function () {
+    return view('users.data-protection');
+})->name('data-protection');
+
 // ─── HOME (after login, redirects based on role) ────────────────────────────
 Route::get('/home', function () {
     $user = Auth::user();
