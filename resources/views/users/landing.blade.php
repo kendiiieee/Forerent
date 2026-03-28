@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <link rel="preload" href="/images/Landing_Page_Bg.webp" as="image" type="image/webp">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -55,55 +56,16 @@
         </a>
 
         {{-- Nav Links --}}
+        @php
+            $navCls = 'nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline text-white/[0.82] transition-colors duration-200 hover:text-white after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white after:scale-x-0 after:origin-left after:transition-transform after:duration-300 hover:after:scale-x-100 [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px] group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b] group-[.nav-light]:after:!bg-[#1a3fbf] group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold';
+        @endphp
         <ul class="flex items-center gap-10 list-none">
-            <li>
-                <a href="#" class="nav-link active relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
-                                   text-white/[0.82] transition-colors duration-200 hover:text-white
-                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
-                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
-                                   hover:after:scale-x-100
-                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
-                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
-                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
-                                   group-[.nav-light]:after:!bg-[#1a3fbf]
-                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">Home</a>
-            </li>
-            <li>
-                <a href="#features" class="nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
-                                   text-white/[0.82] transition-colors duration-200 hover:text-white
-                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
-                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
-                                   hover:after:scale-x-100
-                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
-                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
-                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
-                                   group-[.nav-light]:after:!bg-[#1a3fbf]
-                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">Features</a>
-            </li>
-            <li>
-                <a href="#about" class="nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
-                                   text-white/[0.82] transition-colors duration-200 hover:text-white
-                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
-                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
-                                   hover:after:scale-x-100
-                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
-                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
-                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
-                                   group-[.nav-light]:after:!bg-[#1a3fbf]
-                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">About</a>
-            </li>
-            <li>
-                <a href="#contact" class="nav-link relative inline-block py-2 px-1 font-semibold text-[0.92rem] tracking-[0.4px] no-underline
-                                   text-white/[0.82] transition-colors duration-200 hover:text-white
-                                   after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white
-                                   after:scale-x-0 after:origin-left after:transition-transform after:duration-300
-                                   hover:after:scale-x-100
-                                   [&.active]:text-white [&.active]:font-bold [&.active]:after:scale-x-100 [&.active]:after:h-[2.5px]
-                                   group-[.nav-dark]:text-white/85 group-[.nav-dark]:hover:text-white group-[.nav-dark]:after:bg-white
-                                   group-[.nav-light]:!text-[#1a3fbf] group-[.nav-light]:hover:!text-[#0b1f6b]
-                                   group-[.nav-light]:after:!bg-[#1a3fbf]
-                                   group-[.nav-light]:[&.active]:!text-[#0b1f6b] group-[.nav-light]:[&.active]:font-bold">Contacts</a>
-            </li>
+            <li><a href="#" class="{{ $navCls }} active">Home</a></li>
+            <li><a href="#about" class="{{ $navCls }}">About</a></li>
+            <li><a href="#features" class="{{ $navCls }}">Features</a></li>
+            <li><a href="#faq" class="{{ $navCls }}">FAQ</a></li>
+            <li><a href="#locations" class="{{ $navCls }}">Locations</a></li>
+            <li><a href="#contact" class="{{ $navCls }}">Contacts</a></li>
         </ul>
 
         {{-- CTA --}}
@@ -277,8 +239,12 @@
                     <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.15),rgba(139,92,246,0.15))]
                                 opacity-0 group-hover/card:opacity-100 transition-opacity duration-[350ms] pointer-events-none rounded-2xl"></div>
                     <div class="relative z-[1]">
-                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]
-                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">🏗️</div>
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6
+                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">
+                            <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                            </svg>
+                        </div>
                         <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S1</span>
                         <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Hierarchical Clustering</h3>
                         <p class="text-[0.88rem] text-white/70 leading-[1.68]">Group similar properties or maintenance requests to optimize resource allocation and enable proactive maintenance planning.</p>
@@ -305,8 +271,12 @@
                     <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.15),rgba(139,92,246,0.15))]
                                 opacity-0 group-hover/card:opacity-100 transition-opacity duration-[350ms] pointer-events-none rounded-2xl"></div>
                     <div class="relative z-[1]">
-                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]
-                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">🎯</div>
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6
+                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">
+                            <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
                         <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S2</span>
                         <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Rental Price Prediction</h3>
                         <p class="text-[0.88rem] text-white/70 leading-[1.68]">Utilize Multiple Regression to suggest optimal rental prices based on area, bedrooms, and location attributes.</p>
@@ -333,8 +303,12 @@
                     <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(96,165,250,0.15),rgba(139,92,246,0.15))]
                                 opacity-0 group-hover/card:opacity-100 transition-opacity duration-[350ms] pointer-events-none rounded-2xl"></div>
                     <div class="relative z-[1]">
-                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6 text-[1.8rem]
-                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">📈</div>
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-6
+                                    bg-[linear-gradient(135deg,#60a5fa,#3b82f6)]">
+                            <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </div>
                         <span class="inline-block text-[0.65rem] font-bold tracking-[1.8px] uppercase text-[#93c5fd] mb-3">MODULE S3</span>
                         <h3 class="text-[1.4rem] font-extrabold text-white leading-tight mb-4">Financial Forecasting</h3>
                         <p class="text-[0.88rem] text-white/70 leading-[1.68]">Institutional-grade estimates for future rental income and maintenance costs so drive data-driven decisions.</p>
@@ -775,121 +749,71 @@
 {{-- ═══════════════════════════════════════════════════════════════
      LOCATIONS / MAP
 ═══════════════════════════════════════════════════════════════ --}}
-<section id="locations" class="bg-[#f0f4ff] py-24 px-16">
-    <div class="max-w-[1100px] mx-auto">
+<section id="locations" class="relative">
+    <div class="flex min-h-[620px]">
 
-        {{-- Header --}}
-        <div class="text-center mb-14">
-            <span class="inline-block text-[0.72rem] font-bold tracking-[2.5px] uppercase text-[#1a3fbf] mb-3">Featured Properties</span>
-            <h2 class="text-[2rem] font-extrabold text-[#0b1f6b] leading-tight">
-                Our managed<br>
-                <span class="text-[#1a3fbf]">dormitories</span>
+        {{-- Left: Full map --}}
+        <div class="w-[55%] relative" id="locationMap"></div>
+
+        {{-- Right: Contact info --}}
+        <div class="w-[45%] bg-white px-14 py-16 flex flex-col justify-center">
+
+            <h2 class="text-[2.2rem] font-extrabold text-[#0b1f6b] leading-tight mb-3">
+                Find Our<br>Dormitories
             </h2>
-            <p class="text-[0.95rem] text-gray-500 leading-relaxed max-w-[480px] mx-auto mt-3">
-                Explore our managed dormitory buildings across Metro Manila, designed for comfort, security, and convenience.
+            <p class="text-[0.92rem] text-gray-400 leading-relaxed mb-10">
+                We're here to help you find the perfect place to stay. Visit our managed dormitory buildings across Metro Manila.
             </p>
-        </div>
 
-        {{-- Two location cards --}}
-        <div class="grid grid-cols-2 gap-8">
-
-            {{-- BGC Office --}}
-            <div class="bg-white rounded-2xl overflow-hidden border border-[#e8edf7] shadow-[0_4px_20px_rgba(11,31,107,0.06)] transition-all duration-300 hover:shadow-[0_8px_32px_rgba(11,31,107,0.12)]">
-                {{-- Map embed --}}
-                <div class="w-full h-[240px] bg-gray-100">
-                    <iframe
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=121.0430%2C14.5470%2C121.0580%2C14.5580&layer=mapnik&marker=14.5525%2C121.0505"
-                        class="w-full h-full border-none"
-                        loading="lazy"
-                        title="BGC Office Location">
-                    </iframe>
-                </div>
-                {{-- Info --}}
-                <div class="p-7">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
-                                    bg-[linear-gradient(135deg,#1a3fbf,#3b82f6)]">
-                            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                        </span>
-                        <div>
-                            <h3 class="text-[1.05rem] font-bold text-[#0b1f6b]">BGC Dormitory</h3>
-                            <span class="text-[0.75rem] font-semibold text-[#1a3fbf] uppercase tracking-[1px]">Taguig City</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2 mt-4">
-                        <div class="flex items-start gap-3">
-                            <svg class="w-4 h-4 text-[#1a3fbf] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            <span class="text-[0.88rem] text-gray-500 leading-snug">26th St., Bonifacio Global City, Taguig City</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                            <span class="text-[0.88rem] text-gray-500">48 Units &middot; Mixed Dormitory</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span class="text-[0.88rem] text-gray-500">Starting at &peso;5,500 / month</span>
-                        </div>
-                    </div>
+            {{-- Location 1 --}}
+            <div class="flex items-start gap-4 mb-8">
+                <span class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#eef2ff] text-[#1a3fbf]">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3 class="text-[1rem] font-bold text-[#0b1f6b] mb-1">BGC Dormitory</h3>
+                    <p class="text-[0.88rem] text-gray-500 leading-snug">26th St., Bonifacio Global City, Taguig City</p>
                 </div>
             </div>
 
-            {{-- Makati Office --}}
-            <div class="bg-white rounded-2xl overflow-hidden border border-[#e8edf7] shadow-[0_4px_20px_rgba(11,31,107,0.06)] transition-all duration-300 hover:shadow-[0_8px_32px_rgba(11,31,107,0.12)]">
-                {{-- Map embed --}}
-                <div class="w-full h-[240px] bg-gray-100">
-                    <iframe
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=121.0140%2C14.5510%2C121.0310%2C14.5630&layer=mapnik&marker=14.5570%2C121.0225"
-                        class="w-full h-full border-none"
-                        loading="lazy"
-                        title="Makati Office Location">
-                    </iframe>
+            {{-- Location 2 --}}
+            <div class="flex items-start gap-4 mb-8">
+                <span class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#eef2ff] text-[#1a3fbf]">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3 class="text-[1rem] font-bold text-[#0b1f6b] mb-1">Makati Dormitory</h3>
+                    <p class="text-[0.88rem] text-gray-500 leading-snug">Ayala Ave., Legazpi Village, Makati City</p>
                 </div>
-                {{-- Info --}}
-                <div class="p-7">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
-                                    bg-[linear-gradient(135deg,#1a3fbf,#3b82f6)]">
-                            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                        </span>
-                        <div>
-                            <h3 class="text-[1.05rem] font-bold text-[#0b1f6b]">Makati Dormitory</h3>
-                            <span class="text-[0.75rem] font-semibold text-[#1a3fbf] uppercase tracking-[1px]">Makati City</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2 mt-4">
-                        <div class="flex items-start gap-3">
-                            <svg class="w-4 h-4 text-[#1a3fbf] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            <span class="text-[0.88rem] text-gray-500 leading-snug">Ayala Ave., Legazpi Village, Makati City</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                            <span class="text-[0.88rem] text-gray-500">36 Units &middot; All Female Dormitory</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <svg class="w-4 h-4 text-[#1a3fbf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span class="text-[0.88rem] text-gray-500">Starting at &peso;4,800 / month</span>
-                        </div>
-                    </div>
+            </div>
+
+            {{-- Email --}}
+            <div class="flex items-start gap-4 mb-8">
+                <span class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#eef2ff] text-[#1a3fbf]">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3 class="text-[1rem] font-bold text-[#0b1f6b] mb-1">Email us at</h3>
+                    <p class="text-[0.88rem] text-gray-500">info@forerent.com</p>
+                </div>
+            </div>
+
+            {{-- Phone --}}
+            <div class="flex items-start gap-4 mb-10">
+                <span class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-[#eef2ff] text-[#1a3fbf]">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h3 class="text-[1rem] font-bold text-[#0b1f6b] mb-1">Contact us at</h3>
+                    <p class="text-[0.88rem] text-gray-500">Service Center: (02) 8123-4567</p>
                 </div>
             </div>
 
@@ -940,17 +864,7 @@
             </div>
 
             {{-- Nav columns --}}
-            <div class="flex-1 grid grid-cols-3 gap-8 pt-1">
-                <div>
-                    <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Navigate</h4>
-                    <ul class="list-none flex flex-col gap-4">
-                        <li><a href="#hero-section" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Home</a></li>
-                        <li><a href="#about" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">About</a></li>
-                        <li><a href="#features" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Features</a></li>
-                        <li><a href="#faq" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">FAQ</a></li>
-                        <li><a href="#locations" class="text-[0.78rem] font-bold tracking-[1.5px] uppercase text-white/55 hover:text-white no-underline transition-colors duration-200">Locations</a></li>
-                    </ul>
-                </div>
+            <div class="flex-1 grid grid-cols-2 gap-8 pt-1">
                 <div>
                     <h4 class="text-[0.68rem] font-bold tracking-[2.5px] uppercase text-[#3b82f6] mb-6">Contact</h4>
                     <ul class="list-none flex flex-col gap-4">
@@ -1208,6 +1122,39 @@
                 }
             });
         });
+    });
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const map = L.map('locationMap', {
+            zoomControl: false,
+            attributionControl: false,
+            scrollWheelZoom: false,
+            dragging: true,
+        }).setView([14.5525, 121.035], 13);
+
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+        }).addTo(map);
+
+        const blueIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:40px;height:40px;border-radius:50%;background:#1a3fbf;border:4px solid #fff;box-shadow:0 2px 12px rgba(26,63,191,0.4);"></div>',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+        });
+
+        L.marker([14.5525, 121.0505], { icon: blueIcon })
+            .addTo(map)
+            .bindPopup('<strong style="color:#0b1f6b">BGC Dormitory</strong><br><span style="color:#6b7280;font-size:0.85rem">26th St., BGC, Taguig City</span>');
+
+        L.marker([14.5570, 121.0225], { icon: blueIcon })
+            .addTo(map)
+            .bindPopup('<strong style="color:#0b1f6b">Makati Dormitory</strong><br><span style="color:#6b7280;font-size:0.85rem">Ayala Ave., Legazpi Village, Makati</span>');
+
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
     });
 </script>
 

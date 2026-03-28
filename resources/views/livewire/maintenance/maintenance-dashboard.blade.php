@@ -22,10 +22,10 @@
         </div>
 
         {{-- ADD BUTTON --}}
-        <button class="mt-4 md:mt-0 flex items-center gap-2 bg-[#070642] hover:bg-blue-900 text-white px-6 py-2.5 rounded-full font-semibold shadow-lg transition-transform active:scale-95">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span>Add Maintenance Request</span>
-        </button>
+        <x-ui.button-add
+            text="Add Maintenance Request"
+            class="mt-4 md:mt-0"
+        />
     </div>
 
 

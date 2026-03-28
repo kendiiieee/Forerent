@@ -26,10 +26,8 @@
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
 
             <x-ui.button-add
-                href="#"
                 text="Add Maintenance Request"
-                @click="$dispatch('open-maintenance-modal')"
-                class="bg-[#070642] hover:bg-[#1a1955]"
+                x-on:click="$dispatch('open-maintenance-modal')"
             />
         </div>
     </div>
