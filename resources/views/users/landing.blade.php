@@ -109,74 +109,326 @@
         </div>
     </div>
 
-    {{-- Floating search bar --}}
-    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-20 w-[calc(100%-120px)] max-w-[1100px]">
-        <div class="flex items-center bg-white rounded-[14px] shadow-[0_12px_40px_rgba(0,0,0,0.22)] pl-5 pr-2.5 py-2.5 gap-0">
+    {{-- Floating search bar (cascading dropdowns) --}}
+    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-20 w-[calc(100%-120px)] max-w-[1100px]"
+         x-data="searchBar()" x-init="init()">
+        <form action="{{ route('landing') }}" method="GET"
+              class="flex items-center bg-white rounded-[14px] shadow-[0_12px_40px_rgba(0,0,0,0.22)] pl-5 pr-2.5 py-2.5 gap-0">
 
-            <div class="flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">City <span class="text-gray-400">&or;</span></span>
-                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
-                    <option value="" disabled selected>Choose Location</option>
-                    <option>Manila</option>
-                    <option>Cebu City</option>
-                    <option>Davao</option>
-                    <option>Quezon City</option>
-                    <option>Makati</option>
-                    <option>Pasig</option>
-                    <option>Taguig</option>
-                </select>
+            {{-- City / Address --}}
+            <div class="flex-1 relative px-5 py-2 border-r border-gray-200 min-w-0">
+                <input type="hidden" name="address" :value="address">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1 flex items-center gap-1">
+                    City
+                    <svg class="w-3 h-3 text-gray-400 transition-transform duration-200" :class="openDrop === 'city' && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19 9-7 7-7-7"/></svg>
+                </span>
+                <button type="button" @click="toggle('city')" @click.outside="closeDrop('city')"
+                        class="w-full text-left font-semibold text-gray-800 font-sans text-[0.88rem] bg-transparent cursor-pointer border-none outline-none p-0 truncate">
+                    <span x-text="address || 'Choose Location'" :class="!address && 'text-gray-400'"></span>
+                </button>
+                <div x-show="openDrop === 'city'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1"
+                     class="absolute left-0 top-full mt-2 w-72 bg-white rounded-xl shadow-[0_12px_36px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50 max-h-60 overflow-y-auto"
+                     style="display: none;">
+                    <button type="button" @click="selectAddress('')"
+                            class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans">
+                        Choose Location
+                    </button>
+                    <template x-for="addr in allAddresses" :key="addr">
+                        <button type="button" @click="selectAddress(addr)"
+                                class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans truncate"
+                                :class="address === addr && 'bg-blue-50 text-blue-600 font-semibold'"
+                                x-text="addr">
+                        </button>
+                    </template>
+                </div>
             </div>
 
-            <div class="flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Dormitory Type <span class="text-gray-400">&or;</span></span>
-                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
-                    <option value="all-female" selected>All Female</option>
-                    <option>All Male</option>
-                    <option>Mixed</option>
-                    <option>Couple</option>
-                    <option>Family</option>
-                </select>
+            {{-- Unit Type --}}
+            <div class="flex-1 relative px-5 py-2 border-r border-gray-200 min-w-0">
+                <input type="hidden" name="unit_type" :value="unitType">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1 flex items-center gap-1">
+                    Unit Type
+                    <svg class="w-3 h-3 text-gray-400 transition-transform duration-200" :class="openDrop === 'unitType' && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19 9-7 7-7-7"/></svg>
+                </span>
+                <button type="button" @click="toggle('unitType')" @click.outside="closeDrop('unitType')"
+                        class="w-full text-left font-semibold text-gray-800 font-sans text-[0.88rem] bg-transparent cursor-pointer border-none outline-none p-0 truncate"
+                        :class="!address && 'opacity-50 cursor-not-allowed'" :disabled="!address">
+                    <span x-text="unitType || 'Any'" :class="!unitType && 'text-gray-400'"></span>
+                </button>
+                <div x-show="openDrop === 'unitType'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1"
+                     class="absolute left-0 top-full mt-2 w-48 bg-white rounded-xl shadow-[0_12px_36px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50"
+                     style="display: none;">
+                    <button type="button" @click="unitType = ''; openDrop = ''"
+                            class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans">
+                        Any
+                    </button>
+                    <template x-for="t in availableUnitTypes" :key="t">
+                        <button type="button" @click="unitType = t; openDrop = ''"
+                                class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans"
+                                :class="unitType === t && 'bg-blue-50 text-blue-600 font-semibold'"
+                                x-text="t">
+                        </button>
+                    </template>
+                </div>
             </div>
 
-            <div class="flex-1 flex flex-col px-5 py-2 border-r border-gray-200 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Price <span class="text-gray-400">&or;</span></span>
-                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
-                    <option value="24000" selected>&peso; 24,000</option>
-                    <option>&peso;1,000 &ndash; &peso;3,000</option>
-                    <option>&peso;3,000 &ndash; &peso;6,000</option>
-                    <option>&peso;6,000 &ndash; &peso;10,000</option>
-                    <option>&peso;10,000 &ndash; &peso;20,000</option>
-                    <option>&peso;20,000+</option>
-                </select>
+            {{-- Price --}}
+            <div class="flex-1 relative px-5 py-2 border-r border-gray-200 min-w-0">
+                <input type="hidden" name="price" :value="priceValue">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1 flex items-center gap-1">
+                    Price
+                    <svg class="w-3 h-3 text-gray-400 transition-transform duration-200" :class="openDrop === 'price' && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19 9-7 7-7-7"/></svg>
+                </span>
+                <button type="button" @click="toggle('price')" @click.outside="closeDrop('price')"
+                        class="w-full text-left font-semibold text-gray-800 font-sans text-[0.88rem] bg-transparent cursor-pointer border-none outline-none p-0 truncate"
+                        :class="!address && 'opacity-50 cursor-not-allowed'" :disabled="!address">
+                    <span x-text="priceLabel || 'Any Price'" :class="!priceLabel && 'text-gray-400'"></span>
+                </button>
+                <div x-show="openDrop === 'price'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1"
+                     class="absolute left-0 top-full mt-2 w-56 bg-white rounded-xl shadow-[0_12px_36px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50"
+                     style="display: none;">
+                    <button type="button" @click="priceValue = ''; priceLabel = ''; openDrop = ''"
+                            class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans">
+                        Any Price
+                    </button>
+                    <template x-for="range in availablePriceRanges" :key="range.value">
+                        <button type="button" @click="priceValue = range.value; priceLabel = range.label; openDrop = ''"
+                                class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans"
+                                :class="priceValue === range.value && 'bg-blue-50 text-blue-600 font-semibold'"
+                                x-text="range.label">
+                        </button>
+                    </template>
+                </div>
             </div>
 
-            <div class="flex-1 flex flex-col px-5 py-2 min-w-0">
-                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1">Unit Size <span class="text-gray-400">&or;</span></span>
-                <select class="font-semibold text-gray-800 border-none outline-none font-sans text-[0.88rem] bg-transparent w-full cursor-pointer appearance-none">
-                    <option value="24000" selected>&peso; 24,000</option>
-                    <option>Small (&le; 20 sqm)</option>
-                    <option>Medium (21&ndash;40 sqm)</option>
-                    <option>Large (41&ndash;70 sqm)</option>
-                    <option>Extra Large (70+ sqm)</option>
-                </select>
+            {{-- Room Type --}}
+            <div class="flex-1 relative px-5 py-2 min-w-0">
+                <input type="hidden" name="furnishing" :value="roomType">
+                <span class="text-[0.70rem] font-bold uppercase tracking-[0.8px] text-gray-400 mb-1 flex items-center gap-1">
+                    Room Type
+                    <svg class="w-3 h-3 text-gray-400 transition-transform duration-200" :class="openDrop === 'roomType' && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19 9-7 7-7-7"/></svg>
+                </span>
+                <button type="button" @click="toggle('roomType')" @click.outside="closeDrop('roomType')"
+                        class="w-full text-left font-semibold text-gray-800 font-sans text-[0.88rem] bg-transparent cursor-pointer border-none outline-none p-0 truncate"
+                        :class="!address && 'opacity-50 cursor-not-allowed'" :disabled="!address">
+                    <span x-text="roomType || 'Any'" :class="!roomType && 'text-gray-400'"></span>
+                </button>
+                <div x-show="openDrop === 'roomType'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1"
+                     class="absolute left-0 top-full mt-2 w-52 bg-white rounded-xl shadow-[0_12px_36px_rgba(0,0,0,0.15)] border border-gray-100 py-1.5 z-50"
+                     style="display: none;">
+                    <button type="button" @click="roomType = ''; openDrop = ''"
+                            class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans">
+                        Any
+                    </button>
+                    <template x-for="rt in availableRoomTypes" :key="rt">
+                        <button type="button" @click="roomType = rt; openDrop = ''"
+                                class="w-full text-left px-4 py-2.5 text-[0.85rem] text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-150 cursor-pointer border-none bg-transparent font-sans"
+                                :class="roomType === rt && 'bg-blue-50 text-blue-600 font-semibold'"
+                                x-text="rt">
+                        </button>
+                    </template>
+                </div>
             </div>
 
-            <button class="shrink-0 ml-3 w-14 h-14 rounded-[10px] border-none text-white flex items-center justify-center
+            <button type="submit" class="shrink-0 ml-3 w-14 h-14 rounded-[10px] border-none text-white flex items-center justify-center
                            transition-all duration-200 hover:opacity-90 cursor-pointer
                            bg-[linear-gradient(135deg,#1a3fbf_0%,#0b1f6b_100%)]">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/>
                 </svg>
             </button>
-        </div>
+        </form>
     </div>
+
+    <script>
+        function searchBar() {
+            const allPriceRanges = [
+                { value: '0-3000',     label: '₱1,000 – ₱3,000',   min: 0,     max: 3000 },
+                { value: '3000-6000',  label: '₱3,000 – ₱6,000',   min: 3000,  max: 6000 },
+                { value: '6000-10000', label: '₱6,000 – ₱10,000',  min: 6000,  max: 10000 },
+                { value: '10000-20000',label: '₱10,000 – ₱20,000', min: 10000, max: 20000 },
+                { value: '20000+',     label: '₱20,000+',          min: 20000, max: Infinity },
+            ];
+
+            return {
+                properties: @js($propertyData),
+                allAddresses: @js($addresses),
+                openDrop: '',
+
+                address: @js(request('address', '')),
+                unitType: @js(request('unit_type', '')),
+                priceValue: @js(request('price', '')),
+                priceLabel: '',
+                roomType: @js(request('furnishing', '')),
+
+                availableUnitTypes: [],
+                availableRoomTypes: [],
+                availablePriceRanges: [],
+
+                init() {
+                    if (this.priceValue) {
+                        const found = allPriceRanges.find(r => r.value === this.priceValue);
+                        if (found) this.priceLabel = found.label;
+                    }
+                    if (this.address) this.updateOptions();
+                },
+
+                toggle(name) {
+                    if (name !== 'city' && !this.address) return;
+                    this.openDrop = this.openDrop === name ? '' : name;
+                },
+                closeDrop(name) {
+                    if (this.openDrop === name) this.openDrop = '';
+                },
+
+                selectAddress(addr) {
+                    this.address = addr;
+                    this.unitType = '';
+                    this.priceValue = '';
+                    this.priceLabel = '';
+                    this.roomType = '';
+                    this.openDrop = '';
+                    this.updateOptions();
+                },
+
+                updateOptions() {
+                    const prop = this.properties.find(p => p.address === this.address);
+                    if (!prop) {
+                        this.availableUnitTypes = [];
+                        this.availableRoomTypes = [];
+                        this.availablePriceRanges = [];
+                        return;
+                    }
+                    this.availableUnitTypes = prop.unitTypes;
+                    this.availableRoomTypes = prop.roomTypes;
+
+                    const prices = prop.prices;
+                    if (prices.length === 0) {
+                        this.availablePriceRanges = [];
+                        return;
+                    }
+                    this.availablePriceRanges = allPriceRanges.filter(range =>
+                        prices.some(p => {
+                            const price = parseFloat(p);
+                            return price >= range.min && (range.max === Infinity || price <= range.max);
+                        })
+                    );
+                }
+            };
+        }
+    </script>
 
 </section>
 
 {{-- ═══════════════════════════════════════════════════════════════
+     SEARCH RESULTS
+═══════════════════════════════════════════════════════════════ --}}
+@if(!empty($hasSearch))
+<section id="search-results" class="bg-[#f8faff] pt-24 pb-16">
+    <div class="max-w-[1200px] mx-auto px-8">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h2 class="text-2xl font-extrabold text-[#0b1f6b]">Search Results</h2>
+                <p class="text-sm text-gray-500 mt-1">{{ $units->total() }} {{ Str::plural('unit', $units->total()) }} found</p>
+            </div>
+            <a href="{{ route('landing') }}" class="text-sm font-semibold text-[#1a3fbf] hover:underline">Clear Filters</a>
+        </div>
+
+        @if($units->isEmpty())
+            <div class="text-center py-24">
+                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                </svg>
+                <p class="text-gray-400 text-lg font-semibold">No units match your filters</p>
+                <p class="text-gray-400 text-sm mt-1">Try adjusting your search criteria</p>
+            </div>
+        @else
+            {{-- Results grid --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+                @foreach($units as $unit)
+                    @php $photo = $unit->property->photos->first(); @endphp
+                    <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group">
+                        {{-- Photo --}}
+                        <div class="relative h-52 bg-gray-100 overflow-hidden">
+                            @if($photo)
+                                <img src="{{ asset('storage/' . $photo->file_path) }}"
+                                     alt="{{ $unit->property->building_name }}"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            @else
+                                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                    <svg class="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 7.5h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"/>
+                                    </svg>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Card body --}}
+                        <div class="p-5">
+                            {{-- Address --}}
+                            <div class="flex items-start gap-1.5 mb-3">
+                                <svg class="w-4 h-4 text-[#1a3fbf] mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                <span class="text-sm text-gray-600 leading-snug">{{ $unit->property->address }}</span>
+                            </div>
+
+                            {{-- Info row --}}
+                            <div class="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/>
+                                    </svg>
+                                    {{ $unit->occupants }}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545"/>
+                                    </svg>
+                                    {{ $unit->room_type ?? 'N/A' }}
+                                </span>
+                                @if($unit->living_area)
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
+                                    </svg>
+                                    {{ $unit->living_area }} sqft
+                                </span>
+                                @endif
+                            </div>
+
+                            {{-- Divider --}}
+                            <div class="border-t border-gray-100 pt-4 flex items-center justify-between">
+                                <span class="text-xl font-extrabold text-[#0b1f6b]">₱{{ number_format($unit->price, 0) }}<span class="text-xs font-normal text-gray-400 ml-1">/month</span></span>
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5"/></svg>
+                                    {{ $unit->beds->count() }} {{ Str::plural('bed', $unit->beds->count()) }} available
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Pagination --}}
+            <div class="mt-10">
+                {{ $units->links() }}
+            </div>
+        @endif
+    </div>
+</section>
+@endif
+
+{{-- ═══════════════════════════════════════════════════════════════
      BELOW HERO
 ═══════════════════════════════════════════════════════════════ --}}
-<div class="pt-[90px] bg-[#f8faff]">
+<div class="{{ !empty($hasSearch) ? 'pt-0' : 'pt-[90px]' }} bg-[#f8faff]">
 
     {{-- Stats --}}
     <div class="flex justify-center max-w-[1100px] mx-auto px-16 pt-14 pb-12">
@@ -254,10 +506,6 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
                                 <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
                             </div>
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
-                                        bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
-                                        transition-all duration-300 cursor-pointer
-                                        group-hover/card:bg-[#60a5fa] group-hover/card:text-[#0f172a] group-hover/card:translate-x-1">&rarr;</div>
                         </div>
                     </div>
                 </div>
@@ -286,10 +534,6 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
                                 <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
                             </div>
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
-                                        bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
-                                        transition-all duration-300 cursor-pointer
-                                        group-hover/card:bg-[#60a5fa] group-hover/card:text-[#0f172a] group-hover/card:translate-x-1">&rarr;</div>
                         </div>
                     </div>
                 </div>
@@ -318,10 +562,6 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
                                 <span class="w-1.5 h-1.5 rounded-full bg-[rgba(96,165,250,0.4)]"></span>
                             </div>
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#60a5fa]
-                                        bg-[rgba(96,165,250,0.2)] border border-[rgba(96,165,250,0.3)]
-                                        transition-all duration-300 cursor-pointer
-                                        group-hover/card:bg-[#60a5fa] group-hover/card:text-[#0f172a] group-hover/card:translate-x-1">&rarr;</div>
                         </div>
                     </div>
                 </div>
@@ -902,6 +1142,14 @@
 @vite('resources/js/app.js')
 
 <script>
+    // ─── Auto-scroll to search results ───────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        const results = document.getElementById('search-results');
+        if (results) {
+            setTimeout(() => results.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+        }
+    });
+
     // ─── Set eco-card background images from data attributes ──────────────
     document.querySelectorAll('.eco-bg[data-bg]').forEach(el => {
         el.style.backgroundImage = `url('${el.dataset.bg}')`;

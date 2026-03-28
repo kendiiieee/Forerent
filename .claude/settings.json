@@ -15,7 +15,14 @@
       "Read(//e/reigne/Citispace-Forerent/$APPDATA/**)",
       "Read(//c/ProgramData/**)",
       "Bash(ls database/migrations/*transactions*)",
-      "Bash(find /e/reigne/Citispace-Forerent/database/migrations -type f -name *.php)"
+      "Bash(find /e/reigne/Citispace-Forerent/database/migrations -type f -name *.php)",
+      "Bash(grep -rn \"DB_PASSWORD\\\\|secret\\\\|key\" /e/reigne/Citispace-Forerent/compose*.yaml)",
+      "Bash(grep -rn \"fillable.*tenant_id\\\\|tenant_id.*fillable\" /e/reigne/Citispace-Forerent/app/Models --include=*.php)",
+      "Bash(grep -A 15 \"protected $fillable\" /e/reigne/Citispace-Forerent/app/Models/Billing.php)",
+      "Bash(grep -rn \"$_T\\\\|$_ST\\\\|$_QUEST\\\\|exec\\\\|shell_exec\\\\|passthru\" /e/reigne/Citispace-Forerent/app --include=*.php)",
+      "Bash(grep -A 30 \"Schema::table.*billings\" /e/reigne/Citispace-Forerent/database/migrations/*.php)",
+      "Bash(find /e/reigne/Citispace-Forerent/database/migrations -name *.php -newer /e/reigne/Citispace-Forerent/database/migrations/2026_03_22_200000_add_billing_type_and_due_date_to_billings_table.php)",
+      "Bash(cat /e/reigne/Citispace-Forerent/database/migrations/*.php)"
     ]
   }
 }

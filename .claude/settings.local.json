@@ -57,7 +57,13 @@
       "Bash(wc -l \"e:/reigne/Citispace-Forerent/app/Livewire/Concerns/WithESignature.php\" \"e:/reigne/Citispace-Forerent/resources/views/components/inspection/\"*.blade.php)",
       "Bash(node -e \":*)",
       "Bash(ls -la \"e:/reigne/Citispace-Forerent/public/images/\"*.webp)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(find /e/reigne/Citispace-Forerent/app/Livewire -type f -name *.php)",
+      "Read(//tmp/claude/e--reigne-Citispace-Forerent/9e456eac-9c0c-4be0-a247-773d44415dd9/tasks/**)",
+      "Bash(find /e/reigne/Citispace-Forerent/resources/views/livewire -type f -name *.blade.php)",
+      "Bash(grep -r \"tenant-dashboard\\\\|TenantDashboard\" /e/reigne/Citispace-Forerent --include=*.php --include=*.blade.php)",
+      "Bash(grep -r \"dashboard\\\\|widget\" /e/reigne/Citispace-Forerent/resources/css --include=*.css)",
+      "Bash(find /e/reigne/Citispace-Forerent -path *Tenants* -name *.php -o -path *Tenants* -name *.blade.php)"
     ]
   }
 }

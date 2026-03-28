@@ -2,17 +2,64 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\PropertyController;
+use App\Models\Property;
+use App\Models\Unit;
 
 // Import the Forgot Password Component
 use App\Livewire\Auth\ForgotPassword;
 
 // ─── LANDING PAGE (public, no auth required) ────────────────────────────────
-Route::get('/', function () {
-    return view('users.landing');
+Route::get('/', function (Request $request) {
+    // Build property data with unit options for cascading dropdowns
+    $properties = Property::with(['units' => function ($q) {
+        $q->select('unit_id', 'property_id', 'occupants', 'room_type', 'price');
+    }])->get();
+
+    $propertyData = $properties->map(fn($p) => [
+        'address'    => $p->address,
+        'unitTypes'  => $p->units->pluck('occupants')->unique()->values(),
+        'roomTypes'  => $p->units->pluck('room_type')->filter()->unique()->values(),
+        'prices'     => $p->units->pluck('price')->sort()->values(),
+    ])->values();
+
+    $addresses = $properties->pluck('address')->sort()->values();
+
+    $units = null;
+    $hasSearch = $request->hasAny(['address', 'unit_type', 'price', 'furnishing']);
+
+    if ($hasSearch) {
+        $query = Unit::query()
+            ->whereHas('beds', fn($q) => $q->where('status', 'Vacant'))
+            ->with(['property.photos', 'beds' => fn($q) => $q->where('status', 'Vacant')]);
+
+        if ($request->filled('address')) {
+            $query->whereHas('property', fn($q) => $q->where('address', $request->address));
+        }
+        if ($request->filled('unit_type')) {
+            $query->where('occupants', $request->unit_type);
+        }
+        if ($request->filled('price')) {
+            $range = $request->price;
+            if (str_ends_with($range, '+')) {
+                $query->where('price', '>=', (int) rtrim($range, '+'));
+            } else {
+                [$min, $max] = explode('-', $range);
+                $query->whereBetween('price', [(int) $min, (int) $max]);
+            }
+        }
+        if ($request->filled('furnishing')) {
+            $query->where('room_type', $request->furnishing);
+        }
+
+        $units = $query->paginate(12)->withQueryString();
+    }
+
+    return view('users.landing', compact('addresses', 'units', 'hasSearch', 'propertyData'));
 })->name('landing');
 
 Route::get('/privacy-policy', function () {
