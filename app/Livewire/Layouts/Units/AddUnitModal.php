@@ -236,9 +236,21 @@ class AddUnitModal extends Component
         $this->is_predicting = false;
     }
 
+    public function validateAndConfirm(): void
+    {
+        try {
+            $this->validate();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
+
+        // Validation passed — open the confirmation modal
+        $this->dispatch('open-modal', 'publish-confirmation');
+    }
+
     public function saveUnit()
     {
-        $this->validate();
 
         try {
             if (auth()->user()->role === 'manager' && ! $this->editingUnitId) {
@@ -286,9 +298,13 @@ class AddUnitModal extends Component
             $this->close();
             $this->dispatch('refresh-unit-list');
         } catch (\Exception $e) {
+            \Log::error('Failed to save unit: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'data' => $data ?? [],
+            ]);
             $this->notifyError(
                 'Failed to Save Unit',
-                'An error occurred while saving the unit. Please try again.'
+                $e->getMessage()
             );
         }
     }

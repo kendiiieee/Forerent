@@ -244,7 +244,7 @@
                         <button wire:click="save" data-modal-hide="save-confirm-modal" type="button" class="inline-flex items-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             Yes, save changes
                         </button>
-                        <button wire:click="cancelSave" data-modal-hide="save-confirm-modal" type="button" class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors duration-200 hover:bg-gray-50">
+                        <button data-modal-hide="save-confirm-modal" @click="$wire.cancelSave()" type="button" class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors duration-200 hover:bg-gray-50">
                             No, cancel
                         </button>
                     </div>

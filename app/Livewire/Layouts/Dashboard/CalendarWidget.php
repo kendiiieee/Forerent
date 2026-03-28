@@ -140,9 +140,11 @@ class CalendarWidget extends Component
 
             $this->announcementDates = Announcement::where(function($query) use ($userId, $propertyIds) {
                 $query->where('author_id', $userId)
-                    ->orWhereIn('property_id', $propertyIds);
+                    ->orWhere(function ($propertyQuery) use ($propertyIds) {
+                        $propertyQuery->whereIn('property_id', $propertyIds)
+                            ->where('recipient_role', 'manager');
+                    });
             })
-                ->where('recipient_role', 'manager')
                 ->whereBetween('notification_date', [$startOfMonth, $endOfMonth])
                 ->pluck('notification_date')
                 ->map(fn($d) => (int) Carbon::parse($d)->format('d'))

@@ -330,6 +330,7 @@ class TenantDetail extends Component
             foreach ($errors as $key => $message) {
                 $this->addError($key, $message);
             }
+            $this->dispatch('scroll-to-error');
             return;
         }
 
@@ -477,6 +478,7 @@ class TenantDetail extends Component
             foreach ($errors as $key => $message) {
                 $this->addError($key, $message);
             }
+            $this->dispatch('scroll-to-error');
             return;
         }
 

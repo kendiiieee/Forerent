@@ -28,7 +28,18 @@
         </div>
 </div>
 
-                <div class="flex-1 overflow-y-auto">
+                <div
+                    class="flex-1 overflow-y-auto"
+                    x-data
+                    x-on:scroll-to-error.window="
+                        $nextTick(() => {
+                            const firstError = $el.querySelector('.text-red-500, .text-xs.text-red-500');
+                            if (firstError) {
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        })
+                    "
+                >
                     <ol class="flex items-start justify-between w-full pt-4 pb-6 px-6">
                         @foreach ($steps as $step => $label)
                             @php

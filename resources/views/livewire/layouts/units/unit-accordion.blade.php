@@ -16,12 +16,10 @@
             />
             <x-ui.sort-dropdown model="sortBy" current="{{ $sortBy }}" />
             @if(auth()->user()->role === 'landlord')
-                <button
+                <x-ui.button-add
+                    text="Add Unit"
                     wire:click="$dispatch('open-add-unit-modal')"
-                    class="py-2 px-4 text-sm font-medium text-white bg-[#2360E8] rounded-lg hover:bg-[#1d4eb8] transition-colors"
-                >
-                    + Add Unit
-                </button>
+                />
             @endif
         </div>
     </div>

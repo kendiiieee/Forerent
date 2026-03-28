@@ -602,7 +602,7 @@
                         Sign Move-Out Contract
                     </button>
                 @endif
-                <button wire:click="toggleMoveOutContract" class="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-xl">Close</button>
+                <button @click="$el.closest('.fixed').style.display='none'; $wire.toggleMoveOutContract()" class="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-xl">Close</button>
             </x-slot:footer>
         </x-inspection.contract-viewer-modal>
     @endif
@@ -651,7 +651,7 @@
                         Read & Sign Contract
                     </button>
                 @endif
-                <button wire:click="toggleContract" class="bg-[#070589] hover:bg-[#000060] text-white font-bold py-2.5 px-6 rounded-xl text-sm">Close</button>
+                <button @click="$el.closest('.fixed').style.display='none'; $wire.toggleContract()" class="bg-[#070589] hover:bg-[#000060] text-white font-bold py-2.5 px-6 rounded-xl text-sm">Close</button>
             </x-slot:footer>
         </x-inspection.contract-viewer-modal>
     @endif

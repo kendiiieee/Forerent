@@ -117,6 +117,8 @@ class BuildingCardsSection extends Component
             if (!in_array($this->selectedBuilding, $ids)) {
                 $this->selectedBuilding = $this->properties[0]['property_id'];
             }
+            // Re-dispatch so the selected building's details/photos refresh
+            $this->dispatch('buildingSelected', buildingId: $this->selectedBuilding);
         } else {
             $this->selectedBuilding = null;
         }

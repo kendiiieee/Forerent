@@ -34,15 +34,19 @@ class RevenueReports extends Component
         $income = array_fill(0, 12, 0);
         $expenses = array_fill(0, 12, 0);
 
-        // Call the protected scope from the Model instead of raw SQL
-        $monthlyIncome = Transaction::monthlyRevenueSummary($year)->get();
+        // Revenue/inflow source: credit transactions.
+        $monthlyIncome = Transaction::where('transaction_type', 'Credit')
+            ->whereYear('transaction_date', $year)
+            ->selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
+            ->groupBy('month')
+            ->get();
 
         foreach ($monthlyIncome as $row) {
             $income[(int) $row->month - 1] = (float) $row->total;
         }
 
         $monthlyExpenses = MaintenanceLog::whereYear('completion_date', $year)
-            ->selectRaw('CAST(EXTRACT(MONTH FROM completion_date) AS UNSIGNED) as month, SUM(cost) as total')
+            ->selectRaw('MONTH(completion_date) as month, SUM(cost) as total')
             ->groupBy('month')
             ->get();
 

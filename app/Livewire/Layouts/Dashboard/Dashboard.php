@@ -239,7 +239,8 @@ class Dashboard extends Component
         $monthlyBillings = Transaction::where('transaction_type', 'Credit')
             ->where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM transaction_date) as month, SUM(amount) as total')->groupBy('month')
+            ->selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
+            ->groupBy('month')
             ->get();
 
         foreach ($monthlyBillings as $billing) {
@@ -251,7 +252,7 @@ class Dashboard extends Component
 
         // Get monthly expenses (maintenance logs)
         $monthlyExpensesData = MaintenanceLog::whereYear('completion_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM completion_date) as month, SUM(cost) as total')
+            ->selectRaw('MONTH(completion_date) as month, SUM(cost) as total')
             ->groupBy('month')
             ->get();
 
