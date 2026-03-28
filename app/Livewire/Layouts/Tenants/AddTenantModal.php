@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Tenants;
 use App\Models\Billing;
 use App\Models\Transaction;
 use App\Notifications\NewAccount;
+use App\Services\FirebaseStorageService;
 use App\Services\PasswordGenerator;
 use App\Livewire\Concerns\WithNotifications;
 use Illuminate\Support\Facades\Notification;
@@ -466,12 +467,14 @@ class AddTenantModal extends Component
     private function saveNewTenant(): void
     {
         DB::transaction(function () {
+            $firebase = app(FirebaseStorageService::class);
+
             $photoPath = $this->profilePicture
-                ? $this->profilePicture->store('profile-photos', 'public')
+                ? $firebase->upload($this->profilePicture, 'Images')
                 : null;
 
             $idImagePath = $this->governmentIdImage
-                ? $this->governmentIdImage->store('government-ids', 'public')
+                ? $firebase->upload($this->governmentIdImage, 'Images')
                 : null;
 
             $password = PasswordGenerator::generate();
@@ -669,12 +672,22 @@ class AddTenantModal extends Component
             $tenant = User::find($this->editTenantId);
             if (!$tenant) return;
 
+            $firebase = app(FirebaseStorageService::class);
+
+            if ($this->profilePicture && $tenant->profile_img) {
+                $firebase->delete($tenant->profile_img);
+            }
+
+            if ($this->governmentIdImage && $tenant->government_id_image) {
+                $firebase->delete($tenant->government_id_image);
+            }
+
             $photoPath = $this->profilePicture
-                ? $this->profilePicture->store('profile-photos', 'public')
+                ? $firebase->upload($this->profilePicture, 'Images')
                 : $tenant->profile_img;
 
             $idImagePath = $this->governmentIdImage
-                ? $this->governmentIdImage->store('government-ids', 'public')
+                ? $firebase->upload($this->governmentIdImage, 'Images')
                 : $tenant->government_id_image;
 
             $tenant->update([

@@ -68,13 +68,13 @@
 
         <ul class="space-y-2 font-medium">
             <li>
-                <a href="#" class="flex items-center p-3 text-gray-700 rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] group">
+                <a href="{{ route('settings') }}" class="flex items-center p-3 text-gray-700 rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] group">
                     <x-icons.settings />
                     <span class="ms-3">Settings</span>
                 </a>
             </li>
             <li>
-                <a href="#" class="flex items-center p-3 text-gray-700 rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] group">
+                <a href="{{ route('logout') }}" class="flex items-center p-3 text-gray-700 rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] group">
                     <x-icons.logout />
                     <span class="ms-3">Log Out</span>
                 </a>

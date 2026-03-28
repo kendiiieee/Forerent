@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\NewAccount;
+use App\Services\FirebaseStorageService;
 use App\Services\PasswordGenerator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -179,31 +180,20 @@ class AddManagerModal extends Component
         $this->validate();
 
         try {
+            $firebase = app(FirebaseStorageService::class);
+
             if ($this->isEditing) {
                 $originalManager = User::find($this->managerId);
                 $originalFloor = Unit::where('manager_id', $this->managerId)->value('floor_number');
                 $manager = $this->userForm->update($originalManager);
 
-                // Track what changed
                 $changedFields = [];
-                if ($originalManager->first_name !== $manager->first_name) {
-                    $changedFields[] = 'first name';
-                }
-                if ($originalManager->last_name !== $manager->last_name) {
-                    $changedFields[] = 'last name';
-                }
-                if ($originalManager->contact !== $manager->contact) {
-                    $changedFields[] = 'phone number';
-                }
-                if ($originalManager->email !== $manager->email) {
-                    $changedFields[] = 'email';
-                }
-                if ($this->selectedFloor && $originalFloor != $this->selectedFloor) {
-                    $changedFields[] = 'floor assignment';
-                }
-                if ($this->profilePicture && !is_string($this->profilePicture)) {
-                    $changedFields[] = 'profile picture';
-                }
+                if ($originalManager->first_name !== $manager->first_name) $changedFields[] = 'first name';
+                if ($originalManager->last_name !== $manager->last_name)   $changedFields[] = 'last name';
+                if ($originalManager->contact !== $manager->contact)       $changedFields[] = 'phone number';
+                if ($originalManager->email !== $manager->email)           $changedFields[] = 'email';
+                if ($this->selectedFloor && $originalFloor != $this->selectedFloor) $changedFields[] = 'floor assignment';
+                if ($this->profilePicture && !is_string($this->profilePicture))     $changedFields[] = 'profile picture';
 
                 $changeMessage = !empty($changedFields)
                     ? ucfirst(implode(', ', $changedFields)) . ' updated for ' . $manager->first_name . '.'
@@ -214,8 +204,15 @@ class AddManagerModal extends Component
                 $changeMessage = $manager->first_name . ' added successfully as a manager!';
             }
 
+            // Handle profile picture upload
             if ($this->profilePicture && !is_string($this->profilePicture)) {
-                $path = $this->profilePicture->store('profile-photos', 'public');
+
+                // Delete old photo from Firebase if replacing
+                if ($this->isEditing && $manager->profile_img) {
+                    $firebase->delete($manager->profile_img);
+                }
+
+                $path = $firebase->upload($this->profilePicture, 'Images');
                 $manager->update(['profile_img' => $path]);
             }
 
@@ -226,16 +223,13 @@ class AddManagerModal extends Component
             );
 
             if (!empty($allSelectedUnitIds)) {
-                // Unassign this manager from any units NOT in the new selection
                 Unit::where('manager_id', $manager->user_id)
                     ->whereNotIn('unit_id', $allSelectedUnitIds)
                     ->update(['manager_id' => null]);
 
-                // Assign manager to all selected units
                 Unit::whereIn('unit_id', $allSelectedUnitIds)
                     ->update(['manager_id' => $manager->user_id]);
             } else {
-                // No units selected at all — clear all assignments
                 Unit::where('manager_id', $manager->user_id)
                     ->update(['manager_id' => null]);
             }
@@ -249,6 +243,7 @@ class AddManagerModal extends Component
             $this->dispatch('refresh-manager-list');
             $this->dispatch('managerUpdated', managerId: $manager->user_id);
             $this->dispatch('close-modal', 'save-manager-confirmation');
+
         } catch (\Exception $e) {
             $this->notifyError(
                 'Failed to Save Manager',

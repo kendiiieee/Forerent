@@ -56,7 +56,7 @@
                     {{-- Avatar + Badge --}}
                     <div class="relative flex-shrink-0">
                         <img
-                            src="{{ $chat->profile_img ? asset('storage/' . $chat->profile_img) : 'https://ui-avatars.com/api/?name=' . urlencode($chat->first_name . '+' . $chat->last_name) . '&background=C8D9FD&color=0C0B50' }}"
+                            src="{{ $chat->profile_image_url }}"
                             class="w-11 h-11 rounded-full object-cover border-2
                                 {{ $selectedUserId === $chat->user_id ? 'border-blue-300' : 'border-slate-100' }}"
                         >
@@ -107,7 +107,7 @@
             >
                 <div class="relative">
                     <img
-                        src="{{ $activeChatUser->profile_img ? asset('storage/' . $activeChatUser->profile_img) : 'https://ui-avatars.com/api/?name=' . urlencode($activeChatUser->first_name . '+' . $activeChatUser->last_name) . '&background=C8D9FD&color=0C0B50' }}"
+                        src="{{ $activeChatUser->profile_image_url }}"
                         class="w-9 h-9 rounded-full object-cover border border-blue-100"
                     >
                     <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></div>
@@ -154,7 +154,7 @@
                             {{-- Their Avatar --}}
                             @if(!$isMe)
                                 <img
-                                    src="{{ $activeChatUser->profile_img ? asset('storage/' . $activeChatUser->profile_img) : 'https://ui-avatars.com/api/?name=' . urlencode($activeChatUser->first_name) . '&background=C8D9FD&color=0C0B50' }}"
+                                    src="{{ $activeChatUser->profile_image_url }}"
                                     class="w-7 h-7 rounded-full mr-2 self-end mb-4 flex-shrink-0"
                                 >
                             @endif
@@ -206,7 +206,7 @@
                             @if($isMe)
                                 @php $me = auth()->user(); @endphp
                                 <img
-                                    src="{{ $me->profile_img ? asset('storage/' . $me->profile_img) : 'https://ui-avatars.com/api/?name=' . urlencode($me->first_name) . '&background=0C0B50&color=fff' }}"
+                                    src="{{ $me->profile_image_url }}"
                                     class="w-7 h-7 rounded-full ml-2 self-end mb-4 flex-shrink-0"
                                 >
                             @endif
@@ -455,7 +455,7 @@
                 <div class="relative mb-3">
                     <div class="p-1 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100">
                         <img
-                            src="{{ $activeChatUser->profile_img ? asset('storage/' . $activeChatUser->profile_img) : 'https://ui-avatars.com/api/?name=' . urlencode($activeChatUser->first_name . '+' . $activeChatUser->last_name) . '&background=C8D9FD&color=0C0B50&size=128' }}"
+                            src="{{ $activeChatUser->profile_image_url }}"
                             class="w-20 h-20 rounded-full object-cover"
                         >
                     </div>

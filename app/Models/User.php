@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
@@ -96,5 +97,35 @@ class User extends Authenticatable
     public function receivedMessages()
     {
         return $this->hasMany(Message::class, 'receiver_id', 'user_id');
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        $name = trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
+
+        return $name !== '' ? $name : ((string) ($this->email ?? 'User'));
+    }
+
+    public function getProfileImageUrlAttribute(): string
+    {
+        if (!empty($this->profile_img)) {
+            $path = trim((string) $this->profile_img);
+
+            if (Str::startsWith($path, ['http://', 'https://', '//'])) {
+                return $path;
+            }
+
+            $path = ltrim($path, '/');
+
+            if (Str::startsWith($path, 'storage/')) {
+                $path = Str::after($path, 'storage/');
+            }
+
+            if (Storage::disk('public')->exists($path)) {
+                return Storage::url($path);
+            }
+        }
+
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->display_name) . '&background=C8D9FD&color=0C0B50';
     }
 }

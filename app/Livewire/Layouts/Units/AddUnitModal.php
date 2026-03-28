@@ -63,7 +63,6 @@ class AddUnitModal extends Component
         'living_area' => 'required|numeric|min:1',
         'bed_type' => 'required|in:Single,Bunk',
         'room_cap' => 'required|integer|min:1',
-        'unit_cap' => 'required|integer|min:1',
         'actual_price' => 'required|numeric|min:0|max:999999',
     ];
 
@@ -256,11 +255,11 @@ class AddUnitModal extends Component
             $data = [
                 'property_id' => $this->property_id,
                 'floor_number' => $this->floor_number,
-                'm/f' => $this->m_f,
+                'occupants' => $this->occupants,
+                'living_area' => $this->living_area,
+                'furnishing' => $this->furnishing,
                 'bed_type' => $this->bed_type,
-                'room_type' => $this->room_type,
                 'room_cap' => $this->room_cap,
-                'unit_cap' => $this->unit_cap,
                 'price' => (int) $this->actual_price,
                 'amenities' => json_encode($checkedAmenities),
             ];
