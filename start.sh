@@ -1,32 +1,32 @@
 #!/bin/bash
 set -e
 
-# Ensure Laravel writable paths exist.
-mkdir -p /var/www/storage/logs /var/www/bootstrap/cache
-touch /var/www/storage/logs/laravel.log
+# 1. Ensure permissions are correct
+mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
 
-# If php-fpm user exists, align ownership with runtime user.
-if id -u www-data >/dev/null 2>&1; then
-	chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# 2. Wait for Database (Crucial for Cloud Deploys)
+# This prevents the "Connection Refused" crash on Render
+echo "Waiting for database connection..."
+until php artisan db:monitor --databases=mysql > /dev/null 2>&1; do
+  echo "Database is unavailable - sleeping"
+  sleep 2
+done
+echo "Database is up!"
+
+# 3. Production Optimizations
+if [ "${APP_ENV}" = "production" ]; then
+    echo "Running in production mode..."
+    php artisan migrate --force
+    # 'optimize' handles config, routes, and views in one go
+    php artisan optimize
+    php artisan storage:link
+else
+    echo "Running in development mode..."
+    php artisan migrate
 fi
 
-chmod -R ug+rwX /var/www/storage /var/www/bootstrap/cache
-
-# On production, default to stderr logging unless explicitly configured.
-if [ "${APP_ENV}" = "production" ] && [ -z "${LOG_CHANNEL}" ]; then
-	export LOG_CHANNEL=stderr
-fi
-
-if [ "${APP_ENV}" = "production" ] && [ "${LOG_CHANNEL}" = "stack" ] && [ -z "${LOG_STACK}" ]; then
-	export LOG_STACK=stderr
-fi
-
-php artisan migrate --force
-php artisan config:cache
-php artisan storage:link
-php artisan config:clear
-php artisan view:clear
-php artisan cache:clear
-
-# Start nginx and php-fpm immediately
-/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# 4. Start the Engine
+echo "Starting Supervisord..."
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
