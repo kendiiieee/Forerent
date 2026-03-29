@@ -5,21 +5,17 @@
 
         <div class="flex items-center gap-2">
             @if($showAddButton)
-                <button
-                    type="button"
+                <x-ui.button-add
+                    text="Add Property"
                     onclick="Livewire.dispatch('{{ $addButtonEvent }}')"
-                    class="py-2 px-4 text-sm font-medium text-white bg-[#2360E8] rounded-lg hover:bg-[#1d4eb8] transition-colors">
-                    + Add Property
-                </button>
+                />
             @endif
 
             @if($showAddUnitButton)
-                <button
-                    type="button"
+                <x-ui.button-add
+                    text="Add Unit"
                     onclick="Livewire.dispatch('{{ $addUnitButtonEvent }}')"
-                    class="py-2 px-4 text-sm font-medium text-white bg-[#2360E8] rounded-lg hover:bg-[#1d4eb8] transition-colors">
-                    + Add Unit
-                </button>
+                />
             @endif
         </div>
     </div>
@@ -152,12 +148,11 @@
                     </p>
 
                     @if($showAddButton)
-                        <button
-                            type="button"
+                        <x-ui.button-add
+                            text="Add Your First Property"
                             onclick="Livewire.dispatch('{{ $addButtonEvent }}')"
-                            class="mt-4 py-2 px-6 text-sm font-medium text-white bg-[#2360E8] rounded-lg hover:bg-[#1d4eb8] transition-colors">
-                            Add Your First Property
-                        </button>
+                            class="mt-4"
+                        />
                     @endif
                 </div>
             @endforelse

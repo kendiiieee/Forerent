@@ -163,7 +163,12 @@ class AddTenantModal extends Component
     // --- Stepper Navigation ---
     public function nextStep(): void
     {
-        $this->validate($this->stepValidationRules($this->currentStep));
+        try {
+            $this->validate($this->stepValidationRules($this->currentStep));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
 
         if ($this->currentStep < $this->totalSteps) {
             $this->currentStep++;
@@ -362,9 +367,12 @@ class AddTenantModal extends Component
 
     protected function loadBuildings()
     {
-        $this->buildings = Property::whereHas('units', function ($query) {
+        $ownerIds = Property::whereHas('units', function ($query) {
             $query->where('manager_id', Auth::id());
-        })->get(['property_id', 'building_name']);
+        })->pluck('owner_id')->unique();
+
+        $this->buildings = Property::whereIn('owner_id', $ownerIds)
+            ->get(['property_id', 'building_name']);
     }
 
     public function updatedSelectedBuilding($propertyId)
@@ -414,7 +422,13 @@ class AddTenantModal extends Component
 
     public function validateAndConfirm(): void
     {
-        $this->validate($this->validationRules());
+        try {
+            $this->validate($this->validationRules());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
+
         $confirmModal = match ($this->mode) {
             'transfer' => 'transfer-tenant-confirmation',
             'edit'     => 'edit-tenant-confirmation',

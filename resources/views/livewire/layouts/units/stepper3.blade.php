@@ -175,10 +175,12 @@
         {{-- Save Button --}}
         @if ($predicted_price)
             <button
-                wire:click="$dispatch('open-modal', 'publish-confirmation')"
+                wire:click="validateAndConfirm"
                 class="py-2.5 px-6 font-medium text-sm text-white bg-[#070589] rounded-lg hover:bg-[#1511D6] transition-colors duration-200 shadow-md"
+                wire:loading.attr="disabled"
             >
-                Save Unit
+                <span wire:loading.remove wire:target="validateAndConfirm, saveUnit">Save Unit</span>
+                <span wire:loading wire:target="validateAndConfirm, saveUnit">Processing...</span>
             </button>
         @endif
     </div>

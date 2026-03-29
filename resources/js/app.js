@@ -1,12 +1,11 @@
-// import Alpine from 'alpinejs';
-// window.Alpine = Alpine;
-// Alpine.start();
-
+import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
 
-document.addEventListener('alpine:init', () => {
-    window.Alpine.plugin(collapse);
-});
+if (!window.Alpine) {
+    window.Alpine = Alpine;
+    Alpine.plugin(collapse);
+    Alpine.start();
+}
 
 import 'flowbite';
 import './landing-animations';

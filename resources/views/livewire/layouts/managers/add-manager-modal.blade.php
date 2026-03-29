@@ -26,7 +26,18 @@
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto">
+                <div
+                    class="flex-1 overflow-y-auto"
+                    x-data
+                    x-on:scroll-to-error.window="
+                        $nextTick(() => {
+                            const firstError = $el.querySelector('.text-red-500, .text-xs.text-red-500');
+                            if (firstError) {
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        })
+                    "
+                >
                     <div class="bg-white rounded-xl shadow-lg border border-gray-200 mx-6 my-6">
                         <div class="space-y-6 p-6">
 
