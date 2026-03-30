@@ -28,6 +28,13 @@ class RevenueReports extends Component
     public function getInflowOutflowData(): array
     {
         $year = Carbon::now()->year;
+        $driver = Transaction::query()->getConnection()->getDriverName();
+        $transactionMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM transaction_date)::int'
+            : 'MONTH(transaction_date)';
+        $maintenanceMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM completion_date)::int'
+            : 'MONTH(completion_date)';
 
         $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $income = array_fill(0, 12, 0);
@@ -36,7 +43,7 @@ class RevenueReports extends Component
         // Revenue/inflow source: credit transactions.
         $monthlyIncome = Transaction::where('transaction_type', 'Credit')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
+            ->selectRaw("{$transactionMonthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
             ->get();
 
@@ -45,7 +52,7 @@ class RevenueReports extends Component
         }
 
         $monthlyExpenses = MaintenanceLog::whereYear('completion_date', $year)
-            ->selectRaw('MONTH(completion_date) as month, SUM(cost) as total')
+            ->selectRaw("{$maintenanceMonthExpr} as month, SUM(cost) as total")
             ->groupBy('month')
             ->get();
 

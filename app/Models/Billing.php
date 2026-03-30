@@ -34,9 +34,12 @@ class Billing extends Model
     protected static function booted(): void
     {
         static::saved(function (Billing $billing) {
-            // Sync inflow ledger whenever a billing is newly paid or status changes to paid.
+            // Sync inflow ledger only after commit so billing writes are not poisoned
+            // by any downstream transaction-sequence conflict in PostgreSQL.
             if ($billing->status === 'Paid' && ($billing->wasRecentlyCreated || $billing->wasChanged('status'))) {
-                $billing->ensureCreditTransaction();
+                DB::afterCommit(function () use ($billing) {
+                    $billing->ensureCreditTransaction();
+                });
             }
         });
     }
@@ -79,6 +82,10 @@ class Billing extends Model
 
     private function createCreditTransactionWithRetry(array $payload): void
     {
+        if (DB::getDriverName() === 'pgsql') {
+            $this->syncTransactionIdSequence();
+        }
+
         try {
             $this->transactions()->create($payload);
             return;

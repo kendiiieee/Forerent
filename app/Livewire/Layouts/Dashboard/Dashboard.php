@@ -205,6 +205,13 @@ class Dashboard extends Component
     private function loadMonthlyData()
     {
         $year = Carbon::now()->year;
+        $driver = Transaction::query()->getConnection()->getDriverName();
+        $transactionMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM transaction_date)::int'
+            : 'MONTH(transaction_date)';
+        $maintenanceMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM completion_date)::int'
+            : 'MONTH(completion_date)';
 
         // Initialize monthly arrays
         $this->monthlyLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -216,7 +223,7 @@ class Dashboard extends Component
         $monthlyBillings = Transaction::where('transaction_type', 'Credit')
             ->where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
+            ->selectRaw("{$transactionMonthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
             ->get();
 
@@ -229,7 +236,7 @@ class Dashboard extends Component
 
         // Get monthly expenses (maintenance logs)
         $monthlyExpensesData = MaintenanceLog::whereYear('completion_date', $year)
-            ->selectRaw('MONTH(completion_date) as month, SUM(cost) as total')
+            ->selectRaw("{$maintenanceMonthExpr} as month, SUM(cost) as total")
             ->groupBy('month')
             ->get();
 

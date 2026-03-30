@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Transaction extends Model
 {
@@ -78,5 +79,16 @@ class Transaction extends Model
     public function getNetAmountAttribute()
     {
         return $this->transaction_type === 'Credit' ? $this->amount : -$this->amount;
+    }
+
+    public static function syncPrimaryKeySequence(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::statement(
+            "SELECT setval(pg_get_serial_sequence('transactions', 'transaction_id'), COALESCE(MAX(transaction_id), 0) + 1, false) FROM transactions"
+        );
     }
 }

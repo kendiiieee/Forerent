@@ -22,12 +22,17 @@ class ProjectedMaintenanceCost extends Component
 
     private function loadRealChartData()
     {
+        $driver = DB::connection()->getDriverName();
+        $monthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM created_at)::int'
+            : 'MONTH(created_at)';
+
         // 1. Setup empty months (Jan-Dec)
         $monthlyCosts = array_fill(1, 12, 0);
 
         // 2. Query REAL requests from database
         $requests = DB::table('maintenance_requests')
-            ->select(DB::raw('MONTH(created_at) as month'), DB::raw('COUNT(*) as count'))
+            ->select(DB::raw($monthExpr . ' as month'), DB::raw('COUNT(*) as count'))
             ->whereYear('created_at', date('Y'))
             ->groupBy('month')
             ->get();
