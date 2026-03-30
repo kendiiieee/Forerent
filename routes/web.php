@@ -17,7 +17,7 @@ use App\Livewire\Auth\ForgotPassword;
 Route::get('/', function (Request $request) {
     // Build property data with unit options for cascading dropdowns
     $properties = Property::with(['units' => function ($q) {
-        $q->select('unit_id', 'property_id', 'occupants', 'room_type', 'price');
+        $q->select('unit_id', 'property_id', 'occupants', 'room_cap', 'price');
     }])->get();
 
     $propertyData = $properties->map(fn($p) => [
@@ -53,7 +53,7 @@ Route::get('/', function (Request $request) {
             }
         }
         if ($request->filled('furnishing')) {
-            $query->where('room_type', $request->furnishing);
+            $query->where('furnishing', $request->furnishing);
         }
 
         $units = $query->paginate(12)->withQueryString();

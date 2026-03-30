@@ -26,6 +26,15 @@ class Unit extends Model
         'amenities'
     ];
 
+    public function getRoomTypeAttribute(): ?string
+    {
+        if ($this->room_cap === null) {
+            return null;
+        }
+
+        return $this->room_cap . '-in-a-Room Bedspace';
+    }
+
 
 
     public function property()
