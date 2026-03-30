@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'sendgrid' => [
+        'api_key' => env('TWILLIO_API_KEY'),
+    ]
+
 ];
