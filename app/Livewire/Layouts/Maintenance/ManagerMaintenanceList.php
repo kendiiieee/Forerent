@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Maintenance;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +24,12 @@ class ManagerMaintenanceList extends Component
     public function updatedSearch()
     {
         $this->activeRequestId = null;
+    }
+
+    #[On('refresh-maintenance-list')]
+    public function refreshList()
+    {
+        // Event-driven refresh after create/status updates.
     }
 
     public function setTab($tab)

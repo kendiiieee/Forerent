@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Maintenance;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,7 @@ class TenantMaintenanceList extends Component
         $this->dispatch('tenantMaintenanceSelected', requestId: $id);
     }
 
+    #[On('refresh-maintenance-list')]
     public function refreshList()
     {
         // This empty method triggers a re-render
@@ -64,8 +66,8 @@ class TenantMaintenanceList extends Component
         $counts = [
             'all'         => (clone $baseQuery)->count(),
             'pending'     => $statusCountsRaw['Pending'] ?? 0,
-            'ongoing'     => ($statusCountsRaw['In Progress'] ?? 0) + ($statusCountsRaw['Ongoing'] ?? 0),
-            'completed'   => ($statusCountsRaw['Completed'] ?? 0) + ($statusCountsRaw['Resolved'] ?? 0),
+            'ongoing'     => $statusCountsRaw['Ongoing'] ?? 0,
+            'completed'   => $statusCountsRaw['Completed'] ?? 0,
         ];
 
         $query = (clone $baseQuery)->select(
@@ -83,10 +85,10 @@ class TenantMaintenanceList extends Component
                 $query->where('status', 'Pending');
                 break;
             case 'ongoing':
-                $query->whereIn('status', ['In Progress', 'Ongoing']);
+                $query->where('status', 'Ongoing');
                 break;
             case 'completed':
-                $query->whereIn('status', ['Completed', 'Resolved']);
+                $query->where('status', 'Completed');
                 break;
         }
 

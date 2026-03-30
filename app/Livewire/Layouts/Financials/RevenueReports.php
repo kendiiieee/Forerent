@@ -29,6 +29,13 @@ class RevenueReports extends Component
     public function getInflowOutflowData(): array
     {
         $year = Carbon::now()->year;
+        $driver = Transaction::query()->getConnection()->getDriverName();
+        $transactionMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM transaction_date)::int'
+            : 'MONTH(transaction_date)';
+        $maintenanceMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM completion_date)::int'
+            : 'MONTH(completion_date)';
 
         $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $income = array_fill(0, 12, 0);

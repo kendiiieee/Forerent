@@ -10,7 +10,7 @@ class MaintenanceDashboard extends Component
 {
     use WithPagination;
 
-    public $activeTab = 'All'; // Options: All, Pending, On Hold, Completed
+    public $activeTab = 'All'; // Options: All, Pending, Ongoing (shown as On Hold), Completed
     public $selectedRequestId = null;
 
     // This listener ensures the dashboard updates if other parts of the app change data
@@ -42,7 +42,7 @@ class MaintenanceDashboard extends Component
         $counts = [
             'All' => DB::table('maintenance_requests')->count(),
             'Pending' => DB::table('maintenance_requests')->where('status', 'Pending')->count(),
-            'On Hold' => DB::table('maintenance_requests')->where('status', 'On Hold')->orWhere('status', 'Ongoing')->count(),
+            'On Hold' => DB::table('maintenance_requests')->where('status', 'Ongoing')->count(),
             'Completed' => DB::table('maintenance_requests')->where('status', 'Completed')->count(),
         ];
 
@@ -56,12 +56,12 @@ class MaintenanceDashboard extends Component
                 'maintenance_requests.*',
                 'units.floor_number', // Assuming unit number/name is constructed or stored
                 'beds.bed_number as unit_name', // Using bed/unit identifier
-                'users.name as tenant_name'
+                DB::raw("CONCAT(users.first_name, ' ', users.last_name) as tenant_name")
             );
 
         if ($this->activeTab !== 'All') {
             if ($this->activeTab === 'On Hold') {
-                $query->whereIn('maintenance_requests.status', ['On Hold', 'Ongoing']);
+                $query->where('maintenance_requests.status', 'Ongoing');
             } else {
                 $query->where('maintenance_requests.status', $this->activeTab);
             }
@@ -84,7 +84,7 @@ class MaintenanceDashboard extends Component
                     'units.floor_number',
                     'beds.bed_number as unit_name',
                     'properties.building_name',
-                    'users.name as tenant_name'
+                    DB::raw("CONCAT(users.first_name, ' ', users.last_name) as tenant_name")
                 )
                 ->first();
         }
