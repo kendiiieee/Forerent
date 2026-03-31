@@ -77,7 +77,7 @@
                     <input
                         type="text"
                         id="first_name"
-                        wire:model.live.debounce.300ms="firstName"
+                        wire:model.live="firstName"
                         placeholder="Enter first name"
                         class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
@@ -91,7 +91,7 @@
                     <input
                         type="text"
                         id="last_name"
-                        wire:model.live.debounce.300ms="lastName"
+                        wire:model.live="lastName"
                         placeholder="Enter last name"
                         class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
@@ -133,7 +133,7 @@
                     <input
                         type="email"
                         id="email"
-                        wire:model.live.debounce.300ms="email"
+                        wire:model.live="email"
                         placeholder="Enter email address"
                         class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                     >
@@ -200,20 +200,11 @@
         <div class="mt-8 flex items-center justify-end">
             <button
                 type="button"
-                wire:click="confirmSave"
+                wire:click="save"
                 class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
                 Update Changes
             </button>
         </div>
     </div>
-
-    <x-ui.modal-confirm
-        name="settings-save-confirmation"
-        title="Save Changes?"
-        description="Are you sure you want to save these profile changes?"
-        confirmText="Yes, Save"
-        cancelText="Cancel"
-        confirmAction="save"
-    />
 </div>

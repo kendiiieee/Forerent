@@ -194,9 +194,7 @@ class PaymentReceipts extends Component
 
             for ($attempt = 1; $attempt <= 3; $attempt++) {
                 try {
-                    Transaction::syncPrimaryKeySequence();
-
-                    $transaction = Transaction::create([
+                    $transaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $billingId,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',

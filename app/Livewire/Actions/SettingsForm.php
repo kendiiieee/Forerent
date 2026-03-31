@@ -3,8 +3,10 @@
 namespace App\Livewire\Actions;
 
 use App\Livewire\Concerns\WithNotifications;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -47,14 +49,29 @@ class SettingsForm extends Component
 
     public function hydrate(): void
     {
-        if (!$this->hasPendingChanges && Auth::check() && $this->email === '') {
-            $this->loadUserData();
+        if ($this->hasPendingChanges || !Auth::check()) {
+            return;
+        }
+
+        $user = $this->resolveCurrentUser();
+
+        if (!$user) {
+            return;
+        }
+
+        $shouldReload = ($this->firstName === '' && (string) ($user->first_name ?? '') !== '')
+            || ($this->lastName === '' && (string) ($user->last_name ?? '') !== '')
+            || ($this->email === '' && (string) ($user->email ?? '') !== '')
+            || ($this->phoneNumber === '' && $this->normalizePhone((string) ($user->contact ?? '')) !== '');
+
+        if ($shouldReload) {
+            $this->loadUserData($user);
         }
     }
 
     public function updatedPhoneNumber($value): void
     {
-        $this->phoneNumber = substr(preg_replace('/\D/', '', (string) $value), 0, 10);
+        $this->phoneNumber = $this->normalizePhone((string) $value);
         $this->recomputePendingChanges();
     }
 
@@ -73,10 +90,9 @@ class SettingsForm extends Component
         }
     }
 
-    private function loadUserData(): void
+    private function loadUserData(?User $user = null): void
     {
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        $user ??= $this->resolveCurrentUser();
 
         if (!$user) {
             $this->firstName = '';
@@ -95,7 +111,7 @@ class SettingsForm extends Component
         }
 
         $this->email = (string) ($user->email ?? '');
-        $this->phoneNumber = substr(preg_replace('/\D/', '', (string) ($user->contact ?? '')), 0, 10);
+        $this->phoneNumber = $this->normalizePhone((string) ($user->contact ?? ''));
         $this->firstName = (string) ($user->first_name ?? '');
         $this->lastName = (string) ($user->last_name ?? '');
         $this->existingProfileImg = $user->profile_img;
@@ -105,6 +121,37 @@ class SettingsForm extends Component
 
         $this->syncOriginalState();
         $this->hasPendingChanges = false;
+    }
+
+    private function resolveCurrentUser(): ?User
+    {
+        /** @var \App\Models\User|null $authUser */
+        $authUser = Auth::user();
+
+        if (!$authUser) {
+            return null;
+        }
+
+        /** @var \App\Models\User|null $freshUser */
+        $freshUser = User::query()->find($authUser->getKey());
+
+        return $freshUser ?? $authUser;
+    }
+
+    private function normalizePhone(string $value): string
+    {
+        $digits = preg_replace('/\D/', '', $value) ?? '';
+
+        if ($digits === '') {
+            return '';
+        }
+
+        // Keep the local mobile part shown next to +63 in the UI.
+        if (strlen($digits) > 10) {
+            return substr($digits, -10);
+        }
+
+        return $digits;
     }
 
     public function getExistingProfileImgUrlProperty(): ?string
@@ -170,7 +217,7 @@ class SettingsForm extends Component
         $this->originalFirstName = trim((string) $this->firstName);
         $this->originalLastName = trim((string) $this->lastName);
         $this->originalEmail = trim((string) $this->email);
-        $this->originalPhoneNumber = preg_replace('/\D/', '', (string) $this->phoneNumber);
+        $this->originalPhoneNumber = $this->normalizePhone((string) $this->phoneNumber);
         $this->originalProfileImg = $this->existingProfileImg;
         $this->originalGovernmentIdImage = $this->existingGovernmentIdImage;
     }
@@ -180,7 +227,7 @@ class SettingsForm extends Component
         $formFirstName = trim((string) $this->firstName);
         $formLastName = trim((string) $this->lastName);
         $formEmail = trim((string) $this->email);
-        $formPhone = preg_replace('/\D/', '', (string) $this->phoneNumber);
+        $formPhone = $this->normalizePhone((string) $this->phoneNumber);
 
         $this->hasPendingChanges = $formFirstName !== $this->originalFirstName
             || $formLastName !== $this->originalLastName
@@ -192,27 +239,13 @@ class SettingsForm extends Component
             || $this->existingGovernmentIdImage !== $this->originalGovernmentIdImage;
     }
 
-    public function confirmSave(): void
-    {
-        $this->recomputePendingChanges();
-
-        if (!$this->hasPendingChanges) {
-            $this->notifyInfo('No changes detected', 'Update any field before saving.');
-            return;
-        }
-
-        $this->validate([
-            'firstName' => 'nullable|string|max:255',
-            'lastName' => 'nullable|string|max:255',
-            'phoneNumber' => 'nullable|digits:10',
-            'email' => 'required|email|max:255|unique:users,email,' . Auth::id() . ',user_id',
-        ]);
-
-        $this->dispatch('open-modal', 'settings-save-confirmation');
-    }
-
     public function save(): void
     {
+        $this->firstName = trim((string) $this->firstName);
+        $this->lastName = trim((string) $this->lastName);
+        $this->email = trim((string) $this->email);
+        $this->phoneNumber = $this->normalizePhone((string) $this->phoneNumber);
+
         $this->recomputePendingChanges();
 
         if (!$this->hasPendingChanges) {
@@ -220,8 +253,7 @@ class SettingsForm extends Component
             return;
         }
 
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        $user = $this->resolveCurrentUser();
 
         if (!$user) {
             $this->notifyError('Session expired', 'Please sign in again.');
@@ -231,8 +263,8 @@ class SettingsForm extends Component
         $this->validate([
             'firstName' => 'nullable|string|max:255',
             'lastName' => 'nullable|string|max:255',
-            'phoneNumber' => 'nullable|digits:10',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
+            'phoneNumber' => ['required', 'digits:10', Rule::unique('users', 'contact')->ignore($user->user_id, 'user_id')],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->user_id, 'user_id')],
             'profilePicture' => 'nullable|image|max:10240',
             'governmentIdImage' => 'nullable|image|max:10240',
         ]);
@@ -277,7 +309,6 @@ class SettingsForm extends Component
         $this->hasPendingChanges = false;
 
         $this->dispatch('profile-updated');
-        $this->dispatch('close-modal', 'settings-save-confirmation');
         $this->notifySuccess('Settings Saved Successfully!', 'Your personal information has been updated.');
     }
 

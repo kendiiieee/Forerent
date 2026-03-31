@@ -566,7 +566,7 @@ class AddTenantModal extends Component
 
                 if ($isPaid) {
                     // Deposit transaction
-                    $depTransaction = Transaction::create([
+                    $depTransaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $depbilling->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
@@ -579,7 +579,7 @@ class AddTenantModal extends Component
                     ]);
 
                     // Advance transaction — short-term premium (+₱500) added only here
-                    $advTransaction = Transaction::create([
+                    $advTransaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $billing->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
@@ -694,7 +694,7 @@ class AddTenantModal extends Component
 
             if ($isPaid) {
                 // Advance transaction — short-term premium (+₱500) added only here
-                $advTransaction = Transaction::create([
+                $advTransaction = Transaction::createWithSequenceRetry([
                     'billing_id'       => $billing->billing_id,
                     'reference_number' => 'placeholder',
                     'transaction_type' => 'Debit',
@@ -707,7 +707,7 @@ class AddTenantModal extends Component
                 ]);
 
                 if ($depositShortfall > 0) {
-                    $depTransaction = Transaction::create([
+                    $depTransaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $depbilling->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
