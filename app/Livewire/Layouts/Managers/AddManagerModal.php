@@ -11,6 +11,7 @@ use App\Notifications\NewAccount;
 use App\Services\FirebaseStorageService;
 use App\Services\PasswordGenerator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -186,8 +187,6 @@ class AddManagerModal extends Component
         $this->validate();
 
         try {
-            $firebase = app(FirebaseStorageService::class);
-
             if ($this->isEditing) {
                 $originalManager = User::find($this->managerId);
                 $originalFloor = Unit::where('manager_id', $this->managerId)->value('floor_number');
@@ -205,13 +204,31 @@ class AddManagerModal extends Component
                     ? ucfirst(implode(', ', $changedFields)) . ' updated for ' . $manager->first_name . '.'
                     : $manager->first_name . ' has been updated.';
             } else {
-                $manager = $this->userForm->store('manager');
-                Notification::send($manager, new NewAccount($manager->email, PasswordGenerator::generate(), $manager->role));
+                $tempPassword = PasswordGenerator::generate();
+                $manager = $this->userForm->store('manager', $tempPassword);
+
+                // Email delivery failure should not block manager creation.
+                try {
+                    Notification::send($manager, new NewAccount($manager->email, $tempPassword, $manager->role));
+                } catch (\Throwable $notificationError) {
+                    Log::warning('Manager account created but notification email failed.', [
+                        'manager_id' => $manager->user_id,
+                        'email' => $manager->email,
+                        'error' => $notificationError->getMessage(),
+                    ]);
+
+                    $this->notifyWarning(
+                        'Manager saved, email not sent',
+                        'The manager was created successfully, but the account email could not be delivered.'
+                    );
+                }
+
                 $changeMessage = $manager->first_name . ' added successfully as a manager!';
             }
 
             // Handle profile picture upload
             if ($this->profilePicture && !is_string($this->profilePicture)) {
+                $firebase = app(FirebaseStorageService::class);
 
                 // Delete old photo from Firebase if replacing
                 if ($this->isEditing && $manager->profile_img) {
@@ -250,7 +267,16 @@ class AddManagerModal extends Component
             $this->dispatch('managerUpdated', managerId: $manager->user_id);
             $this->dispatch('close-modal', 'save-manager-confirmation');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('Failed to save manager.', [
+                'manager_id' => $this->managerId,
+                'is_editing' => $this->isEditing,
+                'selected_building' => $this->selectedBuilding,
+                'selected_floor' => $this->selectedFloor,
+                'selected_units_count' => count($this->selectedUnits ?? []),
+                'error' => $e->getMessage(),
+            ]);
+
             $this->notifyError(
                 'Failed to Save Manager',
                 'An error occurred while saving the manager. Please try again.'

@@ -6,7 +6,7 @@
     {!! nl2br(e($announcement->details)) !!}
 
     <x-mail::panel>
-        **Sent by:** {{ auth()->user()->first_name }} ({{ ucfirst(str_replace('_', ' ', $announcement->sender_role)) }})
+        **Sent by:** {{ $senderName }} ({{ ucfirst(str_replace('_', ' ', $senderRole)) }})
     </x-mail::panel>
 
     <x-mail::button :url="config('app.url')">

@@ -101,6 +101,35 @@ class SettingsForm extends Component
         $this->existingGovernmentIdImage = null;
     }
 
+    public function getHasPendingChangesProperty(): bool
+    {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        $currentFirstName = (string) ($user->first_name ?? '');
+        $currentLastName = (string) ($user->last_name ?? '');
+        $currentEmail = (string) ($user->email ?? '');
+        $currentPhone = preg_replace('/\D/', '', (string) ($user->contact ?? ''));
+
+        $formFirstName = trim((string) ($this->firstName ?? ''));
+        $formLastName = trim((string) ($this->lastName ?? ''));
+        $formEmail = trim((string) ($this->email ?? ''));
+        $formPhone = preg_replace('/\D/', '', (string) ($this->phoneNumber ?? ''));
+
+        return $formFirstName !== $currentFirstName
+            || $formLastName !== $currentLastName
+            || $formEmail !== $currentEmail
+            || $formPhone !== $currentPhone
+            || $this->profilePicture !== null
+            || $this->governmentIdImage !== null
+            || $this->existingProfileImg !== $user->profile_img
+            || $this->existingGovernmentIdImage !== $user->government_id_image;
+    }
+
     /**
      * This method is triggered by the form's wire:submit.
      * Its primary job now might be just validation before showing the modal,
@@ -110,6 +139,11 @@ class SettingsForm extends Component
      */
     public function confirmSave()
     {
+        if (!$this->hasPendingChanges) {
+            $this->notifyInfo('No changes detected', 'Update any field before saving.');
+            return;
+        }
+
         $this->validate([
             'firstName' => 'nullable|string|max:255',
             'lastName' => 'nullable|string|max:255',
@@ -127,6 +161,11 @@ class SettingsForm extends Component
      */
     public function save()
     {
+        if (!$this->hasPendingChanges) {
+            $this->notifyInfo('No changes detected', 'Update any field before saving.');
+            return;
+        }
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 

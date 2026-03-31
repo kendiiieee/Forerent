@@ -13,14 +13,15 @@
     <button
         @click="open = !open"
         type="button"
-        class="w-full sm:w-auto flex items-center justify-between gap-3 bg-[#2B66F5] hover:bg-blue-700 text-white rounded-full px-6 py-2.5 font-opensans font-semibold text-[16px] tracking-[-0.05em] shadow-md transition-all focus:ring-4 focus:ring-blue-300 outline-none"
+        class="w-full sm:w-auto sm:max-w-88 flex items-center justify-between gap-3 bg-[#2B66F5] hover:bg-blue-700 text-white rounded-full px-6 py-2.5 font-opensans font-semibold text-[16px] tracking-[-0.05em] shadow-md transition-all focus:ring-4 focus:ring-blue-300 outline-none"
         aria-haspopup="true"
         :aria-expanded="open"
+        title="{{ $label }}"
     >
-        <span>{{ $label }}</span>
+        <span class="block min-w-0 flex-1 truncate text-left">{{ $label }}</span>
 
         {{-- Animated Arrow --}}
-        <svg :class="{ 'rotate-180': open }" class="w-4 h-4 text-white transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg :class="{ 'rotate-180': open }" class="h-4 w-4 shrink-0 text-white transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
     </button>
