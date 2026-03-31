@@ -239,6 +239,9 @@ class AddUnitModal extends Component
     {
 
         try {
+            $savedUnitId = null;
+            $savedPropertyId = (int) $this->property_id;
+
             if (auth()->user()->role === 'manager' && !$this->editingUnitId) {
                 $this->notifyError(
                     'Authorization Failed',
@@ -265,6 +268,7 @@ class AddUnitModal extends Component
                 $unit = Unit::find($this->editingUnitId);
                 if ($unit) {
                     $unit->update($data);
+                    $savedUnitId = $unit->unit_id;
                     $this->notifySuccess(
                         'Unit #' . $unit->unit_id . ' Updated Successfully!',
                         'Unit details have been updated.'
@@ -274,6 +278,7 @@ class AddUnitModal extends Component
                 $newUnit = Unit::create(array_merge($data, [
                     'unit_number' => $this->generateUniqueUnitNumber($this->property_id, $this->floor_number)
                 ]));
+                $savedUnitId = $newUnit->unit_id;
                 $this->notifySuccess(
                     'Unit #' . $newUnit->unit_id . ' Created Successfully!',
                     'New unit has been added to your property.'
@@ -281,7 +286,7 @@ class AddUnitModal extends Component
             }
 
             $this->close();
-            $this->dispatch('refresh-unit-list');
+            $this->dispatch('refresh-unit-list', buildingId: $savedPropertyId, unitId: $savedUnitId);
         } catch (\Exception $e) {
             \Log::error('Failed to save unit: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),

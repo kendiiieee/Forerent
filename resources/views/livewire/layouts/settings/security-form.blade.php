@@ -19,14 +19,14 @@
         showCurrent: false,
         showNew: false,
         showConfirm: false,
-        password: @entangle('password').live,
+        passwordInput: '',
         requirementRules: @js($passwordRequirementRules),
         requirementStatus: {},
         get allMet() {
             return this.requirementRules.every((rule) => this.requirementStatus[rule.key]);
         },
         validatePassword() {
-            const value = this.password || '';
+            const value = this.passwordInput || '';
 
             this.requirementStatus = {};
 
@@ -45,7 +45,7 @@
             });
         }
     }"
-    x-init="validatePassword(); $watch('password', () => validatePassword())"
+    x-init="passwordInput = $refs.newPassword?.value || ''; validatePassword(); $watch('passwordInput', () => validatePassword())"
 >
 
     <div class="w-full bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-6 md:p-8">
@@ -92,6 +92,8 @@
                         </svg>
                     </div>
                     <input
+                        x-ref="newPassword"
+                        x-model="passwordInput"
                         :type="showNew ? 'text' : 'password'"
                         wire:model.live.debounce.250ms="password"
                         autocomplete="off"
@@ -174,6 +176,7 @@
                     showCurrent = false;
                     showNew = false;
                     showConfirm = false;
+                    passwordInput = '';
                     validatePassword();
                 "
                 class="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"

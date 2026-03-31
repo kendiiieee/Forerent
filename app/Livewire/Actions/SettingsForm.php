@@ -2,23 +2,22 @@
 
 namespace App\Livewire\Actions;
 
-use Livewire\Component;
-use Livewire\WithFileUploads;
-use Livewire\Attributes\Validate;
+use App\Livewire\Concerns\WithNotifications;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use App\Models\User;
-use App\Livewire\Concerns\WithNotifications;
+use Livewire\Attributes\Validate;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class SettingsForm extends Component
 {
     use WithNotifications, WithFileUploads;
 
     // Form properties
-    public $firstName;
-    public $lastName;
-    public $phoneNumber;
-    public $email;
+    public string $firstName = '';
+    public string $lastName = '';
+    public string $phoneNumber = '';
+    public string $email = '';
 
     // Image upload properties
     #[Validate('nullable|image|max:10240')]
@@ -28,29 +27,77 @@ class SettingsForm extends Component
     public $governmentIdImage;
 
     // Existing image paths from DB
-    public $existingProfileImg;
-    public $existingGovernmentIdImage;
+    public ?string $existingProfileImg = null;
+    public ?string $existingGovernmentIdImage = null;
 
-    public function mount()
+    // Snapshot of loaded values for dirty-checking
+    public string $originalFirstName = '';
+    public string $originalLastName = '';
+    public string $originalPhoneNumber = '';
+    public string $originalEmail = '';
+    public ?string $originalProfileImg = null;
+    public ?string $originalGovernmentIdImage = null;
+
+    public bool $hasPendingChanges = false;
+
+    public function mount(): void
     {
         $this->loadUserData();
     }
 
-    public function updatedPhoneNumber($value)
+    public function updatedPhoneNumber($value): void
     {
         $this->phoneNumber = substr(preg_replace('/\D/', '', (string) $value), 0, 10);
+        $this->recomputePendingChanges();
     }
 
-    private function loadUserData()
+    public function updated($property): void
     {
+        if (in_array($property, [
+            'firstName',
+            'lastName',
+            'email',
+            'profilePicture',
+            'governmentIdImage',
+            'existingProfileImg',
+            'existingGovernmentIdImage',
+        ], true)) {
+            $this->recomputePendingChanges();
+        }
+    }
+
+    private function loadUserData(): void
+    {
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
 
-        $this->email = $user->email;
-        $this->phoneNumber = $user->contact;
-        $this->firstName = $user->first_name;
-        $this->lastName = $user->last_name;
+        if (!$user) {
+            $this->firstName = '';
+            $this->lastName = '';
+            $this->phoneNumber = '';
+            $this->email = '';
+            $this->existingProfileImg = null;
+            $this->existingGovernmentIdImage = null;
+            $this->profilePicture = null;
+            $this->governmentIdImage = null;
+
+            $this->syncOriginalState();
+            $this->hasPendingChanges = false;
+
+            return;
+        }
+
+        $this->email = (string) ($user->email ?? '');
+        $this->phoneNumber = substr(preg_replace('/\D/', '', (string) ($user->contact ?? '')), 0, 10);
+        $this->firstName = (string) ($user->first_name ?? '');
+        $this->lastName = (string) ($user->last_name ?? '');
         $this->existingProfileImg = $user->profile_img;
         $this->existingGovernmentIdImage = $user->government_id_image;
+        $this->profilePicture = null;
+        $this->governmentIdImage = null;
+
+        $this->syncOriginalState();
+        $this->hasPendingChanges = false;
     }
 
     public function getExistingProfileImgUrlProperty(): ?string
@@ -89,56 +136,51 @@ class SettingsForm extends Component
         return $normalized;
     }
 
-    public function removeProfilePicture()
+    public function removeProfilePicture(): void
     {
         $this->profilePicture = null;
         $this->existingProfileImg = null;
+        $this->recomputePendingChanges();
     }
 
-    public function removeGovernmentIdImage()
+    public function removeGovernmentIdImage(): void
     {
         $this->governmentIdImage = null;
         $this->existingGovernmentIdImage = null;
+        $this->recomputePendingChanges();
     }
 
-    public function getHasPendingChangesProperty(): bool
+    private function syncOriginalState(): void
     {
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        $this->originalFirstName = trim((string) $this->firstName);
+        $this->originalLastName = trim((string) $this->lastName);
+        $this->originalEmail = trim((string) $this->email);
+        $this->originalPhoneNumber = preg_replace('/\D/', '', (string) $this->phoneNumber);
+        $this->originalProfileImg = $this->existingProfileImg;
+        $this->originalGovernmentIdImage = $this->existingGovernmentIdImage;
+    }
 
-        if (!$user) {
-            return false;
-        }
+    private function recomputePendingChanges(): void
+    {
+        $formFirstName = trim((string) $this->firstName);
+        $formLastName = trim((string) $this->lastName);
+        $formEmail = trim((string) $this->email);
+        $formPhone = preg_replace('/\D/', '', (string) $this->phoneNumber);
 
-        $currentFirstName = (string) ($user->first_name ?? '');
-        $currentLastName = (string) ($user->last_name ?? '');
-        $currentEmail = (string) ($user->email ?? '');
-        $currentPhone = preg_replace('/\D/', '', (string) ($user->contact ?? ''));
-
-        $formFirstName = trim((string) ($this->firstName ?? ''));
-        $formLastName = trim((string) ($this->lastName ?? ''));
-        $formEmail = trim((string) ($this->email ?? ''));
-        $formPhone = preg_replace('/\D/', '', (string) ($this->phoneNumber ?? ''));
-
-        return $formFirstName !== $currentFirstName
-            || $formLastName !== $currentLastName
-            || $formEmail !== $currentEmail
-            || $formPhone !== $currentPhone
+        $this->hasPendingChanges = $formFirstName !== $this->originalFirstName
+            || $formLastName !== $this->originalLastName
+            || $formEmail !== $this->originalEmail
+            || $formPhone !== $this->originalPhoneNumber
             || $this->profilePicture !== null
             || $this->governmentIdImage !== null
-            || $this->existingProfileImg !== $user->profile_img
-            || $this->existingGovernmentIdImage !== $user->government_id_image;
+            || $this->existingProfileImg !== $this->originalProfileImg
+            || $this->existingGovernmentIdImage !== $this->originalGovernmentIdImage;
     }
 
-    /**
-     * This method is triggered by the form's wire:submit.
-     * Its primary job now might be just validation before showing the modal,
-     * or it can be removed if the button directly triggers the modal via JS.
-     * Let's keep it simple: the button's data attributes handle showing the modal.
-     * The modal's "Yes" button will call the actual save method.
-     */
-    public function confirmSave()
+    public function confirmSave(): void
     {
+        $this->recomputePendingChanges();
+
         if (!$this->hasPendingChanges) {
             $this->notifyInfo('No changes detected', 'Update any field before saving.');
             return;
@@ -151,23 +193,25 @@ class SettingsForm extends Component
             'email' => 'required|email|max:255|unique:users,email,' . Auth::id() . ',user_id',
         ]);
 
-        // Validation passed — open the Flowbite confirmation modal via JS
         $this->dispatch('open-save-confirm-modal');
     }
 
-
-    /**
-     * This method is triggered by the modal's "Yes, save changes" button.
-     */
-    public function save()
+    public function save(): void
     {
+        $this->recomputePendingChanges();
+
         if (!$this->hasPendingChanges) {
             $this->notifyInfo('No changes detected', 'Update any field before saving.');
             return;
         }
 
-        /** @var \App\Models\User $user */
+        /** @var \App\Models\User|null $user */
         $user = Auth::user();
+
+        if (!$user) {
+            $this->notifyError('Session expired', 'Please sign in again.');
+            return;
+        }
 
         $this->validate([
             'firstName' => 'nullable|string|max:255',
@@ -208,28 +252,24 @@ class SettingsForm extends Component
         }
 
         $user->update($updateData);
+        $user->refresh();
 
-        // Reset file inputs and reload from DB
         $this->profilePicture = null;
         $this->governmentIdImage = null;
         $this->existingProfileImg = $user->profile_img;
         $this->existingGovernmentIdImage = $user->government_id_image;
+        $this->syncOriginalState();
+        $this->hasPendingChanges = false;
 
         $this->dispatch('profile-updated');
-
         $this->notifySuccess('Settings Saved Successfully!', 'Your personal information has been updated.');
     }
 
-    /**
-     * This method is triggered by the modal's "No, cancel" button.
-     */
-    public function cancelSave()
+    public function cancelSave(): void
     {
-        // Just closes the modal (Flowbite JS handles this via data-modal-hide)
-        // $this->showConfirmationModal = false;
         $this->loadUserData();
+        $this->resetValidation();
     }
-
 
     public function render()
     {

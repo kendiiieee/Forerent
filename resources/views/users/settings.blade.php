@@ -33,11 +33,11 @@
         {{-- TAB CONTENT --}}
         <div>
             <div x-show="activeTab === 'personal-info'">
-                <livewire:actions.settings-form />
+                <livewire:actions.settings-form :key="'settings-profile-' . auth()->id()" />
             </div>
 
             <div x-show="activeTab === 'security'">
-                <livewire:layouts.settings.security-form />
+                <livewire:layouts.settings.security-form :key="'settings-security-' . auth()->id()" />
             </div>
         </div>
     </div>
