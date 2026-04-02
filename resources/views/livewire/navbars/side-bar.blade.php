@@ -198,6 +198,7 @@ class="fixed inset-0 bg-gradient-to-br from-gray-900/50 via-gray-900/20 to-gray-
                     </li>
                     <li>
                         <a href="{{ route('logout') }}"
+                           data-logout-trigger
                            class="group flex items-center p-3 text-[#6B7280] rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] transition-all duration-200 hover:translate-x-1 hover:shadow-sm active:scale-[0.98]"
                            :class="!sidebarExpanded && 'justify-center'"
                            :title="!sidebarExpanded ? 'Log Out' : ''">
@@ -224,8 +225,8 @@ class="fixed inset-0 bg-gradient-to-br from-gray-900/50 via-gray-900/20 to-gray-
                    :class="!sidebarExpanded && 'justify-center'"
                    :title="!sidebarExpanded ? '{{ auth()->user()->first_name ?? 'Account' }}' : ''">
                     <div class="flex-shrink-0 w-9 h-9 rounded-full transition-transform duration-200 group-hover:scale-110 overflow-hidden border-2 border-blue-600">
-                        @if(auth()->user()->profile_img)
-                            <img src="{{ asset('storage/' . auth()->user()->profile_img) }}" class="w-full h-full object-cover" alt="Profile">
+                        @if(auth()->user()->profile_image_url)
+                            <img src="{{ auth()->user()->profile_image_url }}" class="w-full h-full object-cover" alt="Profile">
                         @else
                             <div class="w-full h-full bg-white flex items-center justify-center">
                                 <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">

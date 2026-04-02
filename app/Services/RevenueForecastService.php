@@ -200,10 +200,12 @@ class RevenueForecastService
 
     private function getCurrentYearMonthlyRentTotals(int $year): array
     {
+        $monthExpr = $this->monthExpression('transaction_date');
+
         $rows = Transaction::whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
             ->where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
+            ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
             ->get();
 
@@ -217,9 +219,12 @@ class RevenueForecastService
 
     private function getHistoricalMonthlyAverages(): array
     {
+        $yearExpr = $this->yearExpression('transaction_date');
+        $monthExpr = $this->monthExpression('transaction_date');
+
         $rows = Transaction::whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
             ->where('category', 'Rent Payment')
-            ->selectRaw('EXTRACT(YEAR FROM transaction_date)::int as year, EXTRACT(MONTH FROM transaction_date)::int as month, SUM(amount) as total')
+            ->selectRaw("{$yearExpr} as year, {$monthExpr} as month, SUM(amount) as total")
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
@@ -290,5 +295,27 @@ class RevenueForecastService
         fclose($output);
 
         return $csvData;
+    }
+
+    private function monthExpression(string $column): string
+    {
+        $driver = Transaction::query()->getConnection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            return "EXTRACT(MONTH FROM {$column})::int";
+        }
+
+        return "MONTH({$column})";
+    }
+
+    private function yearExpression(string $column): string
+    {
+        $driver = Transaction::query()->getConnection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            return "EXTRACT(YEAR FROM {$column})::int";
+        }
+
+        return "YEAR({$column})";
     }
 }

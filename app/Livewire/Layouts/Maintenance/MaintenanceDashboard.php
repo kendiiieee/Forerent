@@ -41,7 +41,7 @@ class MaintenanceDashboard extends Component
         $counts = [
             'All' => DB::table('maintenance_requests')->count(),
             'Pending' => DB::table('maintenance_requests')->where('status', 'Pending')->count(),
-            'On Hold' => DB::table('maintenance_requests')->where('status', 'On Hold')->orWhere('status', 'Ongoing')->count(),
+            'On Hold' => DB::table('maintenance_requests')->where('status', 'Ongoing')->count(),
             'Completed' => DB::table('maintenance_requests')->where('status', 'Completed')->count(),
         ];
 
@@ -61,7 +61,7 @@ class MaintenanceDashboard extends Component
 
         if ($this->activeTab !== 'All') {
             if ($this->activeTab === 'On Hold') {
-                $query->whereIn('maintenance_requests.status', ['On Hold', 'Ongoing']);
+                $query->where('maintenance_requests.status', 'Ongoing');
             } else {
                 $query->where('maintenance_requests.status', $this->activeTab);
             }

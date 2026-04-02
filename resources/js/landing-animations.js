@@ -412,16 +412,16 @@ function initLiveLandingAnimations() {
         background: '#hero-section > img.absolute',
         logo: '#mainNav > a img[alt="ForeRent Logo"]',
         navLinks: '#mainNav .nav-link',
-        loginButton: '#mainNav .login-btn',
-        heroCard: '#hero-section .hero-card-glass',
+        loginButton: '#mainNav a[href="/login"]',
+        heroCard: '#hero-section > div.relative.z-\\[2\\] > div',
         searchBar: '#hero-section > div.absolute.bottom-0.z-20',
-        searchFields: '#hero-section .search-field',
+        searchFields: '#hero-section > div.absolute.bottom-0.z-20 > div > div.flex-1',
         searchButton: '#hero-section > div.absolute.bottom-0.z-20 button',
         stats: '#hero-section + div > div:first-child > div',
         neuralEyebrow: '#about > div > div:first-child > div:first-child > div',
         neuralTitle: '#about > div > div:first-child > div:first-child > h2',
         neuralCopy: '#about > div > div:first-child > div:last-child',
-        moduleCards: '#about .module-card',
+        moduleCards: '#about .group\\/card',
         ecosystemHeader: '#about + section > div > div:first-child',
         ecosystemCards: '#ecosystemCards .eco-card',
         featureHeader: '#features > div > div:first-child',
@@ -616,7 +616,7 @@ function initLiveLandingAnimations() {
         animateBatch(selectors.footerColumns, { trigger: 'footer', start: 'top 90%', duration: 0.68, stagger: 0.1 });
         animateSingle(selectors.footerBottom, { trigger: 'footer', start: 'top 95%', duration: 0.65, from: { opacity: 0, y: 20 } });
 
-        addHoverLift('#about .module-card, #features > div > div.grid > div');
+        addHoverLift('#about .group\\/card, #features > div > div.grid > div');
         ScrollTrigger.refresh();
     }, document.body);
 

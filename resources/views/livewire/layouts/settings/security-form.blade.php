@@ -19,24 +19,33 @@
         showCurrent: false,
         showNew: false,
         showConfirm: false,
-        password: @entangle('password').live,
-        requirements: {
-            length: false,
-            number: false,
-            special: false,
-            capital: false
-        },
+        passwordInput: '',
+        requirementRules: @js($passwordRequirementRules),
+        requirementStatus: {},
         get allMet() {
-            return this.requirements.length && this.requirements.number && this.requirements.special && this.requirements.capital;
+            return this.requirementRules.every((rule) => this.requirementStatus[rule.key]);
         },
         validatePassword() {
-            this.requirements.length = this.password.length >= 8;
-            this.requirements.number = /[0-9]/.test(this.password);
-            this.requirements.special = /[\W_]/.test(this.password);
-            this.requirements.capital = /[A-Z]/.test(this.password);
+            const value = this.passwordInput || '';
+
+            this.requirementStatus = {};
+
+            this.requirementRules.forEach((rule) => {
+                if (rule.type === 'min') {
+                    this.requirementStatus[rule.key] = value.length >= Number(rule.value);
+                    return;
+                }
+
+                if (rule.type === 'regex') {
+                    this.requirementStatus[rule.key] = new RegExp(rule.pattern).test(value);
+                    return;
+                }
+
+                this.requirementStatus[rule.key] = false;
+            });
         }
     }"
-    x-init="$watch('password', () => validatePassword())"
+    x-init="passwordInput = $refs.newPassword?.value || ''; validatePassword(); $watch('passwordInput', () => validatePassword())"
 >
 
     <div class="w-full bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-6 md:p-8">
@@ -83,8 +92,10 @@
                         </svg>
                     </div>
                     <input
+                        x-ref="newPassword"
+                        x-model="passwordInput"
                         :type="showNew ? 'text' : 'password'"
-                        wire:model.live="password"
+                        wire:model.live.debounce.250ms="password"
                         autocomplete="off"
                         placeholder="Enter new password"
                         class="flex-1 bg-transparent outline-none border-0 ring-0 focus:ring-0 focus:outline-none focus:border-0 text-gray-700 text-sm placeholder-gray-300"
@@ -109,54 +120,18 @@
                     Your password must contain:
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-
-                    {{-- Length --}}
-                    <div class="flex items-center gap-2 text-xs transition-colors duration-200"
-                         :class="requirements.length ? 'text-green-600' : 'text-gray-500'">
-                        <svg x-show="requirements.length" class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <svg x-show="!requirements.length" class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>A minimum of 8 characters</span>
-                    </div>
-
-                    {{-- Number --}}
-                    <div class="flex items-center gap-2 text-xs transition-colors duration-200"
-                         :class="requirements.number ? 'text-green-600' : 'text-gray-500'">
-                        <svg x-show="requirements.number" class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <svg x-show="!requirements.number" class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>At least one number</span>
-                    </div>
-
-                    {{-- Special --}}
-                    <div class="flex items-center gap-2 text-xs transition-colors duration-200"
-                         :class="requirements.special ? 'text-green-600' : 'text-gray-500'">
-                        <svg x-show="requirements.special" class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <svg x-show="!requirements.special" class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>At least 1 special character</span>
-                    </div>
-
-                    {{-- Capital --}}
-                    <div class="flex items-center gap-2 text-xs transition-colors duration-200"
-                         :class="requirements.capital ? 'text-green-600' : 'text-gray-500'">
-                        <svg x-show="requirements.capital" class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <svg x-show="!requirements.capital" class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>At least one uppercase letter</span>
-                    </div>
+                    <template x-for="rule in requirementRules" :key="rule.key">
+                        <div class="flex items-center gap-2 text-xs transition-colors duration-200"
+                             :class="requirementStatus[rule.key] ? 'text-green-600' : 'text-gray-500'">
+                            <svg x-show="requirementStatus[rule.key]" class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <svg x-show="!requirementStatus[rule.key]" class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span x-text="rule.label"></span>
+                        </div>
+                    </template>
 
                 </div>
             </div>
@@ -201,24 +176,29 @@
                     showCurrent = false;
                     showNew = false;
                     showConfirm = false;
-                    requirements.length = false;
-                    requirements.number = false;
-                    requirements.special = false;
-                    requirements.capital = false;
+                    passwordInput = '';
+                    validatePassword();
                 "
                 class="text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
             >
                 Clear
             </button>
             <button
-                wire:click="updatePassword"
+                type="button"
+                wire:click="requestPasswordChangeConfirmation"
                 class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-                Save
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                </svg>
+                Update Password
             </button>
         </div>
     </div>
 
+    <x-ui.modal-confirm
+        name="security-password-confirmation"
+        title="Confirm Password Change?"
+        description="You will be logged out after your password is updated, and you will need to sign in again."
+        confirmText="Yes, Change Password"
+        cancelText="Cancel"
+        confirmAction="updatePassword"
+    />
 </div>

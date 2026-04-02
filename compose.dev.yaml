@@ -39,11 +39,13 @@ services:
     volumes:
       # Mount the application code for live updates
       - ./:/var/www
+      # Override PHP upload limits (default 2M is too low for document uploads)
+      - ./docker/common/php-fpm/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
     working_dir: /var/www
     networks:
       - laravel-development
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy # Wait for mysql to be healthy
 
   # 💡 ADD THIS NEW SERVICE 💡
@@ -85,33 +87,22 @@ services:
     networks:
       - laravel-development
 
-  mysql:
-    image: mysql:8.0
+  postgres:
+    image: postgres:15
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT:-5432}:5432"
     env_file:
       - .env
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - MYSQL_DATABASE=${DB_DATABASE:-db}
-      - MYSQL_USER=${DB_USERNAME:-user}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-pass}
+      - POSTGRES_DB=${DB_DATABASE:-forerent}
+      - POSTGRES_USER=${DB_USERNAME:-root}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-secret}
     volumes:
-      - mysql-data-development:/var/lib/mysql
+      - postgres-data-development:/var/lib/postgresql/data
     networks:
       - laravel-development
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${MYSQL_ROOT_PASSWORD:-root}",
-        ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-root}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -125,5 +116,5 @@ networks:
   laravel-development:
 
 volumes:
-  mysql-data-development:
+  postgres-data-development:
   workspace-node-modules:

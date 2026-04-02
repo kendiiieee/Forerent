@@ -1,4 +1,4 @@
-<div class="bg-[#F4F7FE] p-4 md:p-6 font-sans rounded-xl">
+<div class="w-full font-sans">
 
     {{-- 1. THE LAYOUT SHELL --}}
     <x-ui.card-with-tabs
@@ -67,10 +67,11 @@
         @if ($activeTab === 'payment')
             <x-ui.table>
                 <x-slot:head>
-                    <x-ui.th class="w-[25%]">Reference</x-ui.th>
-                    <x-ui.th class="w-[25%]">Category</x-ui.th>
-                    <x-ui.th class="w-[25%]">Date</x-ui.th>
-                    <x-ui.th class="w-[25%]">Amount</x-ui.th>
+                    <x-ui.th class="w-[22%]">Reference</x-ui.th>
+                    <x-ui.th class="w-[20%]">Category</x-ui.th>
+                    <x-ui.th class="w-[20%]">Date</x-ui.th>
+                    <x-ui.th class="w-[20%]">Amount</x-ui.th>
+                    <x-ui.th class="w-[18%]">Action</x-ui.th>
                 </x-slot:head>
 
                 <x-slot:body>
@@ -80,6 +81,14 @@
                             <x-ui.td>{{ $payment->category }}</x-ui.td>
                             <x-ui.td>{{ \Carbon\Carbon::parse($payment->transaction_date)->format('F d, Y') }}</x-ui.td>
                             <x-ui.td>₱ {{ number_format($payment->amount, 2) }}</x-ui.td>
+                            <x-ui.td>
+                                <button
+                                    wire:click="viewReceipt({{ $payment->billing_id }})"
+                                    class="inline-flex items-center px-3 py-1 border border-[#0906ae] text-[#0906ae] rounded-md text-xs font-bold hover:bg-blue-50 transition-colors"
+                                >
+                                    View
+                                </button>
+                            </x-ui.td>
                         </x-ui.tr>
                     @endforeach
                 </x-slot:body>
@@ -123,4 +132,7 @@
         </x-slot:footer>
 
     </x-ui.card-with-tabs>
+
+    {{-- Payment Receipt Modal --}}
+    <livewire:layouts.financials.payment-receipt-modal />
 </div>

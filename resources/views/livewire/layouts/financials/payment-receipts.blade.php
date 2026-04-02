@@ -82,7 +82,7 @@
                         </x-ui.td>
 
                         <x-ui.td class="text-center" @click.stop>
-                            <div class="inline-flex items-center gap-2 min-w-[180px] justify-start">
+                            <div class="inline-flex items-center gap-2 min-w-[180px] {{ auth()->user()->role === 'landlord' ? 'justify-center' : 'justify-start' }}">
                                 <button
                                     wire:click.stop="viewReceipt({{ $payment->billing_id }})"
                                     class="inline-flex items-center px-3 py-1 border border-[#0906ae] text-[#0906ae] rounded-md text-xs font-bold hover:bg-blue-50 transition-colors"
@@ -90,7 +90,7 @@
                                     View
                                 </button>
 
-                                @if($payment->status !== 'Paid')
+                                @if($payment->status !== 'Paid' && auth()->user()->role !== 'landlord')
                                     <button
                                         wire:click.stop="confirmPayment({{ $payment->billing_id }})"
                                         class="inline-flex items-center px-3 py-1 bg-[#070589] text-white rounded-md text-xs font-bold hover:bg-[#000060] transition-colors"

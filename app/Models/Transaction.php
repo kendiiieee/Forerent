@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 class Transaction extends Model
 {
@@ -80,6 +83,7 @@ class Transaction extends Model
         return $this->transaction_type === 'Credit' ? $this->amount : -$this->amount;
     }
 
+<<<<<<< HEAD
     /**
      * Scope for monthly revenue summary compatible with TiDB/MySQL
      */
@@ -89,5 +93,50 @@ class Transaction extends Model
             ->whereYear('transaction_date', $year)
             ->selectRaw('CAST(EXTRACT(MONTH FROM transaction_date) AS UNSIGNED) as month, SUM(amount) as total')
             ->groupBy('month');
+=======
+    public static function syncPrimaryKeySequence(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::statement(
+            "SELECT setval(pg_get_serial_sequence('transactions', 'transaction_id'), COALESCE(MAX(transaction_id), 0) + 1, false) FROM transactions"
+        );
+    }
+
+    public static function createWithSequenceRetry(array $attributes): self
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            static::syncPrimaryKeySequence();
+        }
+
+        try {
+            /** @var self $transaction */
+            $transaction = static::query()->create($attributes);
+
+            return $transaction;
+        } catch (UniqueConstraintViolationException|QueryException $exception) {
+            if (!static::isPostgresPrimaryKeyConflict($exception)) {
+                throw $exception;
+            }
+        }
+
+        static::syncPrimaryKeySequence();
+
+        /** @var self $transaction */
+        $transaction = static::query()->create($attributes);
+
+        return $transaction;
+    }
+
+    private static function isPostgresPrimaryKeyConflict(QueryException $exception): bool
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return false;
+        }
+
+        return str_contains(strtolower($exception->getMessage()), 'transactions_pkey');
+>>>>>>> feature-integration-v2
     }
 }

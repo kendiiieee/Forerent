@@ -688,6 +688,13 @@ def generate_revenue_forecast(csv_data: str, target_year: int):
         logger.info(f"Monthly data loaded: {len(monthly_data)} records")
         logger.info(f"Date range: {monthly_data['date_column'].min()} to {monthly_data['date_column'].max()}")
 
+        # Filter to only COMPLETE historical months (not current/future incomplete months)
+        current_date = datetime.now()
+        cutoff_date = datetime(current_date.year, current_date.month, 1)
+        monthly_data = monthly_data[monthly_data['date_column'] < cutoff_date].copy()
+        
+        logger.info(f"After filtering incomplete months: {len(monthly_data)} complete historical months")
+
         if len(monthly_data) < 4:  # Reduced minimum requirement
             raise Exception(f"Insufficient historical data for forecasting. Need at least 4 months, got {len(monthly_data)}")
 

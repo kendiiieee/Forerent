@@ -48,6 +48,33 @@ class UnitAccordion extends Component
         $this->dispatch('unitsReset');
     }
 
+    #[On('refresh-unit-list')]
+    public function refreshUnits($buildingId = null, $unitId = null): void
+    {
+        $targetBuildingId = $buildingId ?: $this->selectedBuildingId;
+
+        if (!$targetBuildingId) {
+            return;
+        }
+
+        $this->selectedBuildingId = (int) $targetBuildingId;
+        $this->selectedBuildingName = Property::where('property_id', $this->selectedBuildingId)
+            ->value('building_name');
+
+        $this->resetPage();
+
+        if ($unitId) {
+            $this->openUnitId = (int) $unitId;
+            $this->loadSpecifications((int) $unitId);
+        } elseif ($this->openUnitId) {
+            $this->loadSpecifications((int) $this->openUnitId);
+        } else {
+            $this->specifications = [];
+        }
+
+        $this->dispatch('unitsReset');
+    }
+
     /**
      * Redirect to add property page
      */
@@ -100,7 +127,7 @@ class UnitAccordion extends Component
             }
         }
 
-        $totalCapacity = $unit->unit_cap;
+        $totalCapacity = $unit->room_cap;
 
         // Process amenities
         $amenities = json_decode($unit->amenities, true) ?? [];
@@ -116,6 +143,8 @@ class UnitAccordion extends Component
         // Build specifications
         $this->specifications = [
             'room_capacity' => $unit->room_cap ?? 'N/A',
+            'unit_capacity' => $unit->room_cap ?? 'N/A',
+            'room_type' => ($unit->room_cap ? ($unit->room_cap . '-in-a-Room Bedspace') : 'N/A'),
             'bed_type' => $unit->bed_type ?? 'N/A',
             'furnishing' => $unit->furnishing ?? 'N/A',
             'living_area' => ($unit->living_area ? $unit->living_area . ' sqft' : 'N/A'),
@@ -240,7 +269,7 @@ class UnitAccordion extends Component
                     'Unit #' . $unit->unit_number,
                     $status,
                     $floor . ' Floor',
-                    $unit->room_type,
+                    ($unit->room_cap ? ($unit->room_cap . '-in-a-Room Bedspace') : null),
                 ];
             })->filter()->unique()->values()->toArray();
 
@@ -254,7 +283,6 @@ class UnitAccordion extends Component
                     $search = '%' . $term . '%';
                     $cleanSearch = '%' . $cleanTerm . '%';
                     $q->where('unit_number', 'like', $cleanSearch)
-                      ->orWhere('room_type', 'like', $search)
                       ->orWhere('floor_number', 'like', $cleanSearch);
                 });
             }

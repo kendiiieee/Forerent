@@ -14,10 +14,16 @@ class LoginForm extends Component
     public $email = '';
     public $password = '';
     public $remember = false;
+    public $terms_accepted = false;
 
     protected $rules = [
         'email' => 'required|email',
         'password' => 'required',
+        'terms_accepted' => 'accepted',
+    ];
+
+    protected $messages = [
+        'terms_accepted.accepted' => 'You must agree to the Terms of Service and Privacy Policy.',
     ];
 
     public function updated($propertyName)

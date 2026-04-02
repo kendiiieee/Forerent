@@ -89,15 +89,21 @@ class AddMaintenanceModal extends Component
 
     public function validateAndConfirm()
     {
-        $this->validate([
-            'category'    => 'required|in:Plumbing,Electrical,Structural,Appliance,Pest Control',
-            'description' => 'required|string|min:10|max:2000',
-            'images'      => 'nullable|array|max:3',
-            'images.*'    => 'image|max:5120',
-        ]);
+        try {
+            $this->validate([
+                'category'    => 'required|in:Plumbing,Electrical,Structural,Appliance,Pest Control',
+                'description' => 'required|string|min:10|max:2000',
+                'images'      => 'nullable|array|max:3',
+                'images.*'    => 'image|max:5120',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
 
         if (!$this->leaseId) {
             $this->addError('description', 'You must have an active lease to submit a request.');
+            $this->dispatch('scroll-to-error');
             return;
         }
 

@@ -37,6 +37,7 @@ class UserSeeder extends Seeder
             'email' => 'landlord@example.com',
             'role' => 'landlord',
             'password' => Hash::make('password'),
+            'company_school' => 'ABC COMPANY',
         ]);
 
         User::factory()

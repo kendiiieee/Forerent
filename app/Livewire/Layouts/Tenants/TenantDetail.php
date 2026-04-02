@@ -330,6 +330,7 @@ class TenantDetail extends Component
             foreach ($errors as $key => $message) {
                 $this->addError($key, $message);
             }
+            $this->dispatch('scroll-to-error');
             return;
         }
 
@@ -477,6 +478,7 @@ class TenantDetail extends Component
             foreach ($errors as $key => $message) {
                 $this->addError($key, $message);
             }
+            $this->dispatch('scroll-to-error');
             return;
         }
 
@@ -567,26 +569,42 @@ class TenantDetail extends Component
     {
         if (!$this->currentTenantId) return;
 
-        $lease = Lease::where('tenant_id', $this->currentTenantId)
+        $activeLeases = Lease::where('tenant_id', $this->currentTenantId)
             ->where('status', 'Active')
-            ->latest()
-            ->first();
+            ->get(['lease_id', 'bed_id']);
 
-        if ($lease) {
-            $lease->update([
-                'status'   => 'Expired',
-                'move_out' => \Carbon\Carbon::today(),
-                'end_date' => \Carbon\Carbon::today(),
-            ]);
-
-            \App\Models\Bed::where('bed_id', $lease->bed_id)
-                ->update(['status' => 'Vacant']);
+        if ($activeLeases->isEmpty()) {
+            $this->dispatch('close-modal', 'move-out-confirmation');
+            $this->dispatch('notify',
+                type: 'warning',
+                title: 'No Active Lease',
+                description: 'This tenant has no active lease to move out.'
+            );
+            return;
         }
+
+        $today = \Carbon\Carbon::today();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($activeLeases, $today) {
+            Lease::whereIn('lease_id', $activeLeases->pluck('lease_id'))
+                ->update([
+                    'status'   => 'Expired',
+                    'move_out' => $today,
+                    'end_date' => $today,
+                ]);
+
+            \App\Models\Bed::whereIn('bed_id', $activeLeases->pluck('bed_id')->filter()->unique())
+                ->update(['status' => 'Vacant']);
+        });
 
         $this->dispatch('refresh-tenant-list');
         $this->dispatch('close-modal', 'move-out-confirmation');
         $this->resetTenantData();
-        session()->flash('success', 'Tenant moved out successfully!');
+        $this->dispatch('notify',
+            type: 'success',
+            title: 'Tenant Moved Out',
+            description: 'Lease marked as expired and bed status updated.'
+        );
     }
 
     public function openMoveInContract(): void

@@ -9,6 +9,8 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Carbon\Carbon;
 
 class PaymentReceipts extends Component
@@ -21,6 +23,7 @@ class PaymentReceipts extends Component
     public $billingIdToMarkPaid = null;
     public $search = '';
 
+    public function setTab($tab) { $this->activeTab = $tab; $this->resetPage(); }
     public function updatedActiveTab()   { $this->resetPage(); }
     public function updatedSelectedMonth() { $this->resetPage(); }
     public function updatedSelectedBuilding() { $this->resetPage(); }
@@ -41,10 +44,6 @@ class PaymentReceipts extends Component
             ->join('properties', 'units.property_id', '=', 'properties.property_id')
             ->join('users as tenant', 'leases.tenant_id', '=', 'tenant.user_id')
             ->join('users as manager', 'units.manager_id', '=', 'manager.user_id')
-            ->leftJoin('transactions', function ($join) {
-                $join->on('transactions.billing_id', '=', 'billings.billing_id')
-                    ->whereIn('transactions.category', ['Rent Payment', 'Advance', 'Deposit']);
-            })
             ->where('billings.billing_id', $billingId)
             ->select(
                 'billings.billing_id',
@@ -69,15 +68,17 @@ class PaymentReceipts extends Component
                 'tenant.contact as tenant_contact',
                 'manager.first_name as manager_first_name',
                 'manager.last_name as manager_last_name',
-                'manager.contact as manager_contact',
-                'transactions.transaction_date as txn_date',
-                'transactions.reference_number as txn_reference',
-                'transactions.payment_method as txn_payment_method',
-                'transactions.or_number as txn_or_number',
+                'manager.contact as manager_contact'
             )
             ->first();
 
         if (!$record) return;
+
+        $txn = Transaction::where('billing_id', $billingId)
+            ->whereIn('category', ['Rent Payment', 'Advance', 'Deposit'])
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('created_at')
+            ->first();
 
         $billingDate = Carbon::parse($record->billing_date);
         $dueDate = $record->due_date
@@ -123,13 +124,13 @@ class PaymentReceipts extends Component
                 'lease_type'   => $record->term . '-Month Contract',
             ],
             'payment' => [
-                'date_paid'       => $record->txn_date ? Carbon::parse($record->txn_date)->format('F d, Y') : 'Pending',
-                'payment_method'  => $record->txn_payment_method ?? 'Pending',
-                'txn_id'          => $record->txn_payment_method
-                    ? ['GCash' => 'GC', 'Maya' => 'MY', 'Bank Transfer' => 'BT', 'Cash' => 'CS'][$record->txn_payment_method] . '-' . mt_rand(1000000000, 9999999999)
+                'date_paid'       => $txn?->transaction_date ? Carbon::parse($txn->transaction_date)->format('F d, Y') : 'Pending',
+                'payment_method'  => $txn?->payment_method ?? 'Pending',
+                'txn_id'          => $txn?->payment_method
+                    ? ['GCash' => 'GC', 'Maya' => 'MY', 'Bank Transfer' => 'BT', 'Cash' => 'CS'][$txn->payment_method] . '-' . mt_rand(1000000000, 9999999999)
                     : 'Pending',
-                'reference_no'    => $record->txn_reference ?? 'Pending',
-                'or_number'       => $record->txn_or_number ?? 'Pending',
+                'reference_no'    => $txn?->reference_number ?? 'Pending',
+                'or_number'       => $txn?->or_number ?? 'Pending',
                 'period'          => $billingDate->format('F Y'),
             ],
             'recipient' => [
@@ -151,17 +152,29 @@ class PaymentReceipts extends Component
 
     public function markAsPaid()
     {
-        if ($this->billingIdToMarkPaid) {
+        if (!$this->billingIdToMarkPaid) {
+            return;
+        }
+
+        $billingId = $this->billingIdToMarkPaid;
+
+        DB::transaction(function () use ($billingId) {
+            $billing = DB::table('billings')
+                ->where('billing_id', $billingId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$billing) {
+                return;
+            }
+
             DB::table('billings')
-                ->where('billing_id', $this->billingIdToMarkPaid)
+                ->where('billing_id', $billingId)
                 ->update([
                     'status'     => 'Paid',
                     'amount'     => DB::raw('to_pay'),
                     'updated_at' => now(),
                 ]);
-
-            // Fetch the updated billing record
-            $billing = DB::table('billings')->where('billing_id', $this->billingIdToMarkPaid)->first();
 
             $category = match ($billing->billing_type ?? 'monthly') {
                 'move_in' => 'Advance',
@@ -169,23 +182,67 @@ class PaymentReceipts extends Component
                 default => 'Rent Payment',
             };
 
-            $transaction = Transaction::create([
-                'billing_id'       => $billing->billing_id,
-                'reference_number' => 'placeholder',
-                'transaction_type' => 'Debit',
-                'category'         => $category,
-                'transaction_date' => today(),
-                'amount'           => $billing->amount ?? 0,
-            ]);
+            $existing = Transaction::where('billing_id', $billingId)
+                ->where('transaction_type', 'Debit')
+                ->where('category', $category)
+                ->first();
+
+            if ($existing) {
+                return;
+            }
+
+            $transaction = null;
+
+            for ($attempt = 1; $attempt <= 3; $attempt++) {
+                try {
+                    $transaction = Transaction::createWithSequenceRetry([
+                        'billing_id'       => $billingId,
+                        'reference_number' => 'placeholder',
+                        'transaction_type' => 'Debit',
+                        'category'         => $category,
+                        'payment_method'   => 'Cash',
+                        'transaction_date' => today(),
+                        'amount'           => $billing->to_pay ?? 0,
+                    ]);
+
+                    break;
+                } catch (UniqueConstraintViolationException|QueryException $exception) {
+                    $isPgPkeyConflict = DB::getDriverName() === 'pgsql'
+                        && str_contains(strtolower($exception->getMessage()), 'transactions_pkey');
+
+                    if (!$isPgPkeyConflict || $attempt === 3) {
+                        throw $exception;
+                    }
+
+                    $alreadyInserted = Transaction::where('billing_id', $billingId)
+                        ->where('transaction_type', 'Debit')
+                        ->where('category', $category)
+                        ->first();
+
+                    if ($alreadyInserted) {
+                        return;
+                    }
+                }
+            }
+
+            if (!$transaction) {
+                return;
+            }
+
+            $prefix = match ($category) {
+                'Advance' => 'ADV',
+                'Deposit' => 'DEP',
+                default => 'RENT',
+            };
 
             $transaction->update([
-                'reference_number' => 'RENT' . now()->format('Ymd') . '-' . str_pad($transaction->transaction_id, 6, '0', STR_PAD_LEFT),
+                'reference_number' => $prefix . now()->format('Ymd') . '-' . str_pad($transaction->transaction_id, 6, '0', STR_PAD_LEFT),
             ]);
+        });
 
-            $this->dispatch('show-toast', ['message' => 'Payment marked as Paid!']);
-            $this->dispatch('close-modal', 'mark-as-paid-confirmation');
-            $this->billingIdToMarkPaid = null;
-        }
+        $this->dispatch('notify', type: 'success', title: 'Payment Updated', description: 'Billing marked as paid successfully.');
+        $this->dispatch('close-modal', 'mark-as-paid-confirmation');
+        $this->billingIdToMarkPaid = null;
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────
@@ -193,6 +250,11 @@ class PaymentReceipts extends Component
     private function isManager(): bool
     {
         return Auth::user()?->role === 'manager';
+    }
+
+    private function isLandlord(): bool
+    {
+        return Auth::user()?->role === 'landlord';
     }
 
     private function isTenant(): bool
@@ -212,6 +274,10 @@ class PaymentReceipts extends Component
 
         if ($this->isManager()) {
             $query->where('units.manager_id', Auth::id());
+        }
+
+        if ($this->isLandlord()) {
+            $query->where('properties.owner_id', Auth::id());
         }
 
         if ($this->isTenant()) {

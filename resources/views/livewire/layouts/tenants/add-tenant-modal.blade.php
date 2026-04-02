@@ -93,7 +93,18 @@
                 </div>
 
                 {{-- Scrollable Content --}}
-                <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <div
+                    class="flex-1 overflow-y-auto custom-scrollbar"
+                    x-data
+                    x-on:scroll-to-error.window="
+                        $nextTick(() => {
+                            const firstError = $el.querySelector('.text-red-500, .text-xs.text-red-500');
+                            if (firstError) {
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        })
+                    "
+                >
 
                     @if($isTransfer)
                         {{-- ═══════════════════════════════════════════════

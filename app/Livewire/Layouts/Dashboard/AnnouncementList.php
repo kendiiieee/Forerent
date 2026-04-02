@@ -6,7 +6,9 @@ use App\Models\Announcement;
 use App\Models\Lease;
 use App\Models\Unit;
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 
 class AnnouncementList extends Component
 {
@@ -16,25 +18,38 @@ class AnnouncementList extends Component
     public function mount()
     {
         $this->role = Auth::user()->role;
+        $this->loadAnnouncements();
+    }
+
+    #[On('announcement-posted')]
+    public function refreshAnnouncements(): void
+    {
+        $this->loadAnnouncements();
+    }
+
+    private function loadAnnouncements(): void
+    {
+        $this->role = Auth::user()->role;
 
         if ($this->role == "landlord") {
-            $this->announcements = Announcement::where('author_id', Auth::id())
-                ->orderBy('created_at', 'desc')
-                ->get();
+            $this->announcements = $this->sortByEarliestUpcomingAnnouncement(
+                Announcement::where('author_id', Auth::id())
+            )->get();
         }
         else if ($this->role == "manager") {
             $propertyIds = Unit::where('manager_id', Auth::id())->get()
                 ->pluck('property_id')
                 ->unique();
 
-            $this->announcements = Announcement::where(function ($query) use ($propertyIds) {
+            $this->announcements = $this->sortByEarliestUpcomingAnnouncement(
+                Announcement::where(function ($query) use ($propertyIds) {
                     $query->where('author_id', Auth::id())
                         ->orWhere(function ($propertyQuery) use ($propertyIds) {
                             $propertyQuery->whereIn('property_id', $propertyIds)
                                 ->where('recipient_role', 'manager');
                         });
                 })
-                ->orderBy('created_at', 'desc')
+            )
                 ->get()
                 ->unique('announcement_id')
                 ->values();
@@ -46,12 +61,25 @@ class AnnouncementList extends Component
                 ->pluck('units.property_id')
                 ->unique();
 
-
-            $this->announcements = Announcement::whereIn('property_id', $propertyIds)
-                ->where('recipient_role', 'tenant')
-                ->orderBy('created_at', 'desc')
-                ->get();
+            $this->announcements = $this->sortByEarliestUpcomingAnnouncement(
+                Announcement::whereIn('property_id', $propertyIds)
+                    ->where('recipient_role', 'tenant')
+            )->get();
         }
+    }
+
+    private function sortByEarliestUpcomingAnnouncement($query)
+    {
+        $today = Carbon::today()->toDateString();
+
+        return $query
+            ->orderByRaw(
+                'CASE WHEN notification_date IS NULL THEN 2 WHEN DATE(notification_date) >= ? THEN 0 ELSE 1 END ASC',
+                [$today]
+            )
+            ->orderByRaw('CASE WHEN DATE(notification_date) >= ? THEN notification_date END ASC', [$today])
+            ->orderByRaw('CASE WHEN DATE(notification_date) < ? THEN notification_date END DESC', [$today])
+            ->orderBy('created_at', 'desc');
     }
 
     public function render()

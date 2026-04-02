@@ -16,6 +16,7 @@ class PaymentHistory extends Component
     public $activeTab = 'all';
     public $search = '';
 
+    public function setTab($tab) { $this->activeTab = $tab; $this->resetPage(); }
     public function updatedActiveTab() { $this->resetPage(); }
     public function updatedSearch() { $this->resetPage(); }
 

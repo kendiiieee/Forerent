@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use App\Models\Unit;
 use App\Models\Bed;
 
@@ -100,6 +101,13 @@ class PropertyWidgets extends Component
             ['label' => 'Available', 'value' => $this->moveInReadyPercent, 'count' => $this->moveInReady],
             ['label' => 'Vacant', 'value' => $this->vacantPercent, 'count' => $this->vacant],
         ];
+    }
+
+    #[On('refresh-property-list')]
+    #[On('refresh-unit-list')]
+    public function refreshWidgets(): void
+    {
+        $this->loadUnitStats();
     }
 
     public function render()

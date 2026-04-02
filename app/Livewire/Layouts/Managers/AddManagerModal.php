@@ -10,7 +10,9 @@ use App\Models\User;
 use App\Notifications\NewAccount;
 use App\Services\PasswordGenerator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Validate;
@@ -170,7 +172,13 @@ class AddManagerModal extends Component
 
     public function validateAndConfirm(): void
     {
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
+
         $this->dispatch('open-modal', 'save-manager-confirmation');
     }
 
@@ -184,37 +192,46 @@ class AddManagerModal extends Component
                 $originalFloor = Unit::where('manager_id', $this->managerId)->value('floor_number');
                 $manager = $this->userForm->update($originalManager);
 
-                // Track what changed
                 $changedFields = [];
-                if ($originalManager->first_name !== $manager->first_name) {
-                    $changedFields[] = 'first name';
-                }
-                if ($originalManager->last_name !== $manager->last_name) {
-                    $changedFields[] = 'last name';
-                }
-                if ($originalManager->contact !== $manager->contact) {
-                    $changedFields[] = 'phone number';
-                }
-                if ($originalManager->email !== $manager->email) {
-                    $changedFields[] = 'email';
-                }
-                if ($this->selectedFloor && $originalFloor != $this->selectedFloor) {
-                    $changedFields[] = 'floor assignment';
-                }
-                if ($this->profilePicture && !is_string($this->profilePicture)) {
-                    $changedFields[] = 'profile picture';
-                }
+                if ($originalManager->first_name !== $manager->first_name) $changedFields[] = 'first name';
+                if ($originalManager->last_name !== $manager->last_name)   $changedFields[] = 'last name';
+                if ($originalManager->contact !== $manager->contact)       $changedFields[] = 'phone number';
+                if ($originalManager->email !== $manager->email)           $changedFields[] = 'email';
+                if ($this->selectedFloor && $originalFloor != $this->selectedFloor) $changedFields[] = 'floor assignment';
+                if ($this->profilePicture && !is_string($this->profilePicture))     $changedFields[] = 'profile picture';
 
                 $changeMessage = !empty($changedFields)
                     ? ucfirst(implode(', ', $changedFields)) . ' updated for ' . $manager->first_name . '.'
                     : $manager->first_name . ' has been updated.';
             } else {
-                $manager = $this->userForm->store('manager');
-                Notification::send($manager, new NewAccount($manager->email, PasswordGenerator::generate(), $manager->role));
+                $tempPassword = PasswordGenerator::generate();
+                $manager = $this->userForm->store('manager', $tempPassword);
+
+                // Email delivery failure should not block manager creation.
+                try {
+                    Notification::send($manager, new NewAccount($manager->email, $tempPassword, $manager->role));
+                } catch (\Throwable $notificationError) {
+                    Log::warning('Manager account created but notification email failed.', [
+                        'manager_id' => $manager->user_id,
+                        'email' => $manager->email,
+                        'error' => $notificationError->getMessage(),
+                    ]);
+
+                    $this->notifyWarning(
+                        'Manager saved, email not sent',
+                        'The manager was created successfully, but the account email could not be delivered.'
+                    );
+                }
+
                 $changeMessage = $manager->first_name . ' added successfully as a manager!';
             }
 
+            // Handle profile picture upload
             if ($this->profilePicture && !is_string($this->profilePicture)) {
+                if ($this->isEditing && $manager->profile_img) {
+                    $this->deleteStoredImage($manager->profile_img);
+                }
+
                 $path = $this->profilePicture->store('profile-photos', 'public');
                 $manager->update(['profile_img' => $path]);
             }
@@ -226,16 +243,13 @@ class AddManagerModal extends Component
             );
 
             if (!empty($allSelectedUnitIds)) {
-                // Unassign this manager from any units NOT in the new selection
                 Unit::where('manager_id', $manager->user_id)
                     ->whereNotIn('unit_id', $allSelectedUnitIds)
                     ->update(['manager_id' => null]);
 
-                // Assign manager to all selected units
                 Unit::whereIn('unit_id', $allSelectedUnitIds)
                     ->update(['manager_id' => $manager->user_id]);
             } else {
-                // No units selected at all — clear all assignments
                 Unit::where('manager_id', $manager->user_id)
                     ->update(['manager_id' => null]);
             }
@@ -249,7 +263,17 @@ class AddManagerModal extends Component
             $this->dispatch('refresh-manager-list');
             $this->dispatch('managerUpdated', managerId: $manager->user_id);
             $this->dispatch('close-modal', 'save-manager-confirmation');
-        } catch (\Exception $e) {
+
+        } catch (\Throwable $e) {
+            Log::error('Failed to save manager.', [
+                'manager_id' => $this->managerId,
+                'is_editing' => $this->isEditing,
+                'selected_building' => $this->selectedBuilding,
+                'selected_floor' => $this->selectedFloor,
+                'selected_units_count' => count($this->selectedUnits ?? []),
+                'error' => $e->getMessage(),
+            ]);
+
             $this->notifyError(
                 'Failed to Save Manager',
                 'An error occurred while saving the manager. Please try again.'
@@ -268,6 +292,31 @@ class AddManagerModal extends Component
         $this->reset(['profilePicture', 'selectedBuilding', 'selectedFloor', 'selectedUnits', 'allSelectedUnits', 'floors', 'availableUnits', 'managerId', 'isEditing']);
         $this->userForm->reset();
         $this->resetValidation();
+    }
+
+    private function deleteStoredImage(?string $path): void
+    {
+        if (!$path) {
+            return;
+        }
+
+        try {
+            $normalized = ltrim(trim((string) parse_url($path, PHP_URL_PATH) ?: $path), '/');
+
+            if (str_starts_with($normalized, 'storage/')) {
+                $normalized = substr($normalized, 8);
+            }
+
+            if ($normalized !== '' && Storage::disk('public')->exists($normalized)) {
+                Storage::disk('public')->delete($normalized);
+            }
+        } catch (\Throwable $exception) {
+            // File may not exist on Render ephemeral filesystem after redeploy
+            Log::debug('Could not delete stored image (may be expected on Render redeploy).', [
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function render()

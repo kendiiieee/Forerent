@@ -19,7 +19,18 @@
                 </div>
 
                 {{-- Body --}}
-                <div class="p-7 space-y-6 overflow-y-auto max-h-[70vh]">
+                <div
+                    class="p-7 space-y-6 overflow-y-auto max-h-[70vh]"
+                    x-data
+                    x-on:scroll-to-error.window="
+                        $nextTick(() => {
+                            const firstError = $el.querySelector('.text-red-500, .text-xs.text-red-500');
+                            if (firstError) {
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        })
+                    "
+                >
 
                     {{-- Summary Card --}}
                     <div class="bg-[#2672EC] rounded-xl p-5 text-white flex justify-between items-center shadow-lg">

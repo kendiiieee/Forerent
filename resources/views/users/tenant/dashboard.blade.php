@@ -7,9 +7,9 @@
 
     @include('livewire.layouts.dashboard.admingreeting')
 
-    <livewire:layouts.tenants.tenant-dashboard-overview />
-
     <livewire:layouts.dashboard.announcement-list :is-landlord="false" />
     <livewire:layouts.dashboard.calendar-widget />
+
+    <livewire:layouts.tenants.tenant-dashboard-overview />
 
 @endsection

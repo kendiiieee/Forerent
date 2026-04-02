@@ -19,17 +19,16 @@
             :activeTab="$activeTab"
             :counts="$counts"
             action="setTab"
-            size="lg"
+
         />
 
-        {{-- Right Side: Search & Sort --}}
+        {{-- Right Side: Add Button & Sort --}}
         <div class="flex items-center gap-3">
-            <x-ui.search-bar
-                model="search"
-                placeholder="Search..."
-                :suggestions="$suggestions"
-            />
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
+            <x-ui.button-add
+                text="Add Tenant"
+                x-on:click="$dispatch('open-add-tenant-modal')"
+            />
         </div>
 
     </div>
@@ -40,18 +39,14 @@
         {{-- LEFT PANEL: LIST (30% width) --}}
         <div class="w-full lg:w-[30%] flex-shrink-0 h-[750px] bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col overflow-hidden p-2">
 
-            {{-- Header Section with Title and Add Button --}}
-            <div class="p-4 pb-3 border-b border-gray-50 flex-shrink-0 flex items-center justify-between">
+            {{-- Header Section with Title and Search --}}
+            <div class="p-4 pb-3 border-b border-gray-50 flex-shrink-0 space-y-3">
                 <h3 class="text-xl font-bold text-[#070642]">Tenants</h3>
-                <button
-                    type="button"
-                    x-on:click="$dispatch('open-add-tenant-modal')"
-                    class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                    <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    <span class="text-sm">Add</span>
-                </button>
+                <x-ui.search-bar
+                    model="search"
+                    placeholder="Search..."
+                    :suggestions="$suggestions"
+                />
             </div>
 
             {{-- List Body --}}

@@ -72,7 +72,7 @@ class AddUserForm extends Form
         $this->email = $user->email;
     }
 
-    public function store($role = 'manager')
+    public function store($role = 'manager', ?string $plainPassword = null)
     {
         $this->validate();
 
@@ -85,7 +85,7 @@ class AddUserForm extends Form
             'contact' => $cleanedPhone,
             'email' => $this->email,
             'role' => $role,
-            'password' => Hash::make('password'),
+            'password' => Hash::make($plainPassword ?? 'password'),
             'email_verified_at' => now(),
         ]);
     }

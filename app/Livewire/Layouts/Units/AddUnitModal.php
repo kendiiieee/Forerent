@@ -63,7 +63,6 @@ class AddUnitModal extends Component
         'living_area' => 'required|numeric|min:1',
         'bed_type' => 'required|in:Single,Bunk',
         'room_cap' => 'required|integer|min:1',
-        'unit_cap' => 'required|integer|min:1',
         'actual_price' => 'required|numeric|min:0|max:999999',
     ];
 
@@ -237,12 +236,27 @@ class AddUnitModal extends Component
         $this->is_predicting = false;
     }
 
+    public function validateAndConfirm(): void
+    {
+        try {
+            $this->validate();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('scroll-to-error');
+            throw $e;
+        }
+
+        // Validation passed — open the confirmation modal
+        $this->dispatch('open-modal', 'publish-confirmation');
+    }
+
     public function saveUnit()
     {
-        $this->validate();
 
         try {
-            if (auth()->user()->role === 'manager' && ! $this->editingUnitId) {
+            $savedUnitId = null;
+            $savedPropertyId = (int) $this->property_id;
+
+            if (auth()->user()->role === 'manager' && !$this->editingUnitId) {
                 $this->notifyError(
                     'Authorization Failed',
                     'Managers are not authorized to create new units.'
@@ -256,11 +270,11 @@ class AddUnitModal extends Component
             $data = [
                 'property_id' => $this->property_id,
                 'floor_number' => $this->floor_number,
-                'm/f' => $this->m_f,
+                'occupants' => $this->occupants,
+                'living_area' => $this->living_area,
+                'furnishing' => $this->furnishing,
                 'bed_type' => $this->bed_type,
-                'room_type' => $this->room_type,
                 'room_cap' => $this->room_cap,
-                'unit_cap' => $this->unit_cap,
                 'price' => (int) $this->actual_price,
                 'amenities' => json_encode($checkedAmenities),
             ];
@@ -269,6 +283,7 @@ class AddUnitModal extends Component
                 $unit = Unit::find($this->editingUnitId);
                 if ($unit) {
                     $unit->update($data);
+                    $savedUnitId = $unit->unit_id;
                     $this->notifySuccess(
                         'Unit #'.$unit->unit_id.' Updated Successfully!',
                         'Unit details have been updated.'
@@ -278,6 +293,7 @@ class AddUnitModal extends Component
                 $newUnit = Unit::create(array_merge($data, [
                     'unit_number' => $this->generateUniqueUnitNumber($this->property_id, $this->floor_number),
                 ]));
+                $savedUnitId = $newUnit->unit_id;
                 $this->notifySuccess(
                     'Unit #'.$newUnit->unit_id.' Created Successfully!',
                     'New unit has been added to your property.'
@@ -285,11 +301,15 @@ class AddUnitModal extends Component
             }
 
             $this->close();
-            $this->dispatch('refresh-unit-list');
+            $this->dispatch('refresh-unit-list', buildingId: $savedPropertyId, unitId: $savedUnitId);
         } catch (\Exception $e) {
+            \Log::error('Failed to save unit: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'data' => $data ?? [],
+            ]);
             $this->notifyError(
                 'Failed to Save Unit',
-                'An error occurred while saving the unit. Please try again.'
+                $e->getMessage()
             );
         }
     }

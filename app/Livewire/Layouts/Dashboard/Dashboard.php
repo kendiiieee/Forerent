@@ -228,6 +228,13 @@ class Dashboard extends Component
     private function loadMonthlyData()
     {
         $year = Carbon::now()->year;
+        $driver = Transaction::query()->getConnection()->getDriverName();
+        $transactionMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM transaction_date)::int'
+            : 'MONTH(transaction_date)';
+        $maintenanceMonthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM completion_date)::int'
+            : 'MONTH(completion_date)';
 
         // Initialize monthly arrays
         $this->monthlyLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

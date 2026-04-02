@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Layouts\Maintenance;
 
+use App\Models\Notification;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,24 @@ class TenantMaintenanceCreate extends Component
             'created_at'    => now(),
             'updated_at'    => now(),
         ]);
+
+        // Notify the manager of this unit
+        $unit = DB::table('leases')
+            ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('leases.lease_id', $activeLease->lease_id)
+            ->select('units.manager_id')
+            ->first();
+
+        if ($unit && $unit->manager_id) {
+            Notification::create([
+                'user_id' => $unit->manager_id,
+                'type' => 'maintenance_request',
+                'title' => 'New Maintenance Request',
+                'message' => $user->first_name . ' ' . $user->last_name . ' submitted a maintenance request (' . $ticketNumber . '): ' . \Illuminate\Support\Str::limit($this->problem, 80),
+                'link' => route('manager.maintenance'),
+            ]);
+        }
 
         $this->resetForm();
         $this->dispatch('close-modal');
