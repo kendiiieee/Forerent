@@ -2,6 +2,28 @@
 
 declare(strict_types=1);
 
+$firebaseCredentials = env('FIREBASE_CREDENTIALS');
+$firebaseCredentialsBase64 = env('FIREBASE_CREDENTIALS_BASE64');
+$firebaseCredentialsJson = env('FIREBASE_CREDENTIALS_JSON');
+
+if (is_string($firebaseCredentialsBase64) && $firebaseCredentialsBase64 !== '') {
+    $decoded = base64_decode($firebaseCredentialsBase64, true);
+
+    if (is_string($decoded) && $decoded !== '') {
+        $parsed = json_decode($decoded, true);
+
+        if (is_array($parsed)) {
+            $firebaseCredentials = $parsed;
+        }
+    }
+} elseif (is_string($firebaseCredentialsJson) && $firebaseCredentialsJson !== '') {
+    $parsed = json_decode($firebaseCredentialsJson, true);
+
+    if (is_array($parsed)) {
+        $firebaseCredentials = $parsed;
+    }
+}
+
 return [
     /*
      * ------------------------------------------------------------------------
@@ -50,7 +72,7 @@ return [
              *
              */
 
-            'credentials' => env('FIREBASE_CREDENTIALS'),
+            'credentials' => $firebaseCredentials,
 
             /*
              * ------------------------------------------------------------------------

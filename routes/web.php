@@ -7,6 +7,7 @@ use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 use App\Http\Controllers\Admin\UnitController;
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\SettingsProfileController;
 use App\Models\Property;
 use App\Models\Unit;
 
@@ -129,6 +130,10 @@ Route::middleware(['auth', 'role:tenant'])->prefix('tenant')->group(function () 
 Route::get('/settings', function () {
     return view('users.settings');
 })->middleware('auth')->name('settings');
+
+Route::post('/settings/profile', [SettingsProfileController::class, 'update'])
+    ->middleware('auth')
+    ->name('settings.profile.update');
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/modules/landing.php';

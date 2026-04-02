@@ -2,13 +2,17 @@
 
 namespace App\Livewire\Layouts\Tenants;
 
+use App\Broadcasting\SendGridChannel;
+use App\Mail\NewAccountSmtpMail;
 use App\Models\Billing;
 use App\Models\Transaction;
 use App\Notifications\NewAccount;
-use App\Services\FirebaseStorageService;
 use App\Services\PasswordGenerator;
 use App\Livewire\Concerns\WithNotifications;
+use Illuminate\Mail\Markdown;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Validate;
@@ -21,6 +25,8 @@ use App\Models\Lease;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
 
 class AddTenantModal extends Component
@@ -484,7 +490,6 @@ class AddTenantModal extends Component
 
     private function saveNewTenant(): void
     {
-        $firebase = app(FirebaseStorageService::class);
         $password = PasswordGenerator::generate();
         $photoPath = null;
         $idImagePath = null;
@@ -492,11 +497,11 @@ class AddTenantModal extends Component
 
         try {
             $photoPath = $this->profilePicture
-                ? $firebase->upload($this->profilePicture, 'Images')
+                ? $this->profilePicture->store('profile-photos', 'public')
                 : null;
 
             $idImagePath = $this->governmentIdImage
-                ? $firebase->upload($this->governmentIdImage, 'Images')
+                ? $this->governmentIdImage->store('government-ids', 'public')
                 : null;
 
             DB::transaction(function () use ($photoPath, $idImagePath, $password, &$createdUser) {
@@ -566,7 +571,7 @@ class AddTenantModal extends Component
 
                 if ($isPaid) {
                     // Deposit transaction
-                    $depTransaction = Transaction::create([
+                    $depTransaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $depbilling->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
@@ -579,7 +584,7 @@ class AddTenantModal extends Component
                     ]);
 
                     // Advance transaction — short-term premium (+₱500) added only here
-                    $advTransaction = Transaction::create([
+                    $advTransaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $billing->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
@@ -596,17 +601,23 @@ class AddTenantModal extends Component
             });
         } catch (\Throwable $exception) {
             if ($photoPath) {
-                $firebase->delete($photoPath);
+                $this->deleteStoredImage($photoPath);
             }
             if ($idImagePath) {
-                $firebase->delete($idImagePath);
+                $this->deleteStoredImage($idImagePath);
             }
+
+            Log::error('Failed to save new tenant.', [
+                'email' => $this->email,
+                'selected_bed' => $this->selectedBed,
+                'error' => $exception->getMessage(),
+            ]);
 
             throw $exception;
         }
 
         if ($createdUser) {
-            Notification::send($createdUser, new NewAccount($createdUser->email, $password, $createdUser->role));
+            $this->attemptWelcomeEmailDelivery($createdUser, $password);
         }
 
         $this->notifySuccess(
@@ -615,6 +626,110 @@ class AddTenantModal extends Component
         );
 
         session()->flash('success', 'Tenant added successfully!');
+    }
+
+    private function attemptWelcomeEmailDelivery(User $createdUser, string $password): void
+    {
+        $notification = new NewAccount($createdUser->email, $password, $createdUser->role);
+
+        $this->logWelcomeEmailPreview($notification, $createdUser);
+
+        $sendGridAttempt = [
+            'ok' => false,
+            'status' => null,
+            'error' => 'No SendGrid attempt data.',
+        ];
+
+        try {
+            SendGridChannel::resetLastAttempt();
+            Notification::send($createdUser, $notification);
+
+            $sendGridAttempt = SendGridChannel::lastAttempt() ?? $sendGridAttempt;
+        } catch (\Throwable $exception) {
+            $sendGridAttempt = [
+                'ok' => false,
+                'status' => null,
+                'error' => $exception->getMessage(),
+            ];
+
+            Log::warning('SendGrid call failed for tenant welcome email.', [
+                'tenant_id' => $createdUser->user_id,
+                'tenant_email' => $createdUser->email,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        if (($sendGridAttempt['ok'] ?? false) === true) {
+            Log::info('Tenant welcome email sent via SendGrid.', [
+                'tenant_id' => $createdUser->user_id,
+                'tenant_email' => $createdUser->email,
+                'status' => $sendGridAttempt['status'] ?? null,
+            ]);
+
+            return;
+        }
+
+        Log::warning('Tenant welcome email SendGrid failed; trying SMTPS fallback.', [
+            'tenant_id' => $createdUser->user_id,
+            'tenant_email' => $createdUser->email,
+            'sendgrid_status' => $sendGridAttempt['status'] ?? null,
+            'sendgrid_error' => $sendGridAttempt['error'] ?? null,
+        ]);
+
+        try {
+            Mail::mailer('smtp')
+                ->to($createdUser->email)
+                ->send(new NewAccountSmtpMail(
+                    email: $createdUser->email,
+                    password: $password,
+                    role: $createdUser->role,
+                    firstName: (string) ($createdUser->first_name ?? ''),
+                    lastName: (string) ($createdUser->last_name ?? ''),
+                ));
+
+            Log::info('Tenant welcome email sent via SMTPS fallback.', [
+                'tenant_id' => $createdUser->user_id,
+                'tenant_email' => $createdUser->email,
+                'mailer' => 'smtp',
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('SMTPS fallback failed for tenant welcome email.', [
+                'tenant_id' => $createdUser->user_id,
+                'tenant_email' => $createdUser->email,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $this->notifyWarning(
+                'Tenant saved, email retry failed',
+                'Email delivery failed due to provider limits. Tenant record was saved successfully.'
+            );
+        }
+    }
+
+    private function logWelcomeEmailPreview(NewAccount $notification, User $createdUser): void
+    {
+        if (!config('services.sendgrid.preview_logging', false)) {
+            return;
+        }
+
+        try {
+            $mailMessage = $notification->toMail($createdUser);
+            
+            // Only log if there's an issue rendering the email
+            // Don't log the massive HTML/text content - just verify it renders
+            if (empty($mailMessage->subject)) {
+                Log::warning('Tenant welcome email missing subject.', [
+                    'tenant_id' => $createdUser->user_id,
+                    'tenant_email' => $createdUser->email,
+                ]);
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Error rendering tenant welcome email.', [
+                'tenant_id' => $createdUser->user_id,
+                'tenant_email' => $createdUser->email,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function saveTransfer(): void
@@ -688,7 +803,7 @@ class AddTenantModal extends Component
 
             if ($isPaid) {
                 // Advance transaction — short-term premium (+₱500) added only here
-                $advTransaction = Transaction::create([
+                $advTransaction = Transaction::createWithSequenceRetry([
                     'billing_id'       => $billing->billing_id,
                     'reference_number' => 'placeholder',
                     'transaction_type' => 'Debit',
@@ -701,7 +816,7 @@ class AddTenantModal extends Component
                 ]);
 
                 if ($depositShortfall > 0) {
-                    $depTransaction = Transaction::create([
+                    $depTransaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $depbilling->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
@@ -730,9 +845,7 @@ class AddTenantModal extends Component
 
     private function saveEditTenant(): void
     {
-        $firebase = app(FirebaseStorageService::class);
-
-        DB::transaction(function () use ($firebase) {
+        DB::transaction(function () {
             $tenant = User::find($this->editTenantId);
             if (!$tenant) return;
 
@@ -740,11 +853,11 @@ class AddTenantModal extends Component
             $oldGovernmentIdImage = $tenant->government_id_image;
 
             $photoPath = $this->profilePicture
-                ? $firebase->upload($this->profilePicture, 'Images')
+                ? $this->profilePicture->store('profile-photos', 'public')
                 : $tenant->profile_img;
 
             $idImagePath = $this->governmentIdImage
-                ? $firebase->upload($this->governmentIdImage, 'Images')
+                ? $this->governmentIdImage->store('government-ids', 'public')
                 : $tenant->government_id_image;
 
             $tenant->update([
@@ -795,13 +908,13 @@ class AddTenantModal extends Component
                 }
             }
 
-            DB::afterCommit(function () use ($firebase, $oldProfileImg, $oldGovernmentIdImage, $photoPath, $idImagePath) {
+            DB::afterCommit(function () use ($oldProfileImg, $oldGovernmentIdImage, $photoPath, $idImagePath) {
                 if ($this->profilePicture && $oldProfileImg && $oldProfileImg !== $photoPath) {
-                    $firebase->delete($oldProfileImg);
+                    $this->deleteStoredImage($oldProfileImg);
                 }
 
                 if ($this->governmentIdImage && $oldGovernmentIdImage && $oldGovernmentIdImage !== $idImagePath) {
-                    $firebase->delete($oldGovernmentIdImage);
+                    $this->deleteStoredImage($oldGovernmentIdImage);
                 }
             });
         });
@@ -938,6 +1051,31 @@ class AddTenantModal extends Component
         }
 
         return $rules;
+    }
+
+    private function deleteStoredImage(?string $path): void
+    {
+        if (!$path) {
+            return;
+        }
+
+        try {
+            $normalized = ltrim(trim((string) parse_url($path, PHP_URL_PATH) ?: $path), '/');
+
+            if (str_starts_with($normalized, 'storage/')) {
+                $normalized = substr($normalized, 8);
+            }
+
+            if ($normalized !== '' && Storage::disk('public')->exists($normalized)) {
+                Storage::disk('public')->delete($normalized);
+            }
+        } catch (\Throwable $exception) {
+            // File may not exist on Render ephemeral filesystem after redeploy
+            Log::debug('Could not delete stored image (may be expected on Render redeploy).', [
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function resetForm()

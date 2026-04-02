@@ -54,6 +54,20 @@ class PropertyDetails extends Component
         }
     }
 
+    #[On('refresh-unit-list')]
+    public function refreshFromUnitUpdate($buildingId = null): void
+    {
+        if (!$this->propertyId) {
+            return;
+        }
+
+        if ($buildingId && (int) $buildingId !== (int) $this->propertyId) {
+            return;
+        }
+
+        $this->loadPropertyData((int) $this->propertyId);
+    }
+
     private function resolveInitialBuildingId(): ?int
     {
         $user = Auth::user();

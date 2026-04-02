@@ -48,6 +48,33 @@ class UnitAccordion extends Component
         $this->dispatch('unitsReset');
     }
 
+    #[On('refresh-unit-list')]
+    public function refreshUnits($buildingId = null, $unitId = null): void
+    {
+        $targetBuildingId = $buildingId ?: $this->selectedBuildingId;
+
+        if (!$targetBuildingId) {
+            return;
+        }
+
+        $this->selectedBuildingId = (int) $targetBuildingId;
+        $this->selectedBuildingName = Property::where('property_id', $this->selectedBuildingId)
+            ->value('building_name');
+
+        $this->resetPage();
+
+        if ($unitId) {
+            $this->openUnitId = (int) $unitId;
+            $this->loadSpecifications((int) $unitId);
+        } elseif ($this->openUnitId) {
+            $this->loadSpecifications((int) $this->openUnitId);
+        } else {
+            $this->specifications = [];
+        }
+
+        $this->dispatch('unitsReset');
+    }
+
     /**
      * Redirect to add property page
      */

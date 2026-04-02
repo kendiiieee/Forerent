@@ -3,7 +3,7 @@
         <h3 class="text-white text-lg font-semibold">Announcement</h3>
 
        {{-- Show Add button for Landlord and Manager only --}}
-        @if(request()->is('landlord') || request()->is('manager'))
+        @if(in_array($role, ['landlord', 'manager'], true))
             <button
                 wire:click="$dispatch('open-announcement-modal')"
                 type="button"
@@ -25,7 +25,7 @@
             </div>
 
             {{-- Edit button (show only for owners/managers) --}}
-            @if(request()->is('landlord') || request()->is('manager'))
+            @if(in_array($role, ['landlord', 'manager'], true))
             <button
                 wire:click="$dispatch('edit-announcement', { announcementId: {{ $announcement->announcement_id }} })"
                 type="button"

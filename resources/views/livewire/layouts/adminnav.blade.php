@@ -74,7 +74,7 @@
                 </a>
             </li>
             <li>
-                <a href="{{ route('logout') }}" class="flex items-center p-3 text-gray-700 rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] group">
+                <a href="{{ route('logout') }}" data-logout-trigger class="flex items-center p-3 text-gray-700 rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] group">
                     <x-icons.logout />
                     <span class="ms-3">Log Out</span>
                 </a>

@@ -36,11 +36,15 @@ class NewAnnouncement extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $senderName = trim((string) ($this->announcement->author?->first_name . ' ' . $this->announcement->author?->last_name));
+
         return (new MailMessage)
             ->subject("New Announcement from Forerent: {{$this->announcement->headline}}")
             ->markdown('mail.new-announcement', [
                 'announcement' => $this->announcement,
                 'user' => $notifiable,
+                'senderName' => $senderName !== '' ? $senderName : config('app.name'),
+                'senderRole' => $this->announcement->sender_role,
             ]);
     }
 

@@ -198,6 +198,7 @@ class="fixed inset-0 bg-gradient-to-br from-gray-900/50 via-gray-900/20 to-gray-
                     </li>
                     <li>
                         <a href="{{ route('logout') }}"
+                           data-logout-trigger
                            class="group flex items-center p-3 text-[#6B7280] rounded-lg hover:bg-[#DFE8FC] hover:text-[#070642] transition-all duration-200 hover:translate-x-1 hover:shadow-sm active:scale-[0.98]"
                            :class="!sidebarExpanded && 'justify-center'"
                            :title="!sidebarExpanded ? 'Log Out' : ''">

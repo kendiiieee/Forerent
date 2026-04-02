@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
-use Kreait\Laravel\Firebase\Facades\Firebase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class FirebaseStorageService
 {
@@ -12,7 +14,15 @@ class FirebaseStorageService
 
     public function __construct()
     {
-        $this->bucket = Firebase::storage()->getBucket();
+        try {
+            $this->bucket = app('firebase.storage')->getBucket();
+        } catch (Throwable $exception) {
+            $this->bucket = null;
+
+            Log::warning('Firebase storage unavailable. Falling back to local public disk.', [
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function upload(UploadedFile $file, string $folder): string
@@ -20,36 +30,92 @@ class FirebaseStorageService
         $extension = $file->extension() ?: 'bin';
         $fileName = $folder . '/' . (string) Str::uuid() . '.' . $extension;
 
-        [$fileStream, $contentType] = $this->buildUploadStream($file);
-
-        $object = $this->bucket->upload($fileStream, [
-            'name'          => $fileName,
-            'predefinedAcl' => 'publicRead',  // makes the file publicly accessible
-            'metadata'      => ['contentType' => $contentType],
-        ]);
-
-        if (is_resource($fileStream)) {
-            fclose($fileStream);
+        if (!$this->bucket) {
+            return $this->uploadToLocalDisk($file, $folder, basename($fileName));
         }
 
-        // Return the public URL
-        return sprintf(
-            'https://storage.googleapis.com/%s/%s',
-            $this->bucket->name(),
-            $object->name()
-        );
+        [$fileStream, $contentType] = $this->buildUploadStream($file);
+
+        try {
+            $object = $this->bucket->upload($fileStream, [
+                'name'          => $fileName,
+                'predefinedAcl' => 'publicRead',
+                'metadata'      => ['contentType' => $contentType],
+            ]);
+
+            return sprintf(
+                'https://storage.googleapis.com/%s/%s',
+                $this->bucket->name(),
+                $object->name()
+            );
+        } catch (Throwable $exception) {
+            Log::warning('Firebase upload failed. Falling back to local public disk.', [
+                'file' => $fileName,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $this->uploadToLocalDisk($file, $folder, basename($fileName));
+        } finally {
+            if (is_resource($fileStream)) {
+                fclose($fileStream);
+            }
+        }
     }
 
     public function delete(string $fileUrl): void
     {
-        // Extract the file path from the full URL
+        if (!$fileUrl) {
+            return;
+        }
+
+        if ($this->bucket && str_contains($fileUrl, 'storage.googleapis.com')) {
+            try {
+                $path = parse_url($fileUrl, PHP_URL_PATH);
+                $path = ltrim(str_replace('/' . $this->bucket->name() . '/', '', (string) $path), '/');
+
+                if ($path !== '') {
+                    $object = $this->bucket->object($path);
+
+                    if ($object->exists()) {
+                        $object->delete();
+                    }
+
+                    return;
+                }
+            } catch (Throwable $exception) {
+                Log::warning('Firebase delete failed. Attempting local delete fallback.', [
+                    'file_url' => $fileUrl,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $this->deleteFromLocalDisk($fileUrl);
+    }
+
+    private function uploadToLocalDisk(UploadedFile $file, string $folder, string $filename): string
+    {
+        $storedPath = $file->storeAs($folder, $filename, 'public');
+
+        return Storage::url($storedPath);
+    }
+
+    private function deleteFromLocalDisk(string $fileUrl): void
+    {
         $path = parse_url($fileUrl, PHP_URL_PATH);
-        $path = ltrim(str_replace('/' . $this->bucket->name() . '/', '', $path), '/');
 
-        $object = $this->bucket->object($path);
+        if (!$path) {
+            $path = $fileUrl;
+        }
 
-        if ($object->exists()) {
-            $object->delete();
+        $normalized = ltrim((string) $path, '/');
+
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, 8);
+        }
+
+        if ($normalized !== '' && Storage::disk('public')->exists($normalized)) {
+            Storage::disk('public')->delete($normalized);
         }
     }
 

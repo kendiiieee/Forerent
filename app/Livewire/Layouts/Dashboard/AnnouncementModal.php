@@ -2,17 +2,21 @@
 
 namespace App\Livewire\Layouts\Dashboard;
 
+use App\Livewire\Concerns\WithNotifications;
 use App\Models\Announcement;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\NewAnnouncement;
 use Illuminate\Support\Facades\Auth; // ← ADD THIS IMPORT
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Component;
 
 class AnnouncementModal extends Component
 {
+    use WithNotifications;
+
     public $showModal = false;
     // Removed: public $showConfirmation = false; (No longer needed)
 
@@ -28,15 +32,16 @@ class AnnouncementModal extends Component
         'headline' => 'required|min:3|max:200',
         'details' => 'required|min:10|max:1000',
         'propertyId' => 'required|exists:properties,property_id',
-        'notificationDate' => 'required|date',
+        'notificationDate' => 'required|date|after_or_equal:today',
     ];
 
     protected $messages = [
         'headline.required' => 'Please enter a headline for your announcement.',
         'details.required' => 'Please enter details for your announcement.',
-        'property_id.required' => 'Please select a property.',
+        'propertyId.required' => 'Please select a property.',
         'notificationDate.required' => 'Please select a notification date.',
         'notificationDate.date' => 'The notification date must be a valid date.',
+        'notificationDate.after_or_equal' => 'Past dates are not allowed for announcements.',
     ];
 
     protected $listeners = ['open-announcement-modal' => 'openModal', 'edit-announcement' => 'editAnnouncement'];
@@ -100,33 +105,45 @@ class AnnouncementModal extends Component
     {
         $this->validate();
 
-        if ($this->editingAnnouncementId) {
-            // Update existing announcement
-            $announcement = Announcement::findOrFail($this->editingAnnouncementId);
-            $announcement->update([
-                'headline' => $this->headline,
-                'details' => $this->details,
-                'property_id' => $this->propertyId,
-                'notification_date' => $this->notificationDate,
-            ]);
-            session()->flash('message', 'Announcement updated successfully!');
-        } else {
-            // Create new announcement
-            $announcement = new Announcement();
+        try {
+            if ($this->editingAnnouncementId) {
+                // Update existing announcement
+                $announcement = Announcement::findOrFail($this->editingAnnouncementId);
+                $announcement->update([
+                    'headline' => $this->headline,
+                    'details' => $this->details,
+                    'property_id' => $this->propertyId,
+                    'notification_date' => $this->notificationDate,
+                ]);
 
-            if (Auth::user()->role === "landlord") // ← CHANGE TO Auth::user()
-            {
-                $announcement = $this->saveToDatabase('manager');
-            } else if (Auth::user()->role === "manager") { // ← CHANGE TO Auth::user()
-                $announcement = $this->saveToDatabase('tenant');
+                $this->notifySuccess('Announcement updated!', 'Your changes are now visible.');
+            } else {
+                // Create new announcement
+                $announcement = new Announcement();
+
+                if (Auth::user()->role === "landlord") // ← CHANGE TO Auth::user()
+                {
+                    $announcement = $this->saveToDatabase('manager');
+                } else if (Auth::user()->role === "manager") { // ← CHANGE TO Auth::user()
+                    $announcement = $this->saveToDatabase('tenant');
+                }
+
+                $this->sendEmailToRecipient($announcement);
+                $this->notifySuccess('Announcement posted!', 'Your announcement has been sent successfully.');
             }
 
-            $this->sendEmailToRecipient($announcement);
-            session()->flash('message', 'Announcement posted successfully!');
-        }
+            $this->closeModal();
+            $this->dispatch('announcement-posted');
+        } catch (\Throwable $e) {
+            Log::error('Failed to save announcement.', [
+                'user_id' => Auth::id(),
+                'is_editing' => (bool) $this->editingAnnouncementId,
+                'property_id' => $this->propertyId,
+                'error' => $e->getMessage(),
+            ]);
 
-        $this->closeModal();
-        $this->dispatch('announcement-posted');
+            $this->notifyError('Announcement failed', 'An error occurred while saving your announcement.');
+        }
     }
 
     private function saveToDatabase($recipientRole)
