@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Property extends Model
 {
@@ -54,6 +55,16 @@ class Property extends Model
     public function photos()
     {
         return $this->documents()->where('category', 'property_photo');
+    }
+
+    /**
+     * Get the thumbnail URL (first uploaded property photo).
+     */
+    public function getThumbnailAttribute(): ?string
+    {
+        $firstPhoto = $this->photos()->oldest()->first();
+
+        return $firstPhoto ? Storage::url($firstPhoto->file_path) : null;
     }
 
     public function tenantsForManager($managerId)

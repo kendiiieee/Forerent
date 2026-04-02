@@ -11,6 +11,11 @@ class Message extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'delivered_at' => 'datetime',
+        'read_at'      => 'datetime',
+    ];
+
     // Relationship to the Sender
     public function sender()
     {

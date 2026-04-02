@@ -11,7 +11,7 @@
         <div class="flex items-center gap-3">
             <x-ui.search-bar
                 model="search"
-                placeholder="Search..."
+                placeholder="Search by unit number..."
                 :suggestions="$suggestions"
             />
             <x-ui.sort-dropdown model="sortBy" current="{{ $sortBy }}" />

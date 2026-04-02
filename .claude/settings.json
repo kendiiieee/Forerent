@@ -26,7 +26,15 @@
       "Bash(find /e/reigne/Citispace-Forerent -type f -name *dashboard* -o -name *Dashboard*)",
       "Bash(grep -E '\\\\.\\(blade\\\\.php|php\\)$')",
       "Bash(find e:reigneCitispace-Forerent -name *aymentReceiptModal* -o -name *payment*receipt*modal*)",
-      "Bash(find /e/reigne/Citispace-Forerent -type f -name *landlord* -o -name *owner*sidebar*)"
+      "Bash(find /e/reigne/Citispace-Forerent -type f -name *landlord* -o -name *owner*sidebar*)",
+      "Bash(find /e/reigne/Citispace-Forerent/database/migrations -name *message* -o -name *user*)",
+      "Bash(find /e/reigne/Citispace-Forerent/resources/views/livewire/layouts/properties -type f -name *.blade.php)",
+      "Bash(ls \"C:/laragon/bin/php/\"*)",
+      "Bash(ls \"C:/wamp64/bin/php/\"*)",
+      "Read(//c//**)",
+      "Bash(ls e:/reigne/Citispace-Forerent/docker-compose*)",
+      "Bash(ls e:/reigne/Citispace-Forerent/docker/*)",
+      "Bash(grep -E \"\\\\.\\(php|web\\)$\")"
     ]
   }
 }

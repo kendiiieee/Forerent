@@ -1,4 +1,15 @@
-<div>
+<div
+    x-init="
+        @if($selectedBuilding)
+            $nextTick(() => {
+                Livewire.dispatch('buildingSelected', { buildingId: {{ $selectedBuilding }} });
+                @if($eventName !== 'buildingSelected')
+                    Livewire.dispatch('{{ $eventName }}', { id: {{ $selectedBuilding }} });
+                @endif
+            });
+        @endif
+    "
+>
     {{-- Header --}}
     <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold text-gray-900">{{ $title }}</h3>

@@ -1,5 +1,5 @@
 <div id="calendar-card" class="bg-white rounded-xl shadow-md overflow-hidden w-full flex flex-col">
-    <div class="px-6 py-4 border-b border-gray-100">
+    <div class="px-4 sm:px-6 py-4 border-b border-gray-100">
         <h3 class="text-lg font-semibold text-[#070642]">Calendar</h3>
     </div>
 

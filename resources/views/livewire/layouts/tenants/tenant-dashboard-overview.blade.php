@@ -3,7 +3,7 @@
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- ROW 1: QUICK STAT CARDS                                    --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         {{-- Outstanding --}}
         <div class="bg-white rounded-2xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-shadow duration-300">
@@ -85,7 +85,7 @@
                 <div class="absolute left-1/3 -bottom-12 w-36 h-36 rounded-full bg-blue-400/[0.08]"></div>
 
                 {{-- Banner content --}}
-                <div class="relative z-10 px-6 py-5 flex items-center justify-between">
+                <div class="relative z-10 px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <div class="flex items-center gap-2.5 mb-1">
                             <div class="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center">
@@ -93,7 +93,7 @@
                             </div>
                             <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-widest">Amount Due This Month</p>
                         </div>
-                        <p class="text-4xl font-extrabold text-white tracking-tight mt-1">
+                        <p class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-1">
                             <span class="text-xl font-bold text-white/50 mr-0.5">&#8369;</span>{{ number_format($amountDue, 2) }}
                         </p>
                         <div class="mt-2">
@@ -138,7 +138,7 @@
 
             {{-- Bottom stats --}}
             <div class="px-5 py-4">
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div class="p-3.5 rounded-xl bg-[#F4F7FC]">
                         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Outstanding</p>
                         <p class="text-base font-extrabold {{ $outstandingBalance > 0 ? 'text-orange-600' : 'text-gray-900' }}">
