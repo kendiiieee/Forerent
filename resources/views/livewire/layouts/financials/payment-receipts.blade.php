@@ -10,7 +10,7 @@
             {{-- Search --}}
             <x-ui.search-bar
                 model="search"
-                placeholder="Search..."
+                placeholder="Search by tenant name or building..."
                 :suggestions="$suggestions"
             />
 

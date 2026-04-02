@@ -1,4 +1,4 @@
-<div class="relative w-full h-40 bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600 rounded-2xl shadow-xl overflow-hidden">
+<div class="relative w-full h-40 bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600 rounded-2xl shadow-xl overflow-hidden max-sm:h-auto">
 
     <!-- Circular ring effects (right side decoration) with even ripple spacing -->
     <div class="absolute" style="top: 50%; right: 230px; transform: translate(50%, -50%);">
@@ -9,7 +9,7 @@
     </div>
 
     <!-- Content -->
-    <div class="relative z-10 px-8 flex items-center justify-between h-full w-full">
+    <div class="relative z-10 px-8 flex items-center justify-between h-full w-full max-sm:flex-col max-sm:items-start max-sm:justify-center max-sm:px-4 max-sm:py-4 max-sm:gap-2">
 
         <!-- Left: Greeting -->
         <div class="flex flex-col justify-center">
@@ -41,11 +41,11 @@
             <p class="text-blue-300 text-xs font-semibold uppercase tracking-widest mb-1">
                 {{ $isTenant ? 'Tenant' : 'Property Owner' }}
             </p>
-            <h1 class="text-white text-3xl font-bold leading-tight">
+            <h1 class="text-white text-3xl font-bold leading-tight max-sm:text-xl">
                 Welcome Back,
                 <span class="text-cyan-400">{{ auth()->check() ? strtoupper(auth()->user()->first_name) : 'GUEST' }}!</span>
             </h1>
-            <p class="text-blue-200 text-sm mt-1">
+            <p class="text-blue-200 text-sm mt-1 max-sm:text-xs">
                 @if($isTenant && $tenantInfo)
                     {{ $tenantInfo }}
                 @else
@@ -55,9 +55,9 @@
         </div>
 
         <!-- Right: Time & Date -->
-        <div class="flex flex-col items-end justify-center">
-            <p class="text-white text-4xl font-bold" id="greeting-time"></p>
-            <p class="text-blue-200 text-sm mt-1" id="greeting-date"></p>
+        <div class="flex flex-col items-end justify-center max-sm:items-start">
+            <p class="text-white text-4xl font-bold max-sm:text-xl" id="greeting-time"></p>
+            <p class="text-blue-200 text-sm mt-1 max-sm:text-xs" id="greeting-date"></p>
         </div>
 
     </div>

@@ -7,7 +7,7 @@
         <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
 
             {{-- 1. Header Section --}}
-            <div class="bg-[#070589] text-white p-6 flex-shrink-0">
+            <div class="bg-[#070589] text-white p-4 sm:p-6 flex-shrink-0">
                 <div class="flex items-start justify-between">
                     <div>
                         <h2 class="text-xl font-bold uppercase">{{ $editingAnnouncementId ? 'EDIT' : '' }} ANNOUNCEMENT</h2>
@@ -26,11 +26,11 @@
             </div>
 
             {{-- 2. Form Body --}}
-            <div class="flex-1 overflow-y-auto p-8">
+            <div class="flex-1 overflow-y-auto p-4 sm:p-8">
                 <div class="space-y-6">
 
                     {{-- White Container Card --}}
-                    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm space-y-6">
 
                         {{-- Headline --}}
                         <div class="relative">
@@ -126,7 +126,7 @@
             </div>
 
             {{-- 3. Footer --}}
-            <div class="p-6 pt-0 flex justify-end">
+            <div class="p-4 sm:p-6 pt-0 flex justify-end">
                 {{-- Save Button   --}}
                 <button
                     type="button"
