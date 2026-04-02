@@ -4,6 +4,11 @@
             <tr class="text-left">
                 {{ $head }}
             </tr>
+            <tr>
+                <td colspan="100" class="p-0">
+                    <div class="border-b border-dashed border-blue-300"></div>
+                </td>
+            </tr>
         </thead>
         <tbody class="text-sm">
             {{ $body }}

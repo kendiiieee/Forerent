@@ -18,7 +18,7 @@
             :tabs="$tabs"
             :activeTab="$activeTab"
             :counts="$counts"
-            size="lg"
+
         />
 
         {{-- Sort dropdown + Add Request --}}

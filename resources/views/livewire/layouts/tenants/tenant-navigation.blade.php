@@ -19,16 +19,16 @@
             :activeTab="$activeTab"
             :counts="$counts"
             action="setTab"
-            size="lg"
+
         />
 
         {{-- Right Side: Add Button & Sort --}}
         <div class="flex items-center gap-3">
+            <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
             <x-ui.button-add
-                text="Add"
+                text="Add Tenant"
                 x-on:click="$dispatch('open-add-tenant-modal')"
             />
-            <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
         </div>
 
     </div>

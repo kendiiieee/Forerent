@@ -97,13 +97,13 @@
                 by creating the smartest way to predict.
             </p>
             <div class="flex gap-3.5 flex-wrap">
-                <a href="/login"
+                <a href="#about" id="get-started-btn"
                    class="inline-flex items-center gap-2 px-8 py-[13px] rounded-[10px] text-white text-[0.92rem] font-bold
                           no-underline transition-all duration-200 cursor-pointer
                           bg-[linear-gradient(135deg,#1a3fbf_0%,#0b1f6b_100%)]
                           shadow-[0_4px_18px_rgba(26,63,191,0.45)]
                           hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(26,63,191,0.55)]">
-                    Get Started <span class="text-lg">&rarr;</span>
+                    Get Started
                 </a>
             </div>
         </div>
@@ -1271,6 +1271,15 @@
                 });
             }
         });
+
+        // ─── GET STARTED SMOOTH SCROLL ───────────────────────────────────
+        const getStartedBtn = document.getElementById('get-started-btn');
+        if (getStartedBtn) {
+            getStartedBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                animatedScrollTo(document.getElementById('about'), null);
+            });
+        }
 
         // ─── ECOSYSTEM CARD INTERACTIONS ──────────────────────────────────
         const ecoCards = document.querySelectorAll('.eco-card');

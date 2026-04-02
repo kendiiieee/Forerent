@@ -29,18 +29,25 @@
                 </div>
                 <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Lease Expiry</p>
             </div>
-            <p class="text-[22px] font-extrabold leading-none
-                {{ $lease && $daysUntilExpiry <= 30 ? 'text-red-600' : ($lease && $daysUntilExpiry <= 60 ? 'text-amber-600' : 'text-gray-900') }}">
-                {{ $lease ? max($daysUntilExpiry, 0) : '—' }}
-                <span class="text-sm font-bold text-gray-300 ml-0.5">days</span>
-            </p>
-            <p class="mt-2.5 text-[11px] font-medium text-gray-400">
-                @if($lease)
-                    {{ $leaseStatus === 'Active' ? 'Ends' : 'Ended' }} {{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}
-                @else
-                    No active lease
-                @endif
-            </p>
+            @if($lease && $daysUntilExpiry <= 0)
+                <p class="text-[22px] font-extrabold leading-none text-red-600">Contract Ended</p>
+                <p class="mt-2.5 text-[11px] font-medium text-gray-400">
+                    Ended {{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}
+                </p>
+            @else
+                <p class="text-[22px] font-extrabold leading-none
+                    {{ $lease && $daysUntilExpiry <= 30 ? 'text-red-600' : ($lease && $daysUntilExpiry <= 60 ? 'text-amber-600' : 'text-gray-900') }}">
+                    {{ $lease ? $daysUntilExpiry : '—' }}
+                    <span class="text-sm font-bold text-gray-300 ml-0.5">days</span>
+                </p>
+                <p class="mt-2.5 text-[11px] font-medium text-gray-400">
+                    @if($lease)
+                        Ends {{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}
+                    @else
+                        No active lease
+                    @endif
+                </p>
+            @endif
         </div>
 
         {{-- Maintenance --}}

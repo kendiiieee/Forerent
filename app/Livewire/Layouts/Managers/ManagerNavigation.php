@@ -12,6 +12,7 @@ class ManagerNavigation extends Component
 {
     public $managers = [];
     public $activeManagerId = null;
+    public $search = '';
 
     public function mount(): void
     {
@@ -42,6 +43,23 @@ class ManagerNavigation extends Component
 
     private function loadManagers(): void
     {
+        $allManagerIds = $this->getAllManagerIds();
+
+        $query = User::whereIn('user_id', $allManagerIds)
+            ->where('role', 'manager');
+
+        if (!empty($this->search)) {
+            $query->where(function ($q) {
+                $q->where('first_name', 'like', '%' . $this->search . '%')
+                  ->orWhere('last_name', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        $this->managers = $query->get();
+    }
+
+    private function getAllManagerIds()
+    {
         $landlordId = Auth::id();
 
         $assignedManagerIds = Unit::whereHas('property', function ($query) use ($landlordId) {
@@ -52,17 +70,18 @@ class ManagerNavigation extends Component
             ->whereDoesntHave('unitsManaged')
             ->pluck('user_id');
 
-        $allManagerIds = $assignedManagerIds->merge($unassignedManagerIds)->unique();
-
-        $this->managers = User::whereIn('user_id', $allManagerIds)
-            ->where('role', 'manager')
-            ->get();
+        return $assignedManagerIds->merge($unassignedManagerIds)->unique();
     }
 
     public function selectManager(int $managerId): void
     {
         $this->activeManagerId = $managerId;
         $this->dispatch('managerSelected', managerId: $managerId);
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->loadManagers();
     }
 
     public function render()

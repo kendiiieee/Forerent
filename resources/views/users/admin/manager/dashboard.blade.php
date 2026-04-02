@@ -13,11 +13,11 @@
         </div>
     @endif
 
+    <livewire:layouts.dashboard.announcement-list :is-manager="true" />
+    <livewire:layouts.dashboard.calendar-widget />
+
     <div class="w-full space-y-6">
         <livewire:layouts.dashboard.maintenance-stats />
-
-        <livewire:layouts.dashboard.announcement-list :is-manager="true" />
-        <livewire:layouts.dashboard.calendar-widget />
 
         <livewire:layouts.dashboard.announcement-modal />
 

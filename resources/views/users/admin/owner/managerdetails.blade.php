@@ -16,18 +16,7 @@
     @endif
 
     {{-- Manager Details Content --}}
-    <div id="units-container" class="flex flex-col lg:flex-row gap-6 h-full">
-
-        {{-- Sidebar List --}}
-        <div id="unit-navigation-sidebar" class="w-full lg:w-[30%] flex-shrink-0 h-[750px]">
-            <livewire:layouts.managers.manager-navigation />
-        </div>
-
-        {{-- Detail Card --}}
-        <div id="unit-detail-card" class="w-full lg:w-[70%] h-[750px]">
-            <livewire:layouts.managers.manager-detail />
-        </div>
-    </div>
+    <livewire:layouts.managers.manager-navigation />
 
     {{-- Modals --}}
     <livewire:layouts.managers.add-manager-modal modal-id="manager-dashboard" />

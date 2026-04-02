@@ -108,6 +108,24 @@
                 Sign In
             </button>
 
+            {{-- Terms and Conditions Checkbox --}}
+            <div class="mt-4">
+                <div class="flex items-start space-x-2">
+                    <input
+                        type="checkbox"
+                        id="terms_accepted"
+                        wire:model="terms_accepted"
+                        class="h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500 cursor-pointer">
+                    <label for="terms_accepted" class="text-xs text-gray-600 cursor-pointer leading-relaxed">
+                        I have read and agree to the
+                        <a href="{{ route('terms-of-service') }}" target="_blank" class="text-[var(--color-primary)] hover:text-blue-700 underline font-medium">Terms of Service</a>
+                        and
+                        <a href="{{ route('privacy-policy') }}" target="_blank" class="text-[var(--color-primary)] hover:text-blue-700 underline font-medium">Privacy Policy</a>.
+                    </label>
+                </div>
+                @error('terms_accepted') <p class="text-red-500 text-xs mt-1.5">{{ $message }}</p> @enderror
+            </div>
+
         </form>
 
         {{-- Register link matching Image 1 --}}
