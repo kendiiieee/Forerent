@@ -9,9 +9,11 @@ use App\Models\Lease;
 use App\Models\MaintenanceRequest;
 use App\Models\MoveInInspection;
 use App\Models\MoveOutInspection;
+use App\Models\Notification;
 use App\Models\UtilityBill;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 
@@ -403,6 +405,9 @@ class TenantDashboardOverview extends Component
         $this->tenantSignedAt = $result['signedAt'];
         $this->contractAgreed = $result['agreed'];
 
+        // Notify the manager that the tenant signed the contract
+        $this->notifyManagerOfContractSign($this->lease, 'move-in');
+
         $this->closeSignatureModal();
         $this->dispatch('signature-saved');
     }
@@ -531,8 +536,30 @@ class TenantDashboardOverview extends Component
         $this->moveOutTenantSignedAt = $result['signedAt'];
         $this->moveOutContractAgreed = $result['agreed'];
 
+        // Notify the manager that the tenant signed the move-out contract
+        $this->notifyManagerOfContractSign($this->lease, 'move-out');
+
         $this->closeMoveOutSignatureModal();
         $this->dispatch('moveout-signature-saved');
+    }
+
+    protected function notifyManagerOfContractSign(Lease $lease, string $contractType): void
+    {
+        $user = Auth::user();
+        $managerId = DB::table('beds')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('beds.bed_id', $lease->bed_id)
+            ->value('units.manager_id');
+
+        if ($managerId) {
+            $label = $contractType === 'move-out' ? 'move-out contract' : 'contract';
+            Notification::create([
+                'user_id' => $managerId,
+                'type' => 'contract_signed',
+                'title' => 'Contract Signed by Tenant',
+                'message' => $user->first_name . ' ' . $user->last_name . ' has read and signed the ' . $label . '.',
+            ]);
+        }
     }
 
     public function render()

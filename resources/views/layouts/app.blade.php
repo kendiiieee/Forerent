@@ -25,8 +25,12 @@
 
         <section class="flex-1 flex flex-col h-full overflow-hidden relative">
 
-            {{-- Top spacer --}}
-            <div class="flex-shrink-0 h-20 bg-white"></div>
+            {{-- Top bar with notification bell --}}
+            <div class="flex-shrink-0 h-20 bg-white flex items-center justify-end px-8">
+                @auth
+                    <livewire:navbars.notification-bell />
+                @endauth
+            </div>
 
             <main class="flex-1 overflow-y-auto ml-8 bg-white">
 
