@@ -4,11 +4,11 @@
      class="bg-white rounded-lg shadow-md overflow-hidden shrink-0 w-64 transition-all cursor-pointer hover:shadow-xl selected-building:bg-[#2360E8]">
 
     {{-- Image Container --}}
-    <div class="relative h-48 overflow-hidden">
+    <div class="relative h-48 overflow-hidden flex items-center justify-center bg-gray-100">
         <img
-            src="{{ ($property->image ?? null) ? asset('storage/' . $property->image) : asset('office-building.png') }}"
+            src="{{ $property->thumbnail ?? asset('office-building.png') }}"
             alt="{{ $property->building_name }}"
-            class="w-full h-full object-cover transition-transform hover:scale-110 duration-300">
+            class="{{ $property->thumbnail ? 'w-full h-full object-cover' : 'max-h-full max-w-full object-contain' }} transition-transform hover:scale-110 duration-300">
 
         {{-- Edit Button (appears on hover) --}}
         <button

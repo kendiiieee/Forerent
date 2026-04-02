@@ -12,16 +12,10 @@
         {{-- 2. THE FILTERS --}}
         <x-slot:filters>
 
-            <div class="w-full sm:w-72">
-                <label for="records-search" class="sr-only">Search records</label>
-                <input
-                    id="records-search"
-                    type="text"
-                    wire:model.live.debounce.300ms="search"
-                    placeholder="Search by name or reference number"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
-                />
-            </div>
+            <x-ui.search-bar
+                model="search"
+                placeholder="Search by name or reference number..."
+            />
 
             {{-- Month Filter --}}
             <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}">

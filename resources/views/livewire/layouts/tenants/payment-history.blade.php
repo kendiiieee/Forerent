@@ -19,7 +19,7 @@
         <x-slot:filters>
             <x-ui.search-bar
                 model="search"
-                placeholder="Search..."
+                placeholder="Search by reference number or category..."
                 :suggestions="$suggestions"
             />
         </x-slot:filters>

@@ -12,6 +12,7 @@ use App\Models\Message;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Livewire\Layouts\Message\FloatingChat;
 
 class MessageSystem extends Component
 {
@@ -27,6 +28,7 @@ class MessageSystem extends Component
     public $showProfile = false;
     public $attachment = null;
     public $mediaTab = 'images'; // 'images' or 'documents'
+    public $showConcerns = false;
 
     public function mount()
     {
@@ -130,8 +132,65 @@ class MessageSystem extends Component
         $this->selectedUserId = $userId;
         $this->showProfile = false;
         $this->attachment = null;
+        $this->showConcerns = false;
+
+        // Show concern topics for tenants if no messages exist yet
+        if (Auth::user()->role === 'tenant') {
+            $hasMessages = Message::where(function ($q) use ($userId) {
+                $q->where('sender_id', Auth::id())->where('receiver_id', $userId);
+            })->orWhere(function ($q) use ($userId) {
+                $q->where('sender_id', $userId)->where('receiver_id', Auth::id());
+            })->exists();
+
+            $this->showConcerns = !$hasMessages;
+        }
 
         $this->markAsRead();
+    }
+
+    /**
+     * Handle when a tenant selects a concern topic.
+     */
+    public function selectConcern(string $topicKey)
+    {
+        $topics = FloatingChat::$concernTopics;
+
+        if (!$this->selectedUserId || !isset($topics[$topicKey])) {
+            return;
+        }
+
+        $topic = $topics[$topicKey];
+        $myId = Auth::id();
+
+        // Send the tenant's concern as their message
+        Message::create([
+            'sender_id'   => $myId,
+            'receiver_id' => $this->selectedUserId,
+            'message'     => $topic['message'],
+            'type'        => 'text',
+            'is_read'     => false,
+        ]);
+
+        // Send the automated reply as if from the manager
+        Message::create([
+            'sender_id'     => $this->selectedUserId,
+            'receiver_id'   => $myId,
+            'message'       => $topic['reply'],
+            'type'          => 'text',
+            'is_read'       => true,
+            'is_auto_reply' => true,
+        ]);
+
+        $this->showConcerns = false;
+        $this->dispatch('scroll-to-bottom');
+    }
+
+    /**
+     * Show the concern topics list again.
+     */
+    public function showConcernTopics()
+    {
+        $this->showConcerns = true;
     }
 
     public function sendMessage()
@@ -250,12 +309,14 @@ class MessageSystem extends Component
         }
 
         return view('livewire.layouts.message.message-system', [
-            'chats'           => $this->getChatsProperty(),
-            'activeMessages'  => $activeMessages,
-            'groupedMessages' => $groupedMessages,
-            'activeChatUser'  => $activeChatUser,
-            'mediaImages'     => $mediaImages,
-            'mediaDocuments'  => $mediaDocuments,
+            'chats'              => $this->getChatsProperty(),
+            'activeMessages'     => $activeMessages,
+            'groupedMessages'    => $groupedMessages,
+            'activeChatUser'     => $activeChatUser,
+            'mediaImages'        => $mediaImages,
+            'mediaDocuments'     => $mediaDocuments,
+            'concernTopics'      => FloatingChat::$concernTopics,
+            'concernCategories'  => FloatingChat::$concernCategories,
         ]);
     }
 }

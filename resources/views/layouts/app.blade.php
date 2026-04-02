@@ -26,24 +26,24 @@
         <section class="flex-1 flex flex-col h-full overflow-hidden relative">
 
             {{-- Top bar with notification bell --}}
-            <div class="flex-shrink-0 h-20 bg-white flex items-center justify-end px-8">
+            <div class="flex-shrink-0 h-20 bg-white flex items-center justify-end px-8 max-sm:px-4">
                 @auth
                     <livewire:navbars.notification-bell />
                 @endauth
             </div>
 
-            <main class="flex-1 overflow-y-auto ml-8 bg-[#F4F7FC] rounded-tl-4xl [&::-webkit-scrollbar]:w-0">
+            <main class="flex-1 overflow-y-auto ml-8 max-sm:ml-0 bg-[#F4F7FC] rounded-tl-4xl [&::-webkit-scrollbar]:w-0">
 
                 <div class="w-full min-h-full flex flex-col px-4 md:px-8 lg:px-18 pb-16 gap-6">
 
                     @hasSection('header-title')
                         <div class="sticky top-0 z-20 bg-[#F4F7FC] pb-1 pt-5">
                             <div class="flex flex-col gap-1">
-                                <h1 class="font-sans font-bold text-4xl tracking-[-0.04em] text-blue-900">
+                                <h1 class="font-sans font-bold text-4xl max-sm:text-2xl tracking-[-0.04em] text-blue-900">
                                     @yield('header-title')
                                 </h1>
                                 @hasSection('header-subtitle')
-                                    <p class="font-sans font-medium text-xl tracking-tighter text-[#0C0C0C]">
+                                    <p class="font-sans font-medium text-xl max-sm:text-base tracking-tighter text-[#0C0C0C]">
                                         @yield('header-subtitle')
                                     </p>
                                 @endif
@@ -57,6 +57,15 @@
             </main>
         </section>
     </div>
+
+    {{-- Floating Chat Widget (hidden on message pages) --}}
+    @auth
+        @if(!request()->routeIs('landlord.messages') && !request()->routeIs('manager.messages') && !request()->routeIs('tenant.messages'))
+            <div style="position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9990;">
+                <livewire:layouts.message.floating-chat />
+            </div>
+        @endif
+    @endauth
 
     {{-- Toast Notifications Container --}}
     <livewire:components.notification-container />
@@ -162,5 +171,17 @@
     </script>
 
     @stack('scripts')
+
+    {{-- Floating Chat Auto-Scroll --}}
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('floating-chat-scroll', () => {
+                setTimeout(() => {
+                    const el = document.getElementById('floating-chat-messages');
+                    if (el) el.scrollTop = el.scrollHeight;
+                }, 100);
+            });
+        });
+    </script>
 </body>
 </html>

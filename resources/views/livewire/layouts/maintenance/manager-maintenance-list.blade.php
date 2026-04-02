@@ -41,7 +41,7 @@
                 <div class="relative">
                     <input
                         type="text"
-                        placeholder="Search..."
+                        placeholder="Search by ticket, tenant, or unit..."
                         wire:model.live="search"
                         class="w-full bg-[#F4F6FB] border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200 placeholder-slate-400 text-slate-700 transition"
                     >
