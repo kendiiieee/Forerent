@@ -228,7 +228,7 @@ class AddUnitModal extends Component
         $dataForModel = array_merge($dataForModel, $this->model_amenities);
 
         try {
-            $response = Http::timeout(5)->post('http://price_api:8000/predict', $dataForModel);
+            $response = Http::post(env('PRICE_API_URL') . '/predict', $dataForModel);
             if ($response->successful()) {
                 $this->predicted_price = $response->json('predicted_price');
             } else {

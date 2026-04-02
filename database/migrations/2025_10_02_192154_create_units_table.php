@@ -26,6 +26,7 @@ return new class extends Migration
             $table->enum('furnishing', ['Bare', 'Semi-furnished', 'Fully Furnished'])->nullable();
             $table->enum('bed_type', ['Single', 'Bunk'])->nullable();
             $table->integer('room_cap');
+            $table->string('room_type')->nullable();
             $table->decimal('price', 8, 2);
             $table->string('amenities')->nullable();
             $table->timestamps();

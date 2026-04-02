@@ -36,8 +36,8 @@ return [
     ],
 
     'sendgrid' => [
-        'api_key' => env('TWILLIO_API_KEY'),
+        'api_key' => env('SENDGRID_API_KEY', env('TWILLIO_API_KEY')),
         'preview_logging' => filter_var(env('MAIL_PREVIEW_LOG_ENABLED', false), FILTER_VALIDATE_BOOL),
-    ]
+    ],
 
 ];

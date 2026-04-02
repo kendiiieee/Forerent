@@ -1,18 +1,30 @@
 <x-mail::message>
-    # {{ $announcement->headline }}
+    # Community Update: {{ $announcement->headline }}
 
-    Hello {{ $user->first_name }} {{ $user->last_name }},
+    Hello **{{ $user->first_name }} {{ $user->last_name }}**,
 
-    {!! nl2br(e($announcement->details)) !!}
+    We are writing to share an important update regarding your property. Please take a moment to read the details below:
 
     <x-mail::panel>
-        **Sent by:** {{ $senderName }} ({{ ucfirst(str_replace('_', ' ', $senderRole)) }})
+        {!! nl2br(e($announcement->details)) !!}
     </x-mail::panel>
 
-    <x-mail::button :url="config('app.url')">
-        Open Forerent
+    ### **Notice Information**
+    <x-mail::table>
+        | | |
+        | :--- | :--- |
+        | **Sent By:** | {{ $senderName }} |
+        | **Position:** | {{ ucfirst(str_replace('_', ' ', $senderRole)) }} |
+    </x-mail::table>
+
+    If you would like to see more information or past updates, you can click the button below to visit our website:
+
+    <x-mail::button :url="'https://forerent.onrender.com/'">
+        Read Full Details Online
     </x-mail::button>
 
-    Thanks,<br>
-    {{ config('app.name') }}
+    If you have any questions about this notice, please reach out to your property manager directly.
+
+    Best regards,
+    **The ForeRent Team**
 </x-mail::message>

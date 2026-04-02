@@ -23,11 +23,9 @@ class LeaseSeeder extends Seeder
 
         $availableBeds = Bed::where('status', 'Vacant')->with('unit')->get();
         $managedBeds = $availableBeds->filter(fn($bed) => !is_null($bed->unit->manager_id))->values();
-
         if ($managedBeds->isEmpty() || $tenants->isEmpty()) {
             return;
         }
-
         // Target occupancy: at least 60% of currently available managed beds.
         $targetOccupiedCount = (int) ceil($managedBeds->count() * 0.60);
         $bedsToOccupy = $managedBeds->shuffle()->take($targetOccupiedCount);

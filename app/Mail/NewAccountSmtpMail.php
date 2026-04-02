@@ -16,15 +16,14 @@ class NewAccountSmtpMail extends Mailable
         public string $role,
         public string $firstName,
         public string $lastName
-    ) {
-    }
+    ) {}
 
     public function build(): self
     {
         return $this
-            ->subject('Your account credentials for ' . config('app.name'))
+            ->subject('Your account credentials for ForeRent')
             ->markdown('mail.new-account', [
-                'recipientName' => trim($this->firstName . ' ' . $this->lastName),
+                'recipientName' => trim($this->firstName.' '.$this->lastName),
                 'accountType' => $this->role,
                 'email' => $this->email,
                 'tempPassword' => $this->password,

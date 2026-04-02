@@ -48,6 +48,7 @@ class RevenueReports extends Component
             $income[(int) $row->month - 1] = (float) $row->total;
         }
 
+        // 2. Expenses (Maintenance Logs - MySQL MONTH() -> Postgres EXTRACT)
         $monthlyExpenses = MaintenanceLog::whereYear('completion_date', $year)
             ->selectRaw('CAST(EXTRACT(MONTH FROM completion_date) AS UNSIGNED) as month, SUM(cost) as total')
             ->groupBy('month')

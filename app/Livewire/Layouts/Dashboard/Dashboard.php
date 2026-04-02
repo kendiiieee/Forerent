@@ -242,7 +242,7 @@ class Dashboard extends Component
         $this->monthlyExpenses = array_fill(0, 12, 0);
         $this->monthlyRentCollected = array_fill(0, 12, 0);
 
-        // Get monthly revenue from credit transactions.
+        // 1. Get monthly revenue (Postgres EXTRACT + groupByRaw)
         $monthlyBillings = Transaction::where('transaction_type', 'Credit')
             ->where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
@@ -254,9 +254,7 @@ class Dashboard extends Component
             $this->monthlyRentCollected[$billing->month - 1] = $billing->total;
         }
 
-        // Keep revenue as per-month totals (no cumulative carry-over).
-
-        // Get monthly expenses (maintenance logs)
+        // 2. Get monthly expenses (Maintenance Logs - FIXED FOR POSTGRES)
         $monthlyExpensesData = MaintenanceLog::whereYear('completion_date', $year)
             ->selectRaw('EXTRACT(MONTH FROM completion_date) as month, SUM(cost) as total')
             ->groupBy('month')
