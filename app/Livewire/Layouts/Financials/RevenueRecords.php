@@ -19,6 +19,13 @@ class RevenueRecords extends Component
     public $selectedBuilding = null;
     public $search = '';
 
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
+        $this->resetPage('paymentPage');
+        $this->resetPage('maintenancePage');
+    }
+
     // Reset pagination when filters change
     public function updatedSelectedMonth()
     {

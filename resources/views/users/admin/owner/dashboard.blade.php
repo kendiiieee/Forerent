@@ -5,6 +5,10 @@
 
     @include('livewire.layouts.dashboard.admingreeting')
 
+    {{-- 1. Notifications + Calendar Section --}}
+    <livewire:layouts.dashboard.announcement-list :is-landlord="true" />
+    <livewire:layouts.dashboard.calendar-widget />
+
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <div class="bg-white rounded-2xl p-6 shadow-lg">
             <p class="text-xs uppercase tracking-wide text-gray-500">Total Units</p>
@@ -31,13 +35,13 @@
         </div>
     </div>
 
-    {{-- 1. Financial Overview with Graphs --}}
+    {{-- 2. Financial Overview with Graphs --}}
     <div class="space-y-6">
         <h3 class="text-2xl font-bold text-[#070642]">Financial Overview</h3>
 
         {{-- Graph Layout: Large left, single summary card right --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-            
+
             {{-- Left: Revenue vs Expenses (spans 2 columns) --}}
             <div class="lg:col-span-2 h-full" wire:ignore>
                 @include('livewire.layouts.dashboard.revenue-expenses-chart')
@@ -49,10 +53,6 @@
             </div>
         </div>
     </div>
-
-    {{-- 2. Notifications + Calendar Section --}}
-    <livewire:layouts.dashboard.announcement-list :is-landlord="true" />
-    <livewire:layouts.dashboard.calendar-widget />
 
     {{-- Modal (Hidden by default) --}}
     <livewire:layouts.dashboard.announcement-modal />

@@ -23,6 +23,7 @@ class PaymentReceipts extends Component
     public $billingIdToMarkPaid = null;
     public $search = '';
 
+    public function setTab($tab) { $this->activeTab = $tab; $this->resetPage(); }
     public function updatedActiveTab()   { $this->resetPage(); }
     public function updatedSelectedMonth() { $this->resetPage(); }
     public function updatedSelectedBuilding() { $this->resetPage(); }
