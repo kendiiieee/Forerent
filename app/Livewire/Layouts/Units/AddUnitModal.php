@@ -6,6 +6,8 @@ use App\Livewire\Concerns\WithNotifications;
 use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -14,9 +16,13 @@ class AddUnitModal extends Component
     use WithNotifications;
 
     public $isOpen = false;
+
     public $modalId;
+
     public $editingUnitId = null;
+
     public $editingUnitNumber = null;
+
     public $currentStep = 1;
 
     public $steps = [
@@ -41,8 +47,10 @@ class AddUnitModal extends Component
 
     public $room_cap;
 
-    public $unit_cap;      
-    public $m_f;          
+    public $unit_cap;
+
+    public $m_f;
+
     public $room_type;
 
     public $model_amenities = [];
@@ -240,7 +248,7 @@ class AddUnitModal extends Component
     {
         try {
             $this->validate();
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->dispatch('scroll-to-error');
             throw $e;
         }
@@ -256,7 +264,7 @@ class AddUnitModal extends Component
             $savedUnitId = null;
             $savedPropertyId = (int) $this->property_id;
 
-            if (auth()->user()->role === 'manager' && !$this->editingUnitId) {
+            if (auth()->user()->role === 'manager' && ! $this->editingUnitId) {
                 $this->notifyError(
                     'Authorization Failed',
                     'Managers are not authorized to create new units.'
@@ -303,7 +311,7 @@ class AddUnitModal extends Component
             $this->close();
             $this->dispatch('refresh-unit-list', buildingId: $savedPropertyId, unitId: $savedUnitId);
         } catch (\Exception $e) {
-            \Log::error('Failed to save unit: ' . $e->getMessage(), [
+            Log::error('Failed to save unit: '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'data' => $data ?? [],
             ]);
