@@ -26,5 +26,5 @@
     If you have any questions about this notice, please reach out to your property manager directly.
 
     Best regards,
-    **The ForeRent Team**
+    **ForeRent Team**
 </x-mail::message>

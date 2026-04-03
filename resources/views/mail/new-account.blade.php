@@ -41,6 +41,7 @@
             color: #ffffff;
             font-size: 24px;
             font-weight: 700;
+            text-align: center;
         }
 
         .body {
@@ -133,8 +134,8 @@
                 <p>Hello <strong>{{ $recipientName }}</strong>,</p>
 
                 <p>
-                    We are happy to inform you that your registration as a <strong>{{ $accountType }}</strong> is now complete. 
-                    You can now use our system to manage your rental details and stay updated.
+                    We are happy to inform you that your account as a <strong>{{ $accountType }}</strong> has been set
+                    up! You can now access and start using the system.
                 </p>
 
                 <p>To get started, please sign in using the information below:</p>
@@ -145,8 +146,8 @@
                 </div>
 
                 <div class="tip">
-                    <strong>Important Security Step:</strong> To keep your account safe, the system will ask you 
-                    to <strong>create your own personal password</strong> immediately after you sign in for the first time.
+                    <strong>Important Security Step:</strong> To keep your account safe, we recommend that you
+                    <strong>create your own personal password</strong> immediately after signing in for the first time.
                 </div>
 
                 <p>Click the button below to visit our website and sign in:</p>
@@ -156,12 +157,12 @@
                 </div>
 
                 <p>
-                    If you have any questions or need help, please feel free to reach out to our support team.
+                    If you have any questions or need help, please feel free to reach out to the ForeRent Team.
                 </p>
 
                 <p>
                     Best regards,<br>
-                    <strong>The ForeRent Team</strong>
+                    <strong>ForeRent Team</strong>
                 </p>
             </div>
 
