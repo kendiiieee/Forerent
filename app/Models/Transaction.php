@@ -6,9 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\QueryException;
-use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Facades\DB;
 
 class Transaction extends Model
 {
@@ -84,13 +81,20 @@ class Transaction extends Model
     }
 
     /**
-     * Scope for monthly revenue summary compatible with TiDB/MySQL
+     * Scope for monthly revenue summary compatible with both PostgreSQL and TiDB/MySQL
      */
     public function scopeMonthlyRevenueSummary($query, $year)
     {
+        // Detect the current database driver (pgsql vs mysql)
+        $driver = $this->getConnection()->getDriverName();
+
+        $monthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM transaction_date)::int'
+            : 'CAST(MONTH(transaction_date) AS UNSIGNED)';
+
         return $query->where('transaction_type', 'Credit')
             ->whereYear('transaction_date', $year)
-            ->selectRaw('CAST(EXTRACT(MONTH FROM transaction_date) AS UNSIGNED) as month, SUM(amount) as total')
+            ->selectRaw("$monthExpr as month, SUM(amount) as total")
             ->groupBy('month');
     }
 }

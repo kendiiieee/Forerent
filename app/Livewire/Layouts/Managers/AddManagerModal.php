@@ -4,6 +4,7 @@ namespace App\Livewire\Layouts\Managers;
 
 use App\Livewire\Concerns\WithNotifications;
 use App\Livewire\Forms\AddUserForm;
+use App\Mail\NewAccountSmtpMail;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
@@ -11,17 +12,20 @@ use App\Notifications\NewAccount;
 use App\Services\PasswordGenerator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Livewire\Attributes\Validate;
 
 class AddManagerModal extends Component
 {
     use WithFileUploads, WithNotifications;
 
     public $isOpen = false;
+
     public $modalId;
 
     #[Validate('nullable|image|max:2048')]
@@ -42,9 +46,13 @@ class AddManagerModal extends Component
     public $allSelectedUnits = [];
 
     public $buildings = [];
+
     public $floors = [];
+
     public $availableUnits = [];
+
     public ?int $managerId = null;
+
     public bool $isEditing = false;
 
     public function mount($modalId = null)
@@ -74,11 +82,11 @@ class AddManagerModal extends Component
 
                 // Pre-populate allSelectedUnits with ALL existing assignments
                 $existingUnits = Unit::where('manager_id', $manager->user_id)
-                    ->whereHas('property', fn($q) => $q->where('owner_id', Auth::id()))
+                    ->whereHas('property', fn ($q) => $q->where('owner_id', Auth::id()))
                     ->get(['unit_id', 'property_id', 'floor_number']);
 
                 foreach ($existingUnits as $unit) {
-                    $key = $unit->property_id . '_' . $unit->floor_number;
+                    $key = $unit->property_id.'_'.$unit->floor_number;
                     $this->allSelectedUnits[$key][] = (string) $unit->unit_id;
                 }
 
@@ -106,7 +114,7 @@ class AddManagerModal extends Component
     public function updatedSelectedUnits(): void
     {
         if ($this->selectedBuilding && $this->selectedFloor) {
-            $key = $this->selectedBuilding . '_' . $this->selectedFloor;
+            $key = $this->selectedBuilding.'_'.$this->selectedFloor;
             $this->allSelectedUnits[$key] = $this->selectedUnits;
         }
     }
@@ -136,14 +144,14 @@ class AddManagerModal extends Component
             $this->availableUnits = $this->getUnitsForFloor($this->selectedBuilding, $floor, $this->managerId);
 
             // Restore previously saved selections for this building+floor
-            $key = $this->selectedBuilding . '_' . $floor;
+            $key = $this->selectedBuilding.'_'.$floor;
             $this->selectedUnits = $this->allSelectedUnits[$key] ?? [];
         }
     }
 
     private function getUnitsForFloor($propertyId, $floor, $managerId = null): array
     {
-        $key = $propertyId . '_' . $floor;
+        $key = $propertyId.'_'.$floor;
         $pendingUnitIds = array_map('intval', $this->allSelectedUnits[$key] ?? []);
 
         $units = Unit::where('property_id', $propertyId)
@@ -153,17 +161,17 @@ class AddManagerModal extends Component
             })
             ->where(function ($query) use ($managerId, $pendingUnitIds) {
                 $query->whereNull('manager_id');
-                if (!is_null($managerId)) {
+                if (! is_null($managerId)) {
                     $query->orWhere('manager_id', $managerId);
                 }
-                if (!empty($pendingUnitIds)) {
+                if (! empty($pendingUnitIds)) {
                     $query->orWhereIn('unit_id', $pendingUnitIds);
                 }
             })
             ->orderBy('unit_id')
             ->get(['unit_id', 'manager_id', 'unit_number']);
 
-        return $units->map(fn($unit) => [
+        return $units->map(fn ($unit) => [
             'id' => $unit->unit_id,
             'number' => "Unit {$unit->unit_number}",
             'checked' => $unit->manager_id == $managerId,
@@ -174,7 +182,7 @@ class AddManagerModal extends Component
     {
         try {
             $this->validate();
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->dispatch('scroll-to-error');
             throw $e;
         }
@@ -193,41 +201,39 @@ class AddManagerModal extends Component
                 $manager = $this->userForm->update($originalManager);
 
                 $changedFields = [];
-                if ($originalManager->first_name !== $manager->first_name) $changedFields[] = 'first name';
-                if ($originalManager->last_name !== $manager->last_name)   $changedFields[] = 'last name';
-                if ($originalManager->contact !== $manager->contact)       $changedFields[] = 'phone number';
-                if ($originalManager->email !== $manager->email)           $changedFields[] = 'email';
-                if ($this->selectedFloor && $originalFloor != $this->selectedFloor) $changedFields[] = 'floor assignment';
-                if ($this->profilePicture && !is_string($this->profilePicture))     $changedFields[] = 'profile picture';
+                if ($originalManager->first_name !== $manager->first_name) {
+                    $changedFields[] = 'first name';
+                }
+                if ($originalManager->last_name !== $manager->last_name) {
+                    $changedFields[] = 'last name';
+                }
+                if ($originalManager->contact !== $manager->contact) {
+                    $changedFields[] = 'phone number';
+                }
+                if ($originalManager->email !== $manager->email) {
+                    $changedFields[] = 'email';
+                }
+                if ($this->selectedFloor && $originalFloor != $this->selectedFloor) {
+                    $changedFields[] = 'floor assignment';
+                }
+                if ($this->profilePicture && ! is_string($this->profilePicture)) {
+                    $changedFields[] = 'profile picture';
+                }
 
-                $changeMessage = !empty($changedFields)
-                    ? ucfirst(implode(', ', $changedFields)) . ' updated for ' . $manager->first_name . '.'
-                    : $manager->first_name . ' has been updated.';
+                $changeMessage = ! empty($changedFields)
+                    ? ucfirst(implode(', ', $changedFields)).' updated for '.$manager->first_name.'.'
+                    : $manager->first_name.' has been updated.';
             } else {
                 $tempPassword = PasswordGenerator::generate();
                 $manager = $this->userForm->store('manager', $tempPassword);
 
-                // Email delivery failure should not block manager creation.
-                try {
-                    Notification::send($manager, new NewAccount($manager->email, $tempPassword, $manager->role));
-                } catch (\Throwable $notificationError) {
-                    Log::warning('Manager account created but notification email failed.', [
-                        'manager_id' => $manager->user_id,
-                        'email' => $manager->email,
-                        'error' => $notificationError->getMessage(),
-                    ]);
+                $this->sendManagerWelcomeEmail($manager, $tempPassword);
 
-                    $this->notifyWarning(
-                        'Manager saved, email not sent',
-                        'The manager was created successfully, but the account email could not be delivered.'
-                    );
-                }
-
-                $changeMessage = $manager->first_name . ' added successfully as a manager!';
+                $changeMessage = $manager->first_name.' added successfully as a manager!';
             }
 
             // Handle profile picture upload
-            if ($this->profilePicture && !is_string($this->profilePicture)) {
+            if ($this->profilePicture && ! is_string($this->profilePicture)) {
                 if ($this->isEditing && $manager->profile_img) {
                     $this->deleteStoredImage($manager->profile_img);
                 }
@@ -242,7 +248,7 @@ class AddManagerModal extends Component
                 array_merge(...array_values($this->allSelectedUnits) ?: [[]])
             );
 
-            if (!empty($allSelectedUnitIds)) {
+            if (! empty($allSelectedUnitIds)) {
                 Unit::where('manager_id', $manager->user_id)
                     ->whereNotIn('unit_id', $allSelectedUnitIds)
                     ->update(['manager_id' => null]);
@@ -296,7 +302,7 @@ class AddManagerModal extends Component
 
     private function deleteStoredImage(?string $path): void
     {
-        if (!$path) {
+        if (! $path) {
             return;
         }
 
@@ -317,6 +323,49 @@ class AddManagerModal extends Component
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function sendManagerWelcomeEmail(User $manager, string $tempPassword): void
+    {
+        try {
+            if ($this->shouldSendWelcomeViaSmtp()) {
+                Mail::mailer('smtp')
+                    ->to($manager->email)
+                    ->send(new NewAccountSmtpMail(
+                        email: $manager->email,
+                        password: $tempPassword,
+                        role: (string) $manager->role,
+                        firstName: (string) ($manager->first_name ?? ''),
+                        lastName: (string) ($manager->last_name ?? ''),
+                    ));
+
+                return;
+            }
+
+            Notification::send($manager, new NewAccount($manager->email, $tempPassword, $manager->role));
+        } catch (\Throwable $notificationError) {
+            Log::warning('Manager account created but notification email failed.', [
+                'manager_id' => $manager->user_id,
+                'email' => $manager->email,
+                'error' => $notificationError->getMessage(),
+            ]);
+
+            $this->notifyWarning(
+                'Manager saved, email not sent',
+                'The manager was created successfully, but the account email could not be delivered.'
+            );
+        }
+    }
+
+    private function shouldSendWelcomeViaSmtp(): bool
+    {
+        if (config('mail.default') !== 'smtp') {
+            return false;
+        }
+
+        $smtpHost = strtolower((string) config('mail.mailers.smtp.host', ''));
+
+        return str_contains($smtpHost, 'gmail.com');
     }
 
     public function render()
