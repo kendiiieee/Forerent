@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Financials;
 use App\Models\Billing;
 use App\Models\Notification;
 use App\Models\PaymentRequest;
+use App\Models\Property;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +17,32 @@ class PaymentRequests extends Component
 {
     use WithPagination;
 
-    public $activeTab = 'Pending';
+    public $activeTab = 'All';
     public $selectedRequest = null;
     public $showDetailModal = false;
-    public $rejectReason = '';
+    public $rejectReasons = [];
+    public $rejectOtherReason = '';
     public $showRejectForm = false;
+
+    // Filters
+    public $search = '';
+    public $selectedMonth = '';
+    public $selectedBuilding = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedMonth(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedBuilding(): void
+    {
+        $this->resetPage();
+    }
 
     public function setTab(string $tab): void
     {
@@ -48,7 +70,8 @@ class PaymentRequests extends Component
         $this->selectedRequest['billing_due'] = $request->billing?->due_date ? Carbon::parse($request->billing->due_date)->format('M d, Y') : 'N/A';
 
         $this->showRejectForm = false;
-        $this->rejectReason = '';
+        $this->rejectReasons = [];
+        $this->rejectOtherReason = '';
         $this->showDetailModal = true;
     }
 
@@ -57,7 +80,8 @@ class PaymentRequests extends Component
         $this->showDetailModal = false;
         $this->selectedRequest = null;
         $this->showRejectForm = false;
-        $this->rejectReason = '';
+        $this->rejectReasons = [];
+        $this->rejectOtherReason = '';
     }
 
     public function confirmPayment(): void
@@ -112,6 +136,7 @@ class PaymentRequests extends Component
                 'type' => 'payment_confirmed',
                 'title' => 'Payment Confirmed',
                 'message' => 'Your payment of ₱' . number_format($paymentRequest->amount_paid, 2) . ' has been verified and confirmed.',
+                'link' => '/tenant/payment',
             ]);
         });
 
@@ -121,25 +146,45 @@ class PaymentRequests extends Component
     public function toggleRejectForm(): void
     {
         $this->showRejectForm = !$this->showRejectForm;
+
+        if (!$this->showRejectForm) {
+            $this->rejectReasons = [];
+            $this->rejectOtherReason = '';
+            $this->resetValidation();
+        }
     }
 
     public function rejectPayment(): void
     {
         if (!$this->selectedRequest) return;
 
-        $this->validate([
-            'rejectReason' => 'required|string|min:5|max:500',
-        ], [
-            'rejectReason.required' => 'Please provide a reason for rejection.',
-            'rejectReason.min' => 'Reason must be at least 5 characters.',
-        ]);
+        $rules = [
+            'rejectReasons' => 'required|array|min:1',
+        ];
+        $messages = [
+            'rejectReasons.required' => 'Please select at least one reason for rejection.',
+            'rejectReasons.min' => 'Please select at least one reason for rejection.',
+        ];
+
+        if (in_array('Other', $this->rejectReasons)) {
+            $rules['rejectOtherReason'] = 'required|string|min:5|max:500';
+            $messages['rejectOtherReason.required'] = 'Please specify the other reason.';
+            $messages['rejectOtherReason.min'] = 'Other reason must be at least 5 characters.';
+        }
+
+        $this->validate($rules, $messages);
+
+        // Build the rejection reason string
+        $reasons = collect($this->rejectReasons)
+            ->map(fn($r) => $r === 'Other' ? 'Other: ' . $this->rejectOtherReason : $r)
+            ->implode('; ');
 
         $paymentRequest = PaymentRequest::find($this->selectedRequest['id']);
         if (!$paymentRequest || $paymentRequest->status !== 'Pending') return;
 
         $paymentRequest->update([
             'status' => 'Rejected',
-            'reject_reason' => $this->rejectReason,
+            'reject_reason' => $reasons,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
@@ -149,7 +194,8 @@ class PaymentRequests extends Component
             'user_id' => $paymentRequest->tenant_id,
             'type' => 'payment_rejected',
             'title' => 'Payment Rejected',
-            'message' => 'Your payment of ₱' . number_format($paymentRequest->amount_paid, 2) . ' was rejected. Reason: ' . $this->rejectReason,
+            'message' => 'Your payment of ₱' . number_format($paymentRequest->amount_paid, 2) . ' was rejected. Reason: ' . $reasons,
+            'link' => '/tenant/payment',
         ]);
 
         $this->closeDetailModal();
@@ -168,22 +214,59 @@ class PaymentRequests extends Component
             }
         };
 
+        // Build base query with filters
+        $applyFilters = function ($query) {
+            // Search filter
+            if (!empty($this->search)) {
+                $search = '%' . $this->search . '%';
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('tenant', fn($t) => $t->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$search]))
+                      ->orWhere('reference_number', 'like', $search)
+                      ->orWhere('payment_method', 'like', $search);
+                });
+            }
+
+            // Month filter
+            if (!empty($this->selectedMonth)) {
+                $query->whereHas('billing', fn($b) => $b->whereRaw("TO_CHAR(billing_date, 'YYYY-MM') = ?", [$this->selectedMonth]));
+            }
+
+            // Building filter
+            if (!empty($this->selectedBuilding)) {
+                $query->whereHas('lease.bed.unit.property', fn($p) => $p->where('building_name', $this->selectedBuilding));
+            }
+        };
+
         $query = PaymentRequest::with(['billing', 'tenant', 'lease.bed.unit.property'])
             ->tap($scopeQuery)
-            ->where('status', $this->activeTab)
+            ->tap($applyFilters)
+            ->when($this->activeTab !== 'All', fn($q) => $q->where('status', $this->activeTab))
             ->orderBy('created_at', 'desc');
 
         $requests = $query->paginate(10);
 
-        $counts = [];
+        $counts = ['All' => PaymentRequest::query()->tap($scopeQuery)->tap($applyFilters)->count()];
         foreach (['Pending', 'Confirmed', 'Rejected'] as $s) {
-            $c = PaymentRequest::query()->tap($scopeQuery)->where('status', $s)->count();
-            if ($c > 0) $counts[$s] = $c;
+            $counts[$s] = PaymentRequest::query()->tap($scopeQuery)->tap($applyFilters)->where('status', $s)->count();
         }
+
+        // Building options for dropdown
+        $buildingOptions = Property::distinct()->pluck('building_name', 'building_name')->toArray();
+
+        // Month options from existing payment requests
+        $monthOptions = PaymentRequest::query()
+            ->tap($scopeQuery)
+            ->join('billings', 'payment_requests.billing_id', '=', 'billings.billing_id')
+            ->selectRaw("DISTINCT TO_CHAR(billings.billing_date, 'YYYY-MM') as month_value, TO_CHAR(billings.billing_date, 'FMMonth YYYY') as month_label")
+            ->orderByDesc('month_value')
+            ->pluck('month_label', 'month_value')
+            ->toArray();
 
         return view('livewire.layouts.financials.payment-requests', [
             'requests' => $requests,
             'counts' => $counts,
+            'buildingOptions' => $buildingOptions,
+            'monthOptions' => $monthOptions,
         ]);
     }
 }

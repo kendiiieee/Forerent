@@ -81,13 +81,25 @@
                     </div>
                 @empty
                     <div class="flex flex-col items-center justify-center h-full text-gray-400 py-16">
-                        <div class="bg-[#F4F7FF] p-6 rounded-full mb-4">
-                            <svg class="h-10 w-10 text-[#2B66F5] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                        </div>
-                        <p class="font-semibold text-gray-500 text-sm">No requests found</p>
-                        <p class="text-xs text-gray-400 mt-1">Submit a new request to get started.</p>
+                        @if(!empty($search) || $activeTab !== 'all')
+                            {{-- Filtered but no results --}}
+                            <div class="bg-gray-50 p-6 rounded-full mb-4">
+                                <svg class="h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <p class="font-semibold text-gray-500 text-sm">No matching requests</p>
+                            <p class="text-xs text-gray-400 mt-1">Try adjusting your search or filter.</p>
+                        @else
+                            {{-- Truly empty — first-time user --}}
+                            <div class="bg-[#F4F7FF] p-6 rounded-full mb-4">
+                                <svg class="h-10 w-10 text-[#2B66F5] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="font-semibold text-gray-500 text-sm">No maintenance requests yet</p>
+                            <p class="text-xs text-gray-400 mt-1 text-center px-4">Have an issue in your unit? Click "Add Maintenance Request" to submit a ticket.</p>
+                        @endif
                     </div>
                 @endforelse
             </div>

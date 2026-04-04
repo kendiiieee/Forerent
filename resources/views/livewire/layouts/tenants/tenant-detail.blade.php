@@ -892,10 +892,10 @@
     {{-- E-SIGNATURE PAD MODALS (Move-In & Move-Out) --}}
     <x-inspection.signature-pad-modal
         :show="$showSignatureModal"
-        :title="($signatureRole === 'tenant' ? 'Tenant' : 'Lessor') . ' E-Signature'"
+        title="Lessor E-Signature"
         subtitle="Move-In Contract — Draw your signature below"
-        :signerName="$signatureRole === 'tenant' ? (($currentTenant['personal_info']['first_name'] ?? '') . ' ' . ($currentTenant['personal_info']['last_name'] ?? '')) : ($currentTenant['lessor_info']['representative'] ?? '')"
-        :signerRole="$signatureRole === 'tenant' ? 'Lessee / Tenant' : 'Lessor / Authorized Representative'"
+        :signerName="$currentTenant['lessor_info']['representative'] ?? ''"
+        signerRole="Lessor / Authorized Representative"
         legalText="By clicking &quot;Apply Signature&quot;, I confirm that I have read and agree to all terms in this Move-In Contract. This electronic signature is legally binding under RA 8792 (Electronic Commerce Act of 2000)."
         wireCloseMethod="closeSignatureModal"
         wireSaveMethod="saveSignature"
@@ -904,10 +904,10 @@
 
     <x-inspection.signature-pad-modal
         :show="$showMoveOutSignatureModal"
-        :title="($moveOutSignatureRole === 'tenant' ? 'Tenant' : 'Lessor') . ' E-Signature'"
+        title="Lessor E-Signature"
         subtitle="Move-Out Contract — Draw your signature below"
-        :signerName="$moveOutSignatureRole === 'tenant' ? (($currentTenant['personal_info']['first_name'] ?? '') . ' ' . ($currentTenant['personal_info']['last_name'] ?? '')) : ($currentTenant['lessor_info']['representative'] ?? '')"
-        :signerRole="$moveOutSignatureRole === 'tenant' ? 'Lessee / Tenant' : 'Lessor / Authorized Representative'"
+        :signerName="$currentTenant['lessor_info']['representative'] ?? ''"
+        signerRole="Lessor / Authorized Representative"
         legalText="By clicking &quot;Apply Signature&quot;, I confirm that I have read and agree to all terms in this Move-Out Clearance &amp; Deposit Settlement Agreement. This electronic signature is legally binding under RA 8792 (Electronic Commerce Act of 2000)."
         wireCloseMethod="closeMoveOutSignatureModal"
         wireSaveMethod="saveMoveOutSignature"

@@ -6,7 +6,6 @@
     @php
         $dashTabs = [
             'overview' => 'Overview',
-            'billing' => 'Billing & Lease',
             'inspection' => 'Inspection & Contract',
         ];
         $dashCounts = [];
@@ -34,535 +33,307 @@
     {{-- TAB: OVERVIEW                                              --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
     @if($dashTab === 'overview')
+    @php
+        $totalDays = $lease ? \Carbon\Carbon::parse($lease->start_date)->diffInDays(\Carbon\Carbon::parse($leaseEndDate)) : 0;
+        $elapsed = $lease ? max(\Carbon\Carbon::parse($lease->start_date)->diffInDays(now()), 0) : 0;
+        $leaseProgress = $totalDays > 0 ? min(($elapsed / $totalDays) * 100, 100) : 0;
+        $utilityTotal = $electricityShare + $waterShare;
+        $utilityMax = max($electricityShare, $waterShare, 1);
+    @endphp
+    <div class="space-y-4">
+        <div class="rounded-2xl overflow-hidden shadow-lg shadow-blue-900/10">@include('partials.tenant-payment-banner')</div>
 
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    {{-- BENTO GRID LAYOUT                                          --}}
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-min">
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Payment Hero  (2 cols, 1 row)                ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <div class="col-span-2 lg:col-span-2 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            @include('partials.tenant-payment-banner')
-        </div>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Lease Countdown  (2 cols on lg, row-span-2)  ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        @if($lease)
-        <div class="col-span-2 lg:row-span-2 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col">
-            @php
-                $totalDays = \Carbon\Carbon::parse($lease->start_date)->diffInDays(\Carbon\Carbon::parse($leaseEndDate));
-                $elapsed = max(\Carbon\Carbon::parse($lease->start_date)->diffInDays(now()), 0);
-                $leaseProgress = $totalDays > 0 ? min(($elapsed / $totalDays) * 100, 100) : 0;
-            @endphp
-            <div class="p-5 flex-1 flex flex-col justify-between
-                {{ $daysUntilExpiry <= 30 ? 'bg-gradient-to-br from-red-50 to-white' : ($daysUntilExpiry <= 60 ? 'bg-gradient-to-br from-amber-50 to-white' : 'bg-gradient-to-br from-blue-50/50 to-white') }}">
-                <div>
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-8 h-8 rounded-xl flex items-center justify-center
-                            {{ $daysUntilExpiry <= 30 ? 'bg-red-100' : ($daysUntilExpiry <= 60 ? 'bg-amber-100' : 'bg-blue-100') }}">
-                            <svg class="w-4 h-4 {{ $daysUntilExpiry <= 30 ? 'text-red-500' : ($daysUntilExpiry <= 60 ? 'text-amber-500' : 'text-blue-500') }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        </div>
-                        <p class="text-[10px] font-bold uppercase tracking-wider
-                            {{ $daysUntilExpiry <= 30 ? 'text-red-500' : ($daysUntilExpiry <= 60 ? 'text-amber-500' : 'text-blue-500') }}">
-                            Lease Expiry
-                        </p>
-                    </div>
-                    <p class="text-5xl font-extrabold tracking-tight
-                        {{ $daysUntilExpiry <= 30 ? 'text-red-600' : ($daysUntilExpiry <= 60 ? 'text-amber-600' : 'text-gray-900') }}">
-                        {{ max($daysUntilExpiry, 0) }}
-                    </p>
-                    <p class="text-xs font-medium text-gray-400 mt-1">days remaining</p>
-                </div>
-
-                <div class="mt-5">
-                    <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-500
-                            {{ $daysUntilExpiry <= 30 ? 'bg-red-400' : ($daysUntilExpiry <= 60 ? 'bg-amber-400' : 'bg-blue-400') }}"
-                            style="width: {{ $leaseProgress }}%"></div>
-                    </div>
-                    <div class="flex justify-between mt-2">
-                        <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($lease->start_date)->format('M d, Y') }}</span>
-                        <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}</span>
-                    </div>
-
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        <div class="p-2.5 rounded-xl bg-white/80">
-                            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Status</p>
-                            <span class="inline-flex items-center gap-1 mt-1 text-xs font-bold {{ $leaseStatus === 'Active' ? 'text-emerald-600' : 'text-red-600' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $leaseStatus === 'Active' ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
-                                {{ $leaseStatus }}
-                            </span>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-white/80">
-                            <p class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Term</p>
-                            <p class="text-xs font-bold text-gray-900 mt-1">{{ $leaseTerm }} {{ $leaseTerm === 1 ? 'mo' : 'mos' }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @else
-        <div class="col-span-2 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6 flex items-center justify-center">
-            <p class="text-sm text-gray-400">No active lease</p>
-        </div>
-        @endif
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Due Date  (1 col)                            ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <button wire:click="setDashTab('billing')" class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 text-left hover:shadow-md transition-shadow group">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
-                    <svg class="w-[18px] h-[18px] text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </div>
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Due Date</p>
-            <p class="text-xl font-extrabold text-gray-900">
-                {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}
-            </p>
-            @if($daysUntilDue !== null && $daysUntilDue > 0 && $paymentStatus !== 'Paid')
-                <p class="text-[10px] font-medium text-amber-500 mt-1">{{ $daysUntilDue }} {{ $daysUntilDue === 1 ? 'day' : 'days' }} left</p>
-            @elseif($daysUntilDue < 0 && $paymentStatus !== 'Paid')
-                <p class="text-[10px] font-bold text-red-500 mt-1">{{ abs($daysUntilDue) }}d overdue</p>
-            @endif
-        </button>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Outstanding Balance  (1 col)                 ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <button wire:click="setDashTab('billing')" class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 text-left hover:shadow-md transition-shadow group">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl {{ $outstandingBalance > 0 ? 'bg-orange-50' : 'bg-emerald-50' }} flex items-center justify-center">
-                    <svg class="w-[18px] h-[18px] {{ $outstandingBalance > 0 ? 'text-orange-500' : 'text-emerald-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </div>
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Outstanding</p>
-            <p class="text-xl font-extrabold {{ $outstandingBalance > 0 ? 'text-orange-600' : 'text-gray-900' }}">
-                &#8369;{{ number_format($outstandingBalance, 2) }}
-            </p>
-            @if($outstandingBalance > 0)
-                <p class="text-[10px] font-medium text-orange-400 mt-1">Previous months</p>
-            @else
-                <p class="text-[10px] font-medium text-emerald-500 mt-1">All clear</p>
-            @endif
-        </button>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Maintenance  (2 cols on sm, 1 col on lg,    ║ --}}
-        {{-- ║  row-span-2 on lg)                                  ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <div class="col-span-2 lg:col-span-1 lg:row-span-2 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden border border-gray-100/60 flex flex-col">
-            <a href="{{ route('tenant.maintenance') }}" class="block overflow-hidden rounded-t-2xl group" style="background: #CFDEFB">
-                <div class="px-5 py-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: rgba(37,78,160,0.12)">
-                                <svg class="w-3.5 h-3.5" style="color: #254ea0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            </div>
-                            <p class="text-[11px] font-semibold uppercase tracking-widest" style="color: #3b6cb5">Maintenance</p>
-                        </div>
-                        <svg class="w-4 h-4 group-hover:opacity-80 transition-opacity" style="color: #3b6cb5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </div>
-                    <p class="text-3xl font-extrabold tracking-tight" style="color: #1e3a6e">{{ $openMaintenanceCount }}</p>
-                    <div class="flex items-center gap-1.5 mt-1">
-                        <p class="text-[11px] font-medium" style="color: #3b6cb5">Open Requests</p>
-                        @if($openMaintenanceCount > 0)
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="color: #254ea0; background: rgba(37,78,160,0.1)">+{{ $pendingMaintenanceCount }} pending</span>
-                        @endif
-                    </div>
-                </div>
-            </a>
-            <div class="px-4 py-2.5 flex-1">
-                @forelse($recentRequests as $request)
-                    <a href="{{ route('tenant.maintenance') }}" class="flex items-center gap-3 py-2.5 {{ !$loop->last ? 'border-b border-gray-100' : '' }} hover:bg-gray-50/50 -mx-1.5 px-1.5 rounded-lg transition-colors">
-                        <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0
-                            {{ $request->status === 'Pending' ? 'bg-amber-50' : 'bg-blue-50' }}">
-                            @if($request->status === 'Pending')
-                                <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            @else
-                                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                            @endif
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[11px] font-bold text-gray-800 truncate">{{ $request->problem }}</p>
-                            <p class="text-[9px] text-gray-400 mt-0.5">{{ $request->category }} &bull; {{ \Carbon\Carbon::parse($request->log_date)->format('M d') }}</p>
-                        </div>
-                        <span class="flex-shrink-0 text-[10px] font-bold
-                            {{ $request->status === 'Pending' ? 'text-amber-500' : 'text-blue-500' }}">
-                            {{ $request->status }}
-                        </span>
-                    </a>
-                @empty
-                    <div class="text-center py-4">
-                        <p class="text-[11px] font-medium text-gray-400">No pending requests</p>
-                    </div>
-                @endforelse
-            </div>
-        </div>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Contract Status  (1 col)                     ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <button wire:click="setDashTab('inspection')" class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 text-left hover:shadow-md transition-shadow group">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl {{ $contractAgreed ? 'bg-emerald-50' : 'bg-amber-50' }} flex items-center justify-center">
-                    <svg class="w-[18px] h-[18px] {{ $contractAgreed ? 'text-emerald-500' : 'text-amber-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </div>
-                <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </div>
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Contract</p>
-            <p class="text-xl font-extrabold {{ $contractAgreed ? 'text-emerald-600' : 'text-amber-600' }}">
-                {{ $contractAgreed ? 'Signed' : 'Pending' }}
-            </p>
-            @if(!$contractAgreed && $ownerSignature && !$tenantSignature)
-                <p class="text-[10px] font-bold text-amber-500 mt-1 animate-pulse">Action needed</p>
-            @elseif($contractAgreed)
-                <p class="text-[10px] font-medium text-emerald-500 mt-1">Both parties signed</p>
-            @else
-                <p class="text-[10px] font-medium text-gray-400 mt-1">Awaiting signatures</p>
-            @endif
-        </button>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Utilities Summary  (1 col)                   ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <button wire:click="setDashTab('billing')" class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 text-left hover:shadow-md transition-shadow group">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
-                    <svg class="w-[18px] h-[18px] text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
-                </div>
-                <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </div>
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Utilities</p>
-            @if($electricityShare > 0 || $waterShare > 0)
-                <p class="text-xl font-extrabold text-gray-900">&#8369;{{ number_format($electricityShare + $waterShare, 2) }}</p>
-                <p class="text-[10px] font-medium text-gray-400 mt-1">{{ $billingPeriod ?: 'Current period' }}</p>
-            @else
-                <p class="text-xl font-extrabold text-gray-900">&#8369;0.00</p>
-                <p class="text-[10px] font-medium text-gray-400 mt-1">No bills yet</p>
-            @endif
-        </button>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Monthly Rate  (1 col)                        ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        <button wire:click="setDashTab('billing')" class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-5 text-left hover:shadow-md transition-shadow group">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <svg class="w-[18px] h-[18px] text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0l8.955 8.955M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
-                </div>
-                <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </div>
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Monthly Rate</p>
-            <p class="text-xl font-extrabold text-gray-900">&#8369;{{ number_format($contractRate, 2) }}</p>
-            <p class="text-[10px] font-medium text-gray-400 mt-1">{{ $isShortTerm ? 'Short-term' : 'Long-term' }}</p>
-        </button>
-
-        {{-- ╔══════════════════════════════════════════════════════╗ --}}
-        {{-- ║  TILE: Payment Requests Tracker  (full row)         ║ --}}
-        {{-- ╚══════════════════════════════════════════════════════╝ --}}
-        @if(count($pendingPaymentRequests) > 0 || count($rejectedPaymentRequests) > 0)
-        <div class="col-span-2 lg:col-span-4 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-100">
+        {{-- Overdue warning --}}
+        @if($daysUntilDue < 0 && $paymentStatus !== 'Paid')
+            <div class="px-3.5 py-2.5 rounded-xl bg-red-50 flex items-center justify-between gap-2.5">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    </div>
-                    <h3 class="text-sm font-bold text-gray-900">Payment Requests</h3>
+                    <svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    <p class="text-[13px] font-medium text-red-600">Your payment is {{ abs($daysUntilDue) }} {{ abs($daysUntilDue) === 1 ? 'day' : 'days' }} overdue.</p>
                 </div>
+                @if(count($pendingPaymentRequests) === 0)
+                    <button wire:click="openPaymentModal" class="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 text-white text-xs font-bold uppercase tracking-wide hover:bg-red-700 transition">
+                        Pay Now
+                    </button>
+                @else
+                    <span class="flex-shrink-0 px-3 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wide">
+                        Pending Verification
+                    </span>
+                @endif
             </div>
-            <div class="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                @foreach($pendingPaymentRequests as $pr)
-                    <div class="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-bold text-gray-900">
-                                {{ $pr['billing'] ? \Carbon\Carbon::parse($pr['billing']['billing_date'])->format('F Y') : 'N/A' }}
-                            </p>
-                            <p class="text-[10px] text-gray-500 mt-0.5">
-                                {{ $pr['payment_method'] }} &middot; &#8369;{{ number_format($pr['amount_paid'], 2) }}
-                            </p>
-                            <p class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($pr['created_at'])->format('M d, Y h:i A') }}</p>
-                        </div>
-                        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100">
-                            <svg class="w-3 h-3 text-amber-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="text-[10px] font-bold text-amber-700">Pending</span>
-                        </div>
-                    </div>
-                @endforeach
-
-                @foreach($rejectedPaymentRequests as $pr)
-                    <div class="p-3 rounded-xl bg-red-50 border border-red-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-gray-900">
-                                    {{ $pr['billing'] ? \Carbon\Carbon::parse($pr['billing']['billing_date'])->format('F Y') : 'N/A' }}
-                                </p>
-                                <p class="text-[10px] text-gray-500 mt-0.5">
-                                    {{ $pr['payment_method'] }} &middot; &#8369;{{ number_format($pr['amount_paid'], 2) }}
-                                </p>
-                            </div>
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-[10px] font-bold text-red-700">Rejected</span>
-                        </div>
-                        @if($pr['reject_reason'])
-                            <div class="mt-2 p-2 rounded-lg bg-red-100/50 border border-red-200">
-                                <p class="text-[10px] font-semibold text-red-600">Reason: {{ $pr['reject_reason'] }}</p>
-                            </div>
-                        @endif
-                        <button
-                            wire:click="resubmitPayment({{ $pr['id'] }})"
-                            class="mt-2 w-full py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-wide transition"
-                        >
-                            Re-submit Payment
-                        </button>
-                    </div>
-                @endforeach
-            </div>
-        </div>
         @endif
 
-    </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Due Date</p><p class="text-xl font-extrabold text-gray-900 mt-1">{{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}</p>@if($daysUntilDue > 0 && $paymentStatus !== 'Paid')<p class="text-xs font-semibold mt-1" style="color:#2563eb">{{ $daysUntilDue }}d left</p>@elseif($daysUntilDue < 0 && $paymentStatus !== 'Paid')<p class="text-xs font-bold text-red-500 mt-1">{{ abs($daysUntilDue) }}d overdue</p>@elseif($paymentStatus === 'Paid')<p class="text-xs font-semibold mt-1" style="color:#2563eb">Settled</p>@endif</div>
+            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Outstanding</p><p class="text-xl font-extrabold text-gray-900 mt-1">&#8369;{{ number_format($outstandingBalance, 2) }}</p>@if($outstandingBalance > 0)<p class="text-xs font-semibold text-red-500 mt-1">Previous months</p>@else<p class="text-xs font-semibold mt-1" style="color:#2563eb">All clear</p>@endif</div>
+            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0l8.955 8.955M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Monthly Rate</p><p class="text-xl font-extrabold text-gray-900 mt-1">&#8369;{{ number_format($contractRate, 2) }}</p><p class="text-xs font-semibold mt-1" style="color:#2563eb">{{ $isShortTerm ? 'Short-term' : 'Long-term' }}</p></div>
+            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Lease</p><p class="text-xl font-extrabold text-gray-900 mt-1">{{ $leaseStatus }}</p>@if($lease)<p class="text-xs font-semibold mt-1" style="color:#2563eb">{{ max($daysUntilExpiry, 0) }}d remaining</p>@endif</div>
+        </div>
 
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    {{-- TAB: BILLING & LEASE                                       --}}
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    @elseif($dashTab === 'billing')
-    <div class="space-y-5">
+        {{-- ══ Lease Ring + Billing Cycle ════════════════════════════ --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            @if($lease)
+            <div class="rounded-2xl overflow-hidden relative text-left" style="background: linear-gradient(160deg, #020147 0%, #070589 45%, #1e3fae 100%)">
+                <div class="absolute -right-10 -top-10 w-36 h-36 rounded-full" style="background: radial-gradient(circle, rgba(96,165,250,0.08) 0%, transparent 70%)"></div>
+                <div class="absolute -left-6 bottom-4 w-24 h-24 rounded-full" style="background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)"></div>
+                <div class="relative z-10 p-6 h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-1">
+                        <p class="text-xs font-bold text-blue-200 uppercase tracking-[0.2em]">Lease Expiry</p>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[13px] font-bold uppercase bg-white/10 text-blue-200 ring-1 ring-white/10"><span class="w-1.5 h-1.5 rounded-full {{ $leaseStatus === 'Active' ? 'bg-blue-300' : 'bg-red-400' }}"></span>{{ $leaseStatus }}</span>
+                    </div>
+                    <p class="text-xs text-white/70 mb-4">{{ \Carbon\Carbon::parse($lease->start_date)->format('M d, Y') }} — {{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}</p>
+                    <div class="flex items-center justify-center py-4">
+                        <div class="relative">
+                            <svg class="w-32 h-32 -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+                                <circle cx="50" cy="50" r="42" fill="none" stroke="{{ $daysUntilExpiry <= 30 ? '#f87171' : '#60a5fa' }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ 2 * 3.14159 * 42 }}" stroke-dashoffset="{{ 2 * 3.14159 * 42 * (1 - $leaseProgress / 100) }}" class="transition-all duration-1000"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <p class="text-4xl font-extrabold text-white leading-none">{{ max($daysUntilExpiry, 0) }}</p>
+                                <p class="text-xs font-medium text-white/70 mt-1">days left</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-auto space-y-1.5">
+                        <div class="flex justify-between text-xs"><span class="text-white/70">Term</span><span class="font-bold text-white">{{ $leaseTerm }} {{ $leaseTerm === 1 ? 'month' : 'months' }}</span></div>
+                        <div class="flex justify-between text-xs"><span class="text-white/70">Shift</span><span class="font-bold text-white">{{ $lease->shift }}</span></div>
+                        <div class="flex justify-between text-xs"><span class="text-white/70">Auto-Renew</span><span class="font-bold text-white">{{ $autoRenew ? 'Enabled' : 'Off' }}</span></div>
+                        <div class="w-full rounded-full h-1 overflow-hidden mt-2" style="background:rgba(255,255,255,0.08)"><div class="h-full rounded-full bg-blue-400 transition-all duration-500" style="width:{{ $leaseProgress }}%"></div></div>
+                        <p class="text-[13px] text-white/60 text-center">{{ round($leaseProgress) }}% elapsed</p>
+                    </div>
+                </div>
+            </div>
+            @endif
 
-        {{-- Payment & Billing Card --}}
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5">
+                <div class="flex items-center gap-2.5 mb-5">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+                    <div><p class="text-sm font-bold text-gray-900">Billing Cycle</p><p class="text-xs text-gray-400">{{ $billingStartDate ? \Carbon\Carbon::parse($billingStartDate)->format('M d') : '—' }} — {{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d, Y') : '—' }}</p></div>
+                </div>
+                <div class="relative">
+                    <div class="w-full rounded-full h-3 overflow-hidden" style="background:#eef2ff"><div class="h-full rounded-full transition-all duration-500 relative" style="width:{{ $billingProgress }}%; background: linear-gradient(90deg, #070589, #2563eb)"><div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-[2.5px] shadow-md" style="border-color:#070589"></div></div></div>
+                    <div class="flex items-center justify-between mt-2.5"><span class="text-xs font-medium text-gray-400">{{ $billingProgress }}% through cycle</span><span class="text-xs font-bold" style="color:#070589">Due: {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}</span></div>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mt-5">
+                    <div class="text-center p-3 rounded-xl" style="background:#f8f9ff"><p class="text-[13px] font-bold uppercase tracking-wider" style="color:#070589">Due In</p><p class="text-base font-extrabold text-gray-900 mt-1">@if($paymentStatus === 'Paid') Paid @elseif($daysUntilDue < 0) {{ abs($daysUntilDue) }}d @else {{ $daysUntilDue }}d @endif</p></div>
+                    <div class="text-center p-3 rounded-xl" style="background:#f8f9ff"><p class="text-[13px] font-bold uppercase tracking-wider" style="color:#070589">Overdue</p><p class="text-base font-extrabold {{ $outstandingBalance > 0 ? 'text-red-600' : 'text-gray-900' }} mt-1">{{ $outstandingBalance > 0 ? '₱' . number_format($outstandingBalance, 0) : 'None' }}</p></div>
+                    <div class="text-center p-3 rounded-xl" style="background:#f8f9ff"><p class="text-[13px] font-bold uppercase tracking-wider" style="color:#070589">Next Bill</p><p class="text-base font-extrabold text-gray-900 mt-1">{{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d') : 'N/A' }}</p></div>
+                </div>
+            </div>
+        </div>
 
-            {{-- Amount Due Banner --}}
-            @include('partials.tenant-payment-banner')
+        {{-- Maintenance + Utilities + Contract --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
+                <a href="{{ route('tenant.maintenance') }}" class="block overflow-hidden group relative" style="background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%)">
+                    <div class="px-5 py-4 relative z-10">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(7,5,137,0.1)">
+                                    <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                </div>
+                                <p class="text-[13px] font-bold uppercase tracking-widest" style="color:#070589">Maintenance</p>
+                            </div>
+                            <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </div>
+                        <p class="text-4xl font-extrabold tracking-tight" style="color:#070589">{{ $openMaintenanceCount }}</p>
+                        <p class="text-[13px] font-medium" style="color:#2563eb">Open Requests</p>
+                    </div>
+                </a>
+                <div class="px-4 py-2 flex-1 overflow-auto">
+                    @forelse($recentRequests as $request)
+                        <a href="{{ route('tenant.maintenance') }}" class="flex items-center gap-2.5 py-2 {{ !$loop->last ? 'border-b border-gray-50' : '' }} hover:bg-blue-50/30 -mx-1 px-1 rounded-lg transition-colors">
+                            <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#eef2ff">
+                                <svg class="w-3.5 h-3.5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-bold text-gray-800 truncate">{{ $request->problem }}</p>
+                                <p class="text-[13px] text-gray-400">{{ \Carbon\Carbon::parse($request->log_date)->format('M d') }}</p>
+                            </div>
+                            <span class="flex-shrink-0 text-[13px] font-bold px-1.5 py-0.5 rounded-full" style="background:#eef2ff;color:#070589">{{ $request->status }}</span>
+                        </a>
+                    @empty
+                        <div class="text-center py-5">
+                            <div class="w-9 h-9 rounded-full flex items-center justify-center mx-auto mb-2" style="background:#eef2ff">
+                                <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <p class="text-xs font-medium text-gray-400">All clear!</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
 
-            {{-- Overdue warning --}}
-            @if($daysUntilDue < 0 && $paymentStatus !== 'Paid')
-                <div class="mx-5 mt-4 px-3.5 py-2.5 rounded-xl bg-red-50 flex items-center justify-between gap-2.5">
+            {{-- Utilities --}}
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 text-left">
+                <div class="flex items-center justify-between mb-5">
                     <div class="flex items-center gap-2.5">
-                        <svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                        <p class="text-[11px] font-medium text-red-600">Your payment is {{ abs($daysUntilDue) }} {{ abs($daysUntilDue) === 1 ? 'day' : 'days' }} overdue.</p>
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
+                            <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-900">Utilities</p>
+                            <p class="text-xs text-gray-400">{{ $billingPeriod ?: 'Current period' }}</p>
+                        </div>
                     </div>
-                    @if(count($pendingPaymentRequests) === 0)
-                        <button wire:click="openPaymentModal" class="flex-shrink-0 px-3 py-1 rounded-lg bg-red-600 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-red-700 transition">
-                            Pay Now
-                        </button>
-                    @else
-                        <span class="flex-shrink-0 px-3 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide">
-                            Pending Verification
-                        </span>
-                    @endif
-                </div>
-            @endif
-
-            {{-- Bottom stats --}}
-            <div class="px-5 py-4">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div class="p-3.5 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Outstanding</p>
-                        <p class="text-base font-extrabold {{ $outstandingBalance > 0 ? 'text-orange-600' : 'text-gray-900' }}">
-                            &#8369;{{ number_format($outstandingBalance, 2) }}
-                        </p>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Due Date</p>
-                        <p class="text-base font-extrabold text-gray-900">
-                            {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d, Y') : 'N/A' }}
-                        </p>
-                    </div>
-                    <div class="p-3.5 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Next Bill</p>
-                        <p class="text-base font-extrabold text-gray-900">
-                            {{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d, Y') : 'N/A' }}
-                        </p>
+                    <div class="text-right">
+                        <p class="text-xl font-extrabold text-gray-900">&#8369;{{ number_format($utilityTotal, 2) }}</p>
+                        <p class="text-[13px] text-gray-400">your share</p>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        {{-- Utility Bills Card --}}
-        @if($electricityShare > 0 || $waterShare > 0)
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="px-5 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
-                        <svg class="w-[18px] h-[18px] text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                @if($electricityShare > 0 || $waterShare > 0)
+                    <div class="mb-3.5">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:#070589"></span><span class="text-[13px] font-semibold text-gray-600">Electricity</span></div>
+                            <span class="text-[13px] font-bold text-gray-900">&#8369;{{ number_format($electricityShare, 2) }}</span>
+                        </div>
+                        <div class="w-full rounded-full h-2.5 overflow-hidden" style="background:#eef2ff">
+                            <div class="h-full rounded-full transition-all duration-700" style="width:{{ $utilityMax > 0 ? min(($electricityShare / $utilityMax) * 100, 100) : 0 }}%;background:linear-gradient(90deg,#070589,#2563eb)"></div>
+                        </div>
                     </div>
                     <div>
-                        <h3 class="text-[15px] font-bold text-gray-900">Utility Bills</h3>
-                        @if($billingPeriod)
-                            <p class="text-[10px] text-gray-400 font-medium">Latest: {{ $billingPeriod }}</p>
-                        @endif
-                    </div>
-                </div>
-                <a href="{{ route('tenant.payment') }}" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider">View All</a>
-            </div>
-
-            <div class="px-5 pb-5">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {{-- Electricity --}}
-                    @if($electricityShare > 0)
-                    <div class="p-4 rounded-xl bg-orange-50/70 border border-orange-100">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold uppercase">Electricity</span>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:#93c5fd"></span><span class="text-[13px] font-semibold text-gray-600">Water</span></div>
+                            <span class="text-[13px] font-bold text-gray-900">&#8369;{{ number_format($waterShare, 2) }}</span>
                         </div>
-                        <p class="text-2xl font-extrabold text-gray-900">&#8369;{{ number_format($electricityShare, 2) }}</p>
-                        <p class="text-[10px] text-gray-400 mt-1">Your share &bull; Total: &#8369;{{ number_format($electricityTotal, 2) }} &divide; {{ $tenantCount }} tenants</p>
-                    </div>
-                    @endif
-
-                    {{-- Water --}}
-                    @if($waterShare > 0)
-                    <div class="p-4 rounded-xl bg-blue-50/70 border border-blue-100">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold uppercase">Water</span>
+                        <div class="w-full rounded-full h-2.5 overflow-hidden" style="background:#eef2ff">
+                            <div class="h-full rounded-full transition-all duration-700" style="width:{{ $utilityMax > 0 ? min(($waterShare / $utilityMax) * 100, 100) : 0 }}%;background:linear-gradient(90deg,#60a5fa,#93c5fd)"></div>
                         </div>
-                        <p class="text-2xl font-extrabold text-gray-900">&#8369;{{ number_format($waterShare, 2) }}</p>
-                        <p class="text-[10px] text-gray-400 mt-1">Your share &bull; Total: &#8369;{{ number_format($waterTotal, 2) }} &divide; {{ $tenantCount }} tenants</p>
                     </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-        @endif
-
-        {{-- Lease & Contract Card --}}
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="px-5 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
-                        <svg class="w-[18px] h-[18px] text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    </div>
-                    <h3 class="text-[15px] font-bold text-gray-900">Lease & Contract</h3>
-                </div>
-                @if($lease)
-                    <div class="flex items-center gap-1.5">
-                        @if($isShortTerm)
-                            <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase">Short-Term</span>
-                        @endif
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-                            {{ $leaseStatus === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600' }}">
-                            <span class="w-1.5 h-1.5 rounded-full mr-1.5
-                                {{ $leaseStatus === 'Active' ? 'bg-emerald-500' : 'bg-red-500' }}"></span>
-                            {{ $leaseStatus }}
-                        </span>
-                    </div>
+                    <p class="text-[13px] text-gray-400 mt-3">Total &#8369;{{ number_format($electricityTotal + $waterTotal, 2) }} &divide; {{ $tenantCount }} tenants</p>
+                @else
+                    <div class="text-center py-3"><p class="text-[13px] text-gray-400">No utility bills yet</p></div>
                 @endif
             </div>
 
-            @if($lease)
-            <div class="px-5 pb-5">
-                {{-- Expiry countdown --}}
-                @php
-                    $totalDays = \Carbon\Carbon::parse($lease->start_date)->diffInDays(\Carbon\Carbon::parse($leaseEndDate));
-                    $elapsed = max(\Carbon\Carbon::parse($lease->start_date)->diffInDays(now()), 0);
-                    $progress = $totalDays > 0 ? min(($elapsed / $totalDays) * 100, 100) : 0;
-                @endphp
-                <div class="mb-4 p-4 rounded-xl
-                    {{ $daysUntilExpiry <= 30 ? 'bg-red-50/70' : ($daysUntilExpiry <= 60 ? 'bg-amber-50/70' : 'bg-[#F4F7FC]') }}">
-                    <div class="flex items-center justify-between mb-2.5">
-                        <div>
-                            <p class="text-[10px] font-bold uppercase tracking-wider
-                                {{ $daysUntilExpiry <= 30 ? 'text-red-500' : ($daysUntilExpiry <= 60 ? 'text-amber-500' : 'text-blue-500') }}">
-                                Days Until Lease Expiry
-                            </p>
-                            <p class="text-[11px] text-gray-400 mt-0.5">Ends {{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}</p>
+            {{-- Contract Status --}}
+            <div class="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
+                            <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                         </div>
-                        <div class="text-right">
-                            <p class="text-3xl font-extrabold
-                                {{ $daysUntilExpiry <= 30 ? 'text-red-600' : ($daysUntilExpiry <= 60 ? 'text-amber-600' : 'text-gray-900') }}">
-                                {{ max($daysUntilExpiry, 0) }}
-                            </p>
-                            <p class="text-[10px] font-medium text-gray-400">days</p>
+                        <h3 class="text-sm font-bold text-gray-900">Contract</h3>
+                    </div>
+                    @if($contractAgreed)
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase" style="background:#eef2ff;color:#070589">Signed</span>
+                    @elseif(!$tenantSignature && $ownerSignature)
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold uppercase animate-pulse">Action Needed</span>
+                    @else
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase" style="background:#eef2ff;color:#070589">Pending</span>
+                    @endif
+                </div>
+                <div class="flex items-center gap-2 mb-5">
+                    <div class="flex items-center gap-2 flex-1 p-2.5 rounded-xl" style="background:{{ $ownerSignature ? '#eef2ff' : '#f9fafb' }}">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:{{ $ownerSignature ? '#070589' : '#e5e7eb' }}">
+                            @if($ownerSignature)
+                                <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            @else
+                                <span class="text-[13px] font-bold text-gray-400">1</span>
+                            @endif
                         </div>
+                        <div><p class="text-xs font-bold" style="color:{{ $ownerSignature ? '#070589' : '#9ca3af' }}">Lessor</p><p class="text-[13px]" style="color:{{ $ownerSignature ? '#2563eb' : '#d1d5db' }}">{{ $ownerSignature ? 'Signed' : 'Waiting' }}</p></div>
                     </div>
-                    <div class="w-full bg-white/80 rounded-full h-1.5 overflow-hidden">
-                        <div class="h-full rounded-full transition-all duration-500
-                            {{ $daysUntilExpiry <= 30 ? 'bg-red-400' : ($daysUntilExpiry <= 60 ? 'bg-amber-400' : 'bg-blue-400') }}"
-                            style="width: {{ $progress }}%"></div>
-                    </div>
-                    <div class="flex justify-between mt-1">
-                        <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($lease->start_date)->format('M d, Y') }}</span>
-                        <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}</span>
+                    <div class="w-5 h-px" style="background:{{ $ownerSignature ? '#070589' : '#e5e7eb' }}"></div>
+                    <div class="flex items-center gap-2 flex-1 p-2.5 rounded-xl" style="background:{{ $tenantSignature ? '#eef2ff' : ($ownerSignature ? '#eff6ff' : '#f9fafb') }}">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:{{ $tenantSignature ? '#070589' : ($ownerSignature ? '#2563eb' : '#e5e7eb') }}">
+                            @if($tenantSignature)
+                                <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            @else
+                                <span class="text-[13px] font-bold {{ $ownerSignature ? 'text-white' : 'text-gray-400' }}">2</span>
+                            @endif
+                        </div>
+                        <div><p class="text-xs font-bold" style="color:{{ $tenantSignature ? '#070589' : ($ownerSignature ? '#2563eb' : '#9ca3af') }}">You</p><p class="text-[13px]" style="color:{{ $tenantSignature ? '#2563eb' : ($ownerSignature ? '#60a5fa' : '#d1d5db') }}">{{ $tenantSignature ? 'Signed' : ($ownerSignature ? 'Your turn' : 'Waiting') }}</p></div>
                     </div>
                 </div>
+                <div class="mt-auto">
+                    @if(!$tenantSignature && $ownerSignature)
+                        <button wire:click="toggleContract" class="w-full py-2.5 px-4 text-white font-bold rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 hover:opacity-90" style="background:#070589;box-shadow:0 4px 14px rgba(7,5,137,0.3)">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                            Read & Sign Contract
+                        </button>
+                    @else
+                        <button wire:click="setDashTab('inspection')" class="w-full py-2.5 px-4 font-bold rounded-xl text-[13px] transition-colors flex items-center justify-center gap-2 hover:opacity-80" style="background:#eef2ff;color:#070589">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                            View Contract & Inspection
+                        </button>
+                    @endif
+                </div>
+            </div>
+        </div>
 
-                {{-- Contract Details --}}
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div class="p-3 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Contract Type</p>
-                        <p class="text-sm font-bold text-gray-900">{{ $isShortTerm ? 'Short-Term' : 'Long-Term' }}</p>
-                        <p class="text-[10px] text-gray-400">{{ $leaseTerm }} {{ $leaseTerm === 1 ? 'month' : 'months' }}</p>
+        {{-- Move Dates + Payment Requests (bento row) --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {{-- Move Dates --}}
+            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+                <div class="flex items-center gap-2.5 mb-4">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#eef2ff">
+                        <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     </div>
-                    <div class="p-3 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Monthly Rate</p>
-                        <p class="text-sm font-bold text-gray-900">&#8369;{{ number_format($contractRate, 2) }}</p>
+                    <h3 class="text-sm font-bold text-gray-900">Move Dates</h3>
+                </div>
+                <div class="space-y-2.5">
+                    <div class="p-3 rounded-xl flex items-center justify-between" style="background:#f8f9ff">
+                        <div>
+                            <p class="text-[11px] font-bold uppercase tracking-wider" style="color:#070589">Move-In</p>
+                            <p class="text-sm font-extrabold text-gray-900 mt-0.5">{{ $moveInDate ? \Carbon\Carbon::parse($moveInDate)->format('M d, Y') : 'N/A' }}</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#eef2ff">
+                            <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                        </div>
                     </div>
-                    <div class="p-3 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Shift</p>
-                        <p class="text-sm font-bold text-gray-900">{{ $lease->shift }}</p>
-                    </div>
-                    <div class="p-3 rounded-xl bg-[#F4F7FC]">
-                        <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Auto-Renewal</p>
-                        <span class="inline-flex items-center gap-1.5 text-sm font-bold {{ $autoRenew ? 'text-emerald-600' : 'text-gray-400' }}">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $autoRenew ? 'bg-emerald-500' : 'bg-gray-300' }}"></span>
-                            {{ $autoRenew ? 'Enabled' : 'Disabled' }}
-                        </span>
+                    <div class="p-3 rounded-xl flex items-center justify-between {{ $moveOutDate ? 'bg-red-50/50' : '' }}" style="{{ !$moveOutDate ? 'background:#f8f9ff' : '' }}">
+                        <div>
+                            <p class="text-[11px] font-bold uppercase tracking-wider {{ $moveOutDate ? 'text-red-400' : '' }}" style="{{ !$moveOutDate ? 'color:#070589' : '' }}">Move-Out</p>
+                            <p class="text-sm font-extrabold text-gray-900 mt-0.5">{{ $moveOutDate ? \Carbon\Carbon::parse($moveOutDate)->format('M d, Y') : 'N/A' }}</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center {{ $moveOutDate ? 'bg-red-100/80' : '' }}" style="{{ !$moveOutDate ? 'background:#eef2ff' : '' }}">
+                            <svg class="w-4 h-4 {{ $moveOutDate ? 'text-red-400' : '' }}" style="{{ !$moveOutDate ? 'color:#070589' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        </div>
                     </div>
                 </div>
             </div>
-            @else
-                <div class="p-6 text-center py-10">
-                    <p class="text-sm text-gray-400">No active lease found</p>
+
+            {{-- Payment Requests --}}
+            @if(count($pendingPaymentRequests) > 0 || count($rejectedPaymentRequests) > 0)
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#eef2ff">
+                            <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-900">Payment Requests</h3>
+                    </div>
                 </div>
+                <div class="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    @foreach($pendingPaymentRequests as $pr)
+                        <div class="p-3.5 rounded-xl border" style="background:#f8f9ff;border-color:#e0e7ff">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-bold text-gray-900">{{ $pr['billing'] ? \Carbon\Carbon::parse($pr['billing']['billing_date'])->format('F Y') : 'N/A' }}</p>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#eef2ff;color:#070589">Pending</span>
+                            </div>
+                            <p class="text-lg font-extrabold text-gray-900">&#8369;{{ number_format($pr['amount_paid'], 2) }}</p>
+                            <p class="text-xs text-gray-400 mt-1">{{ $pr['payment_method'] }} &middot; {{ \Carbon\Carbon::parse($pr['created_at'])->format('M d, h:i A') }}</p>
+                        </div>
+                    @endforeach
+                    @foreach($rejectedPaymentRequests as $pr)
+                        <div class="p-3.5 rounded-xl bg-red-50/80 border border-red-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-bold text-gray-900">{{ $pr['billing'] ? \Carbon\Carbon::parse($pr['billing']['billing_date'])->format('F Y') : 'N/A' }}</p>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Rejected</span>
+                            </div>
+                            <p class="text-lg font-extrabold text-gray-900">&#8369;{{ number_format($pr['amount_paid'], 2) }}</p>
+                            @if($pr['reject_reason'])
+                                <p class="text-xs font-medium text-red-500 mt-1.5">{{ $pr['reject_reason'] }}</p>
+                            @endif
+                            <button wire:click="resubmitPayment({{ $pr['id'] }})" class="mt-2.5 w-full py-2 rounded-xl text-white text-xs font-bold uppercase tracking-wide transition hover:opacity-90" style="background:#070589">Re-submit Payment</button>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
             @endif
         </div>
 
-        {{-- Move-In / Move-Out Card --}}
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="px-5 py-4">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center">
-                        <svg class="w-[18px] h-[18px] text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                    </div>
-                    <h3 class="text-[15px] font-bold text-gray-900">Move-In / Move-Out</h3>
-                </div>
-            </div>
-
-            <div class="px-5 pb-5">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div class="p-3.5 rounded-xl bg-emerald-50/50 flex items-center justify-between">
-                        <div>
-                            <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Move-In Date</p>
-                            <p class="text-[15px] font-bold text-gray-900 mt-0.5">
-                                {{ $moveInDate ? \Carbon\Carbon::parse($moveInDate)->format('M d, Y') : 'Not set' }}
-                            </p>
-                        </div>
-                        <div class="w-8 h-8 rounded-full bg-emerald-100/80 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                        </div>
-                    </div>
-
-                    <div class="p-3.5 rounded-xl {{ $moveOutDate ? 'bg-red-50/50' : 'bg-gray-50/50' }} flex items-center justify-between">
-                        <div>
-                            <p class="text-[10px] font-bold {{ $moveOutDate ? 'text-red-400' : 'text-gray-400' }} uppercase tracking-wider">Move-Out Date</p>
-                            <p class="text-[15px] font-bold text-gray-900 mt-0.5">
-                                {{ $moveOutDate ? \Carbon\Carbon::parse($moveOutDate)->format('M d, Y') : 'N/A' }}
-                            </p>
-                        </div>
-                        <div class="w-8 h-8 rounded-full {{ $moveOutDate ? 'bg-red-100/80' : 'bg-gray-100' }} flex items-center justify-center">
-                            <svg class="w-4 h-4 {{ $moveOutDate ? 'text-red-400' : 'text-gray-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
     </div>
+
 
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- TAB: INSPECTION & CONTRACT                                 --}}
@@ -585,16 +356,16 @@
                 <div class="flex items-center gap-1 bg-[#F4F7FC] rounded-xl p-1">
                     <button @click="activeTab = 'movein'"
                             :class="activeTab === 'movein' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
-                            class="px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200">
+                            class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200">
                         Move-In
                     </button>
                     <button @click="{{ $moveOutDate ? "activeTab = 'moveout'" : '' }}"
                             :class="activeTab === 'moveout' ? 'bg-white text-gray-900 shadow-sm' : '{{ $moveOutDate ? 'text-gray-400 hover:text-gray-600' : 'text-gray-300 cursor-not-allowed' }}'"
-                            class="px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200"
+                            class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200"
                             {{ !$moveOutDate ? 'disabled' : '' }}>
                         Move-Out
                         @if(!$moveOutDate)
-                            <span class="ml-1 text-[9px] opacity-50">(N/A)</span>
+                            <span class="ml-1 text-[13px] opacity-50">(N/A)</span>
                         @endif
                     </button>
                 </div>
@@ -604,15 +375,15 @@
                     <template x-if="activeTab === 'movein'">
                         <span>
                             @if($contractAgreed)
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold uppercase tracking-wider">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>Signed
                                 </span>
                             @elseif($ownerSignature && !$tenantSignature)
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-bold uppercase tracking-wider animate-pulse">
                                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>Action Needed
                                 </span>
                             @else
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-xs font-bold uppercase tracking-wider">
                                     <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-1.5"></span>Pending
                                 </span>
                             @endif
@@ -622,15 +393,15 @@
                     <template x-if="activeTab === 'moveout'">
                         <span>
                             @if($moveOutContractAgreed)
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold uppercase tracking-wider">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>Signed
                                 </span>
                             @elseif(count($moveOutChecklist) > 0)
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold uppercase tracking-wider">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>Inspected
                                 </span>
                             @else
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-xs font-bold uppercase tracking-wider">
                                     <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-1.5"></span>Pending
                                 </span>
                             @endif
@@ -645,22 +416,22 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 border-t border-gray-50">
 
                     <div class="p-5 lg:border-r border-gray-50">
-                        <h4 class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-4">Contract & Signature</h4>
+                        <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Contract & Signature</h4>
 
                         <div class="rounded-xl bg-[#F4F7FC] p-3.5 mb-4 space-y-2">
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Property</span>
                                 <span class="font-bold text-gray-700">{{ $contractData['property'] ?? '—' }}</span>
                             </div>
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Unit / Bed</span>
                                 <span class="font-bold text-gray-700">{{ $contractData['unit'] ?? '—' }} / {{ $contractData['bed'] ?? '—' }}</span>
                             </div>
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Lease Period</span>
                                 <span class="font-bold text-gray-700">{{ $contractData['start_date'] ?? '—' }} — {{ $contractData['end_date'] ?? '—' }}</span>
                             </div>
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Monthly Rate</span>
                                 <span class="font-extrabold text-gray-900">&#8369;{{ number_format($contractData['monthly_rate'] ?? 0, 2) }}</span>
                             </div>
@@ -678,8 +449,8 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <p class="text-[10px] font-bold {{ $ownerSignature ? 'text-emerald-600' : 'text-gray-400' }}">Lessor / Manager</p>
-                                        <p class="text-[9px] {{ $ownerSignature ? 'text-emerald-500' : 'text-gray-300' }}">{{ $ownerSignature ? 'Signed: ' . $ownerSignedAt : 'Awaiting signature' }}</p>
+                                        <p class="text-xs font-bold {{ $ownerSignature ? 'text-emerald-600' : 'text-gray-400' }}">Lessor / Manager</p>
+                                        <p class="text-[13px] {{ $ownerSignature ? 'text-emerald-500' : 'text-gray-300' }}">{{ $ownerSignature ? 'Signed: ' . $ownerSignedAt : 'Awaiting signature' }}</p>
                                     </div>
                                 </div>
                                 @if($ownerSignature)<img src="{{ asset('storage/' . $ownerSignature) }}" class="h-7 object-contain" alt="Signature">@endif
@@ -695,27 +466,27 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <p class="text-[10px] font-bold {{ $tenantSignature ? 'text-emerald-600' : 'text-blue-600' }}">Your Signature</p>
-                                        <p class="text-[9px] {{ $tenantSignature ? 'text-emerald-500' : 'text-blue-400' }}">{{ $tenantSignature ? 'Signed: ' . $tenantSignedAt : 'Your signature is required' }}</p>
+                                        <p class="text-xs font-bold {{ $tenantSignature ? 'text-emerald-600' : 'text-blue-600' }}">Your Signature</p>
+                                        <p class="text-[13px] {{ $tenantSignature ? 'text-emerald-500' : 'text-blue-400' }}">{{ $tenantSignature ? 'Signed: ' . $tenantSignedAt : 'Your signature is required' }}</p>
                                     </div>
                                 </div>
                                 @if($tenantSignature)<img src="{{ asset('storage/' . $tenantSignature) }}" class="h-7 object-contain" alt="Signature">@endif
                             </div>
                         </div>
 
-                        <button wire:click="toggleContract" class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-[11px] transition-colors flex items-center justify-center gap-2">
+                        <button wire:click="toggleContract" class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-[13px] transition-colors flex items-center justify-center gap-2">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                             {{ !$tenantSignature && $ownerSignature ? 'Read & Sign Contract' : 'View Contract' }}
                         </button>
 
                         @if($contractAgreed)
                             <div class="text-center py-2 px-3 bg-emerald-50/50 rounded-xl mt-3">
-                                <p class="text-[11px] font-bold text-emerald-600">Contract Fully Signed</p>
-                                <p class="text-[9px] text-emerald-400 mt-0.5">Both parties have signed electronically per RA 8792.</p>
+                                <p class="text-[13px] font-bold text-emerald-600">Contract Fully Signed</p>
+                                <p class="text-[13px] text-emerald-400 mt-0.5">Both parties have signed electronically per RA 8792.</p>
                             </div>
                         @elseif(!$tenantSignature && !$ownerSignature)
                             <div class="text-center py-2 px-3 bg-gray-50/50 rounded-xl mt-3">
-                                <p class="text-[10px] text-gray-400">Waiting for the lessor/manager to sign first.</p>
+                                <p class="text-xs text-gray-400">Waiting for the lessor/manager to sign first.</p>
                             </div>
                         @endif
                     </div>
@@ -743,18 +514,18 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 border-t border-gray-50">
 
                     <div class="p-5 lg:border-r border-gray-50">
-                        <h4 class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-4">Clearance & Settlement</h4>
+                        <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Clearance & Settlement</h4>
 
                         <div class="rounded-xl bg-[#F4F7FC] p-3.5 mb-4 space-y-2">
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Move-Out Date</span>
                                 <span class="font-bold text-gray-700">{{ \Carbon\Carbon::parse($moveOutDate)->format('M d, Y') }}</span>
                             </div>
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Security Deposit</span>
                                 <span class="font-extrabold text-gray-900">&#8369;{{ number_format($securityDeposit, 2) }}</span>
                             </div>
-                            <div class="flex justify-between text-[11px]">
+                            <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Inspection Status</span>
                                 <span class="font-bold {{ count($moveOutChecklist) > 0 ? 'text-emerald-600' : 'text-amber-600' }}">
                                     {{ count($moveOutChecklist) > 0 ? 'Completed' : 'Awaiting inspection' }}
@@ -774,8 +545,8 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <p class="text-[10px] font-bold {{ $moveOutOwnerSignature ? 'text-emerald-600' : 'text-gray-400' }}">Lessor / Manager</p>
-                                        <p class="text-[9px] {{ $moveOutOwnerSignature ? 'text-emerald-500' : 'text-gray-300' }}">{{ $moveOutOwnerSignature ? 'Signed: ' . $moveOutOwnerSignedAt : 'Awaiting signature' }}</p>
+                                        <p class="text-xs font-bold {{ $moveOutOwnerSignature ? 'text-emerald-600' : 'text-gray-400' }}">Lessor / Manager</p>
+                                        <p class="text-[13px] {{ $moveOutOwnerSignature ? 'text-emerald-500' : 'text-gray-300' }}">{{ $moveOutOwnerSignature ? 'Signed: ' . $moveOutOwnerSignedAt : 'Awaiting signature' }}</p>
                                     </div>
                                 </div>
                                 @if($moveOutOwnerSignature)<img src="{{ asset('storage/' . $moveOutOwnerSignature) }}" class="h-7 object-contain" alt="Signature">@endif
@@ -791,23 +562,23 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <p class="text-[10px] font-bold {{ $moveOutTenantSignature ? 'text-emerald-600' : 'text-blue-600' }}">Your Signature</p>
-                                        <p class="text-[9px] {{ $moveOutTenantSignature ? 'text-emerald-500' : 'text-blue-400' }}">{{ $moveOutTenantSignature ? 'Signed: ' . $moveOutTenantSignedAt : 'Your signature is required' }}</p>
+                                        <p class="text-xs font-bold {{ $moveOutTenantSignature ? 'text-emerald-600' : 'text-blue-600' }}">Your Signature</p>
+                                        <p class="text-[13px] {{ $moveOutTenantSignature ? 'text-emerald-500' : 'text-blue-400' }}">{{ $moveOutTenantSignature ? 'Signed: ' . $moveOutTenantSignedAt : 'Your signature is required' }}</p>
                                     </div>
                                 </div>
                                 @if($moveOutTenantSignature)<img src="{{ asset('storage/' . $moveOutTenantSignature) }}" class="h-7 object-contain" alt="Signature">@endif
                             </div>
                         </div>
 
-                        <button wire:click="toggleMoveOutContract" class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-[11px] transition-colors flex items-center justify-center gap-2">
+                        <button wire:click="toggleMoveOutContract" class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-[13px] transition-colors flex items-center justify-center gap-2">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                             View Move-Out Contract
                         </button>
 
                         @if($moveOutContractAgreed)
                             <div class="text-center py-2 px-3 bg-emerald-50/50 rounded-xl mt-3">
-                                <p class="text-[11px] font-bold text-emerald-600">Move-Out Contract Fully Signed</p>
-                                <p class="text-[9px] text-emerald-400 mt-0.5">Both parties have signed electronically per RA 8792.</p>
+                                <p class="text-[13px] font-bold text-emerald-600">Move-Out Contract Fully Signed</p>
+                                <p class="text-[13px] text-emerald-400 mt-0.5">Both parties have signed electronically per RA 8792.</p>
                             </div>
                         @endif
                     </div>
@@ -853,7 +624,7 @@
                         ];
                     @endphp
                     @foreach($checklistItems as $item)
-                        <div class="flex items-center gap-2.5 text-[11px]">
+                        <div class="flex items-center gap-2.5 text-[13px]">
                             @if($item['done'])
                                 <span class="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                                     <svg class="w-2.5 h-2.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -886,6 +657,7 @@
     {{-- MODALS (available across all tabs)                         --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
     @if($showMoveOutContract && $lease)
+        <div wire:poll.5s="refreshMoveOutData"></div>
         @php
             $t = $tenantContractData;
             $deposit = $t['move_in_details']['security_deposit'];
@@ -923,6 +695,7 @@
     @endif
 
     @if($showContract && $lease)
+        <div wire:poll.5s="refreshContractData"></div>
         @php
             $t = $tenantContractData;
             $rate = $t['move_in_details']['monthly_rate'];
@@ -1006,7 +779,7 @@
                             <h2 class="text-xl font-bold uppercase">PAY NOW</h2>
                             <p class="mt-1 text-sm text-blue-100">Submit your payment for verification</p>
                         </div>
-                        <button type="button" wire:click="closePaymentModal" class="text-white hover:text-blue-200 transition-colors focus:outline-none">
+                        <button type="button" x-on:click="$dispatch('open-modal', 'cancel-payment-modal')" class="text-white hover:text-blue-200 transition-colors focus:outline-none">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -1041,7 +814,7 @@
                                                     {{ $step['num'] }}
                                                 @endif
                                             </div>
-                                            <span class="text-[10px] font-semibold mt-1.5 tracking-wide transition-all duration-200
+                                            <span class="text-xs font-semibold mt-1.5 tracking-wide transition-all duration-200
                                                 {{ $paymentStep === $step['num'] ? 'text-white' : '' }}
                                                 {{ $paymentStep > $step['num'] ? 'text-blue-200' : '' }}
                                                 {{ $paymentStep < $step['num'] ? 'text-blue-300/50' : '' }}">{{ $step['title'] }}</span>
@@ -1090,7 +863,7 @@
                                                 </div>
                                                 <div class="text-right">
                                                     <p class="text-base font-extrabold text-gray-900">&#8369;{{ number_format($billing['to_pay'], 2) }}</p>
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase
                                                         {{ $billing['status'] === 'Overdue' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600' }}">
                                                         {{ $billing['status'] }}
                                                     </span>
@@ -1135,42 +908,84 @@
 
                             {{-- Payment methods --}}
                             <label class="text-xs font-semibold text-gray-700 mb-2 block">Choose Payment Method</label>
-                            <div class="grid grid-cols-2 gap-3 mb-5">
-                                @php
-                                    $methods = [
-                                        ['name' => 'GCash', 'desc' => 'Send via GCash app'],
-                                        ['name' => 'Maya', 'desc' => 'Send via Maya app'],
-                                        ['name' => 'Bank Transfer', 'desc' => 'Transfer via bank app'],
-                                        ['name' => 'Cash', 'desc' => 'Pay at property office'],
-                                    ];
-                                @endphp
-                                @foreach($methods as $method)
-                                    <button
-                                        type="button"
-                                        wire:click="selectPaymentMethod('{{ $method['name'] }}')"
-                                        class="p-4 rounded-xl border-2 text-left transition-all hover:border-[#2360E8] hover:bg-blue-50/50 border-gray-200"
-                                    >
-                                        <p class="text-sm font-bold text-gray-900">{{ $method['name'] }}</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">{{ $method['desc'] }}</p>
-                                    </button>
-                                @endforeach
+                            <div class="grid grid-cols-3 gap-3 mb-5">
+                                {{-- GCash --}}
+                                <button type="button" wire:click="selectPaymentMethod('GCash')"
+                                    class="py-3 px-2 rounded-xl border-2 text-center transition-all {{ $selectedPaymentMethod === 'GCash' ? 'border-transparent' : 'border-gray-200' }}"
+                                    style="{{ $selectedPaymentMethod === 'GCash' ? 'background-color:#0070E0; color:#fff; border-color:#0070E0;' : '' }}">
+                                    <p class="text-sm font-bold" style="color: {{ $selectedPaymentMethod === 'GCash' ? '#fff' : '#0070E0' }}">GCash</p>
+                                </button>
+
+                                {{-- Maya --}}
+                                <button type="button" wire:click="selectPaymentMethod('Maya')"
+                                    class="py-3 px-2 rounded-xl border-2 text-center transition-all {{ $selectedPaymentMethod === 'Maya' ? 'border-transparent' : 'border-gray-200' }}"
+                                    style="{{ $selectedPaymentMethod === 'Maya' ? 'background-color:#27AE60; color:#fff; border-color:#27AE60;' : '' }}">
+                                    <p class="text-sm font-bold" style="color: {{ $selectedPaymentMethod === 'Maya' ? '#fff' : '#27AE60' }}">Maya</p>
+                                </button>
+
+                                {{-- Bank Transfer --}}
+                                <button type="button" wire:click="selectPaymentMethod('Bank Transfer')"
+                                    class="py-3 px-2 rounded-xl border-2 text-center transition-all {{ $selectedPaymentMethod === 'Bank Transfer' ? 'border-transparent' : 'border-gray-200' }}"
+                                    style="{{ $selectedPaymentMethod === 'Bank Transfer' ? 'background-color:#2C3E50; color:#fff; border-color:#2C3E50;' : '' }}">
+                                    <p class="text-sm font-bold" style="color: {{ $selectedPaymentMethod === 'Bank Transfer' ? '#fff' : '#2C3E50' }}">Bank Transfer</p>
+                                </button>
                             </div>
 
-                            {{-- Payment details info --}}
-                            <div class="p-4 rounded-xl bg-blue-50 border border-blue-100">
-                                <p class="text-xs font-bold text-[#070589] uppercase tracking-wider mb-3">Send Payment To</p>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p class="text-xs text-gray-500">Account Name</p>
-                                        <p class="text-sm font-bold text-gray-900 mt-0.5">{{ $paymentOwnerInfo['owner_name'] ?? 'N/A' }}</p>
+                            {{-- Payment instructions per method --}}
+                            @if($selectedPaymentMethod === 'GCash')
+                                <div class="p-4 rounded-xl bg-blue-50/60 border border-blue-100">
+                                    <p class="text-xs font-semibold text-[#0070E0] mb-3">Send via GCash</p>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Send to</span>
+                                            <span class="text-sm font-bold text-gray-900">{{ $paymentOwnerInfo['owner_name'] ?? 'N/A' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">GCash Number</span>
+                                            <span class="text-sm font-bold text-[#0070E0]">{{ $paymentOwnerInfo['contact'] ?? 'N/A' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Amount</span>
+                                            <span class="text-sm font-bold text-gray-900">&#8369;{{ number_format($selectedBilling['to_pay'] ?? 0, 2) }}</span>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="text-xs text-gray-500">GCash / Maya Number</p>
-                                        <p class="text-sm font-bold text-[#2360E8] mt-0.5">{{ $paymentOwnerInfo['contact'] ?? 'N/A' }}</p>
-                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-3 pt-2 border-t border-blue-100">Open GCash → Send Money → enter details above → screenshot the receipt</p>
                                 </div>
-                                <p class="text-[11px] text-gray-400 mt-3">For bank transfer details or cash payment location, contact your property manager.</p>
-                            </div>
+                            @elseif($selectedPaymentMethod === 'Maya')
+                                <div class="p-4 rounded-xl bg-green-50/60 border border-green-100">
+                                    <p class="text-xs font-semibold text-[#27AE60] mb-3">Send via Maya</p>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Send to</span>
+                                            <span class="text-sm font-bold text-gray-900">{{ $paymentOwnerInfo['owner_name'] ?? 'N/A' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Maya Number</span>
+                                            <span class="text-sm font-bold text-[#27AE60]">{{ $paymentOwnerInfo['contact'] ?? 'N/A' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Amount</span>
+                                            <span class="text-sm font-bold text-gray-900">&#8369;{{ number_format($selectedBilling['to_pay'] ?? 0, 2) }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-3 pt-2 border-t border-green-100">Open Maya → Send Money → enter details above → screenshot the receipt</p>
+                                </div>
+                            @elseif($selectedPaymentMethod === 'Bank Transfer')
+                                <div class="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                                    <p class="text-xs font-semibold text-[#2C3E50] mb-3">Send via Bank Transfer</p>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Transfer to</span>
+                                            <span class="text-sm font-bold text-gray-900">{{ $paymentOwnerInfo['owner_name'] ?? 'N/A' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-gray-500">Amount</span>
+                                            <span class="text-sm font-bold text-gray-900">&#8369;{{ number_format($selectedBilling['to_pay'] ?? 0, 2) }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mt-3 pt-2 border-t border-gray-200">Contact your property manager for bank account details → transfer → screenshot the receipt</p>
+                                </div>
+                            @endif
 
                         {{-- STEP 3: Proof of Payment --}}
                         @elseif($paymentStep === 3)
@@ -1178,6 +993,18 @@
 
                             <h3 class="text-base font-bold text-[#070589] mb-1">Submit Proof of Payment</h3>
                             <p class="text-sm text-gray-500 mb-5">Fill in the details and upload your receipt.</p>
+
+                            {{-- Rejection reason banner --}}
+                            @if($resubmitRejectReason)
+                                <div class="p-3.5 rounded-xl bg-red-50 border border-red-200 mb-5 flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                                    <div>
+                                        <p class="text-xs font-bold text-red-700 uppercase tracking-wide">Previous submission rejected</p>
+                                        <p class="text-sm text-red-600 mt-1">{{ $resubmitRejectReason }}</p>
+                                        <p class="text-xs text-gray-500 mt-1.5">Your previous details are pre-filled below. Update the fields that need correction and resubmit.</p>
+                                    </div>
+                                </div>
+                            @endif
 
                             {{-- Summary --}}
                             <div class="p-4 rounded-xl bg-[#F4F7FC] border border-gray-200 mb-6">
@@ -1201,14 +1028,12 @@
                             <form wire:submit="submitPaymentRequest">
                                 <div class="grid grid-cols-2 gap-4">
                                     {{-- Reference Number --}}
-                                    <div class="{{ $selectedPaymentMethod === 'Cash' ? 'col-span-2' : '' }}">
-                                        @if($selectedPaymentMethod !== 'Cash')
-                                            <label class="text-xs font-semibold text-gray-700">Reference Number</label>
-                                            <input type="text" wire:model="paymentReferenceNumber"
-                                                class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500"
-                                                placeholder="e.g. 1234567890">
-                                            @error('paymentReferenceNumber') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
-                                        @endif
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-700">Reference Number</label>
+                                        <input type="text" wire:model="paymentReferenceNumber"
+                                            class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500"
+                                            placeholder="e.g. 1234567890">
+                                        @error('paymentReferenceNumber') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
 
                                     {{-- Amount Paid --}}
@@ -1234,11 +1059,16 @@
                                     <label class="mt-1 flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition relative overflow-hidden">
                                         @if($paymentProofImage)
                                             <img src="{{ $paymentProofImage->temporaryUrl() }}" alt="Preview" class="absolute inset-0 w-full h-full object-contain p-2">
+                                        @elseif($previousProofImagePath)
+                                            <img src="{{ asset('storage/' . $previousProofImagePath) }}" alt="Previous proof" class="absolute inset-0 w-full h-full object-contain p-2 opacity-60">
+                                            <div class="absolute bottom-1 left-0 right-0 text-center">
+                                                <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Previous upload — click to replace</span>
+                                            </div>
                                         @else
                                             <div class="flex flex-col items-center justify-center pt-5 pb-6" x-show="!uploading">
                                                 <svg class="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                                                 <p class="text-xs text-gray-500 font-semibold">Click to upload receipt</p>
-                                                <p class="text-[10px] text-gray-400 mt-0.5">PNG, JPG up to 10MB</p>
+                                                <p class="text-xs text-gray-400 mt-0.5">PNG, JPG up to 10MB</p>
                                             </div>
                                         @endif
                                         {{-- Upload progress --}}
@@ -1283,7 +1113,14 @@
                             class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-xl text-sm transition-colors">
                             Back
                         </button>
-                        <p class="text-xs text-gray-400 self-center">Select a payment method to continue</p>
+                        @if($selectedPaymentMethod)
+                            <button type="button" wire:click="confirmPaymentMethod"
+                                class="bg-[#070589] hover:bg-[#000060] text-white font-bold py-3 px-10 rounded-xl text-sm transition-colors shadow-lg">
+                                Continue
+                            </button>
+                        @else
+                            <p class="text-xs text-gray-400 self-center">Select a payment method to continue</p>
+                        @endif
                     @elseif($paymentStep === 3)
                         <button type="button" wire:click="goToPaymentStep(2)"
                             class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-xl text-sm transition-colors">
@@ -1307,6 +1144,16 @@
 
             </div>
         </div>
+
+        {{-- Cancel Payment Confirmation --}}
+        <x-ui.modal-cancel
+            name="cancel-payment-modal"
+            title="Cancel Payment?"
+            description="Are you sure you want to cancel? Your payment progress will not be saved."
+            discardText="Yes, Cancel"
+            returnText="Continue Payment"
+            discardAction="closePaymentModal"
+        />
     @endif
 
 </div>

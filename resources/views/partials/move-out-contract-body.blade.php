@@ -314,19 +314,9 @@
                 <p class="text-xs font-semibold text-gray-800">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
                 <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
             @else
-                @if($signatureMode === 'manager')
-                    <button
-                        wire:click="openMoveOutSignatureModal('tenant')"
-                        class="w-full border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer group no-print"
-                    >
-                        <svg class="w-6 h-6 text-blue-400 group-hover:text-blue-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="text-[10px] font-semibold text-blue-500 group-hover:text-blue-600">Click to Sign</span>
-                    </button>
-                @else
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
-                    </div>
-                @endif
+                <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
+                    <span class="text-[10px] text-gray-400">Awaiting tenant signature</span>
+                </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
                 <p class="text-[10px] text-gray-400 mt-1">Tenant's Signature Over Printed Name</p>

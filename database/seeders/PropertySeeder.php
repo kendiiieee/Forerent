@@ -17,9 +17,11 @@ class PropertySeeder extends Seeder
     {
         $this->faker = app(Generator::class);
 
-        // Create 3 properties owned by user with ID 3
+        $liam = \App\Models\User::where('email', 'landlord@example.com')->first();
+
+        // Create 3 properties owned by Liam Landlord
         Property::factory()
             ->count(3)
-            ->create(['owner_id' => 3]);
+            ->create(['owner_id' => $liam->user_id]);
     }
 }

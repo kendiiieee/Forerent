@@ -46,7 +46,42 @@
       "Bash(cmd.exe /c \"php artisan tinker --execute=\\\\\"\\\\\\\\App\\\\\\\\Models\\\\\\\\Lease::query\\(\\)->update\\(['late_payment_penalty' => 1]\\);\\\\\"\")",
       "Bash(cmd.exe /c \"php artisan tinker --execute=\\\\\"echo \\\\\\\\App\\\\\\\\Models\\\\\\\\Lease::query\\(\\)->update\\(['late_payment_penalty' => 1]\\);\\\\\"\")",
       "Bash(cmd.exe /c \"cd /d E:\\\\reigne\\\\Citispace-Forerent && php --version\")",
-      "Read(//c/Program Files/PHP/**)"
+      "Read(//c/Program Files/PHP/**)",
+      "Read(//tmp/**)",
+      "Bash(php -r ':*)",
+      "Bash(node -e ':*)",
+      "Bash(cygpath -w /tmp/tenant-dash-new.txt)",
+      "Bash(find /e/reigne/Citispace-Forerent -name \"*.php\" -type f -exec grep -l \"PaymentRequest::create\\\\|PaymentRequestFactory\" {} \\\\;)",
+      "Read(//e/herd/bin/**)",
+      "Bash(ls /e/herd/bin/php*.exe)",
+      "Bash(ls /c/laragon/bin/php*/php.exe)",
+      "Read(//c/php/**)",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path 'C:\\\\' -Filter 'php.exe' -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 5 -ExpandProperty FullName\")",
+      "Read(//c/Program Files/**)",
+      "Bash(grep \"\\\\.php$\")",
+      "Bash(wc -l /e/reigne/Citispace-Forerent/app/Livewire/**/*.php)",
+      "Bash(grep -B5 'public $selectedBuilding\\\\|buildings =' /e/reigne/Citispace-Forerent/app/Livewire/Layouts/Financials/UtilityBillEntry.php)",
+      "Bash(grep -r \"->default\\\\|enum.*default\" /e/reigne/Citispace-Forerent/database/migrations/*.php)",
+      "Bash(grep -r \"default\" /e/reigne/Citispace-Forerent/database/migrations/*.php)",
+      "Bash(where wkhtmltopdf:*)",
+      "Bash(where chrome:*)",
+      "Bash(where python:*)",
+      "Bash(where npm:*)",
+      "Bash(grep -r \"api\\\\|API\\\\|token\\\\|secret\\\\|password\" /e/reigne/Citispace-Forerent/.env*)",
+      "Bash(grep -r \"SESSION_SECURE\\\\|SESSION_HTTP_ONLY\\\\|SESSION_SAME_SITE\" /e/reigne/Citispace-Forerent/.env* /e/reigne/Citispace-Forerent/config/session.php)",
+      "Bash(grep -C3 \"TenantMaintenanceCreate\\\\|old duplicate\" '/e/reigne/Citispace-Forerent/app/Livewire/Layouts/Maintenance/'*.php)",
+      "Bash(grep -E \"\\\\.\\(blade|php\\)$\")",
+      "Bash(grep -E \"\\\\.\\(blade\\\\.php|php\\)$\")",
+      "Bash(grep -n \"class Billing\\\\|function\\\\|public \\\\$\" /e/reigne/Citispace-Forerent/app/Models/Billing.php)",
+      "Bash(php -l app/Livewire/Layouts/Tenants/PaymentHistory.php)",
+      "Bash(php -l app/Livewire/Layouts/Tenants/TenantDashboardOverview.php)",
+      "Bash(/c/xampp/php/php.exe -l \"e:/reigne/Citispace-Forerent/app/Livewire/Layouts/Tenants/PaymentHistory.php\")",
+      "Bash(/c/xampp/php/php.exe -l \"e:/reigne/Citispace-Forerent/app/Livewire/Layouts/Tenants/TenantDashboardOverview.php\")",
+      "Bash(cmd.exe /c \"php -l e:\\\\reigne\\\\Citispace-Forerent\\\\app\\\\Livewire\\\\Layouts\\\\Tenants\\\\PaymentHistory.php\")",
+      "Bash(cmd.exe /c \"php -l e:\\\\reigne\\\\Citispace-Forerent\\\\app\\\\Livewire\\\\Layouts\\\\Tenants\\\\TenantDashboardOverview.php\")"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

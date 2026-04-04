@@ -111,8 +111,69 @@
                                 {{ $ticket->status }}
                             </span>
                         </div>
+                        <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
+                            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Assigned To</p>
+                            <p class="text-[#070642] font-semibold text-sm">{{ $ticket->assigned_to ?? 'Not assigned' }}</p>
+                        </div>
+                        <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
+                            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Expected Completion</p>
+                            <p class="text-[#070642] font-semibold text-sm">
+                                {{ $ticket->expected_completion_date ? \Carbon\Carbon::parse($ticket->expected_completion_date)->format('M d, Y') : 'Not set' }}
+                            </p>
+                        </div>
                     </div>
                 </div>
+
+                {{-- ── TRACKING FIELDS (editable) ── --}}
+                @if(in_array($ticket->status, ['Pending', 'Ongoing']))
+                    <div>
+                        <h3 class="text-sm font-bold text-[#070642] mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-[#2B66F5] rounded-full"></span>
+                            Manage Request
+                        </h3>
+                        <div class="grid grid-cols-1 gap-3">
+                            {{-- Priority Escalation --}}
+                            <div class="flex items-end gap-2">
+                                <div class="flex-1">
+                                    <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">Change Priority</label>
+                                    <select wire:model="newUrgency" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none">
+                                        <option value="Level 1">Level 1 — Critical</option>
+                                        <option value="Level 2">Level 2 — High</option>
+                                        <option value="Level 3">Level 3 — Medium</option>
+                                        <option value="Level 4">Level 4 — Low</option>
+                                    </select>
+                                </div>
+                                <button wire:click="changeUrgency" class="px-4 py-2 bg-[#2B66F5] text-white text-xs font-bold rounded-xl hover:bg-[#1a4fd1] transition-colors">
+                                    Update
+                                </button>
+                            </div>
+
+                            {{-- Assigned Worker --}}
+                            <div class="flex items-end gap-2">
+                                <div class="flex-1">
+                                    <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">Assigned Worker / Vendor</label>
+                                    <input type="text" wire:model="assignedTo" placeholder="e.g. Juan (Plumber), ABC Services" maxlength="255"
+                                        class="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-300 outline-none">
+                                </div>
+                                <button wire:click="saveAssignedTo" class="px-4 py-2 bg-[#2B66F5] text-white text-xs font-bold rounded-xl hover:bg-[#1a4fd1] transition-colors">
+                                    Save
+                                </button>
+                            </div>
+
+                            {{-- Expected Completion Date --}}
+                            <div class="flex items-end gap-2">
+                                <div class="flex-1">
+                                    <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">Expected Completion Date</label>
+                                    <input type="date" wire:model="expectedCompletionDate"
+                                        class="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 outline-none">
+                                </div>
+                                <button wire:click="saveExpectedDate" class="px-4 py-2 bg-[#2B66F5] text-white text-xs font-bold rounded-xl hover:bg-[#1a4fd1] transition-colors">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Description --}}
                 <div>
@@ -451,6 +512,101 @@
                     </div>
                 </template>
 
+                {{-- ── COST THRESHOLD WARNING ── --}}
+                @if($requestTotal >= \App\Livewire\Layouts\Maintenance\ManagerMaintenanceDetail::COST_WARNING_THRESHOLD)
+                    <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-bold text-amber-700">Cost Threshold Exceeded</p>
+                            <p class="text-xs text-amber-600">This request's total (PHP {{ number_format($requestTotal, 2) }}) exceeds the PHP {{ number_format(\App\Livewire\Layouts\Maintenance\ManagerMaintenanceDetail::COST_WARNING_THRESHOLD, 0) }} threshold. Please review before adding more costs.</p>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- ── MANAGER NOTES (internal) ── --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[#070642] mb-3 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-purple-500 rounded-full"></span>
+                        Internal Notes
+                        <span class="text-[10px] text-gray-400 font-normal ml-1">(not visible to tenant)</span>
+                    </h3>
+
+                    {{-- Add Note Form --}}
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" wire:model="noteText" wire:keydown.enter="saveNote" placeholder="Add a note..." maxlength="1000"
+                            class="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-300 outline-none focus:ring-2 focus:ring-purple-200 focus:border-transparent">
+                        <button wire:click="saveNote" class="px-4 py-2 bg-purple-500 text-white text-xs font-bold rounded-xl hover:bg-purple-600 transition-colors flex-shrink-0">
+                            Add
+                        </button>
+                    </div>
+                    @error('noteText') <p class="text-xs text-red-500 mb-2">{{ $message }}</p> @enderror
+
+                    {{-- Notes List --}}
+                    @if(!empty($notes))
+                        <div class="space-y-2 max-h-48 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;">
+                            @foreach($notes as $n)
+                                <div class="group flex items-start gap-3 bg-purple-50/50 border border-purple-100 rounded-xl p-3">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm text-gray-700">{{ $n['note'] }}</p>
+                                        <p class="text-[10px] text-gray-400 mt-1">
+                                            {{ $n['author_name'] }} &middot; {{ \Carbon\Carbon::parse($n['created_at'])->format('M d, h:i A') }}
+                                        </p>
+                                    </div>
+                                    <button wire:click="deleteNote({{ $n['note_id'] }})"
+                                        class="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-100 text-gray-400 hover:text-red-500 flex-shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs text-gray-400 italic">No internal notes yet.</p>
+                    @endif
+                </div>
+
+                {{-- ── ACTIVITY LOG ── --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[#070642] mb-3 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-indigo-500 rounded-full"></span>
+                        Activity Log
+                    </h3>
+
+                    @if(!empty($activities))
+                        <div class="space-y-2 max-h-60 overflow-y-auto" style="scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;">
+                            @foreach($activities as $act)
+                                <div class="flex items-start gap-3 py-2 {{ !$loop->last ? 'border-b border-gray-50' : '' }}">
+                                    @php
+                                        $iconColor = match($act['action']) {
+                                            'status_changed' => 'text-blue-500 bg-blue-50',
+                                            'cost_added', 'cost_removed' => 'text-green-500 bg-green-50',
+                                            'note_added' => 'text-purple-500 bg-purple-50',
+                                            'urgency_changed' => 'text-red-500 bg-red-50',
+                                            'worker_assigned', 'eta_updated' => 'text-indigo-500 bg-indigo-50',
+                                            'archived' => 'text-gray-500 bg-gray-100',
+                                            default => 'text-gray-500 bg-gray-50'
+                                        };
+                                    @endphp
+                                    <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 {{ $iconColor }}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm text-gray-700">{{ $act['details'] }}</p>
+                                        <p class="text-[10px] text-gray-400 mt-0.5">
+                                            {{ $act['actor_name'] }} &middot; {{ \Carbon\Carbon::parse($act['created_at'])->format('M d, h:i A') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs text-gray-400 italic">No activity recorded yet.</p>
+                    @endif
+                </div>
+
                 {{-- Updates + Manager Action Buttons --}}
                 <div>
                     <div class="flex items-center justify-between mb-4">
@@ -463,31 +619,25 @@
                         <div class="flex items-center gap-2">
                             @if($canMarkOngoing)
                                 <button
-                                    wire:click="markAsOngoing"
-                                    wire:loading.attr="disabled"
-                                    wire:target="markAsOngoing"
-                                    class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors disabled:opacity-50"
+                                    x-on:click="$dispatch('open-modal', 'confirm-mark-ongoing')"
+                                    class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors"
                                 >
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                     </svg>
-                                    <span wire:loading.remove wire:target="markAsOngoing">Mark as Ongoing</span>
-                                    <span wire:loading wire:target="markAsOngoing">Updating...</span>
+                                    Mark as Ongoing
                                 </button>
                             @endif
 
                             @if($canMarkCompleted)
                                 <button
-                                    wire:click="markAsCompleted"
-                                    wire:loading.attr="disabled"
-                                    wire:target="markAsCompleted"
-                                    class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50"
+                                    x-on:click="$dispatch('open-modal', 'confirm-mark-completed')"
+                                    class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
                                 >
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    <span wire:loading.remove wire:target="markAsCompleted">Mark as Completed</span>
-                                    <span wire:loading wire:target="markAsCompleted">Updating...</span>
+                                    Mark as Completed
                                 </button>
                             @endif
 
@@ -498,6 +648,25 @@
                                     </svg>
                                     Resolved
                                 </span>
+                                <button
+                                    x-on:click="$dispatch('open-modal', 'confirm-revert-status')"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 transition-colors"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    Revert
+                                </button>
+                            @elseif($ticket->status === 'Ongoing')
+                                <button
+                                    x-on:click="$dispatch('open-modal', 'confirm-revert-status')"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 transition-colors"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    Revert
+                                </button>
                             @endif
                         </div>
                     </div>
@@ -635,8 +804,44 @@
                     </div>
                 @endif
 
+                {{-- ── ARCHIVE BUTTON ── --}}
+                @if($ticket->status === 'Completed')
+                    <div class="pt-2 border-t border-gray-100">
+                        <button
+                            x-on:click="$dispatch('open-modal', 'confirm-archive-request')"
+                            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-500 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                            </svg>
+                            Archive Request
+                        </button>
+                    </div>
+                @endif
+
             </div>
         </div>
+
+        {{-- ── Confirmation Modals (reusable component) ── --}}
+        <x-ui.modal-confirm name="confirm-archive-request"
+            title="Archive this request?"
+            description="This will remove the request from the active list. Archived requests can be restored later."
+            confirmText="Yes, Archive" cancelText="Cancel" confirmAction="archiveRequest"/>
+
+        <x-ui.modal-confirm name="confirm-mark-ongoing"
+            title="Mark as Ongoing?"
+            description="This will update the status to Ongoing and the tenant will be notified."
+            confirmText="Yes, Mark as Ongoing" cancelText="Cancel" confirmAction="markAsOngoing"/>
+
+        <x-ui.modal-confirm name="confirm-mark-completed"
+            title="Mark as Completed?"
+            description="This will mark the request as completed. The tenant will be notified and can leave feedback."
+            confirmText="Yes, Mark as Completed" cancelText="Cancel" confirmAction="markAsCompleted"/>
+
+        <x-ui.modal-confirm name="confirm-revert-status"
+            title="Revert Status?"
+            description="This will move the request back to its previous status. The tenant will be notified."
+            confirmText="Yes, Revert" cancelText="Cancel" confirmAction="revertStatus"/>
 
     @else
         {{-- Empty State --}}

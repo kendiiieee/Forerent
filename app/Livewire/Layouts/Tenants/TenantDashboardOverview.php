@@ -110,6 +110,8 @@ class TenantDashboardOverview extends Component
     public $paymentOwnerInfo = [];
     public $pendingPaymentRequests = [];
     public $rejectedPaymentRequests = [];
+    public $previousProofImagePath = null;
+    public $resubmitRejectReason = null;
 
     // Move-out e-signature (independent from move-in)
     public $showMoveOutSignatureModal = false;
@@ -122,6 +124,12 @@ class TenantDashboardOverview extends Component
     public function mount()
     {
         $user = Auth::user();
+
+        // Auto-switch tab from query param (e.g. ?tab=inspection)
+        $tab = request()->query('tab');
+        if ($tab && in_array($tab, ['overview', 'inspection'])) {
+            $this->dashTab = $tab;
+        }
 
         // Try active lease first, then fall back to latest expired lease
         $this->lease = Lease::with(['bed.unit.property', 'billings.items'])
@@ -312,6 +320,12 @@ class TenantDashboardOverview extends Component
             ->get();
     }
 
+    public function refreshContractData()
+    {
+        $this->lease->refresh();
+        $this->loadContractData();
+    }
+
     protected function loadContractData()
     {
         $this->tenantSignature = $this->lease->tenant_signature;
@@ -494,7 +508,13 @@ class TenantDashboardOverview extends Component
     public function selectPaymentMethod(string $method): void
     {
         $this->selectedPaymentMethod = $method;
-        $this->paymentStep = 3;
+    }
+
+    public function confirmPaymentMethod(): void
+    {
+        if ($this->selectedPaymentMethod) {
+            $this->paymentStep = 3;
+        }
     }
 
     public function goToPaymentStep(int $step): void
@@ -506,18 +526,29 @@ class TenantDashboardOverview extends Component
 
     public function submitPaymentRequest(): void
     {
-        $this->validate([
+        $rules = [
             'selectedBillingId' => 'required',
-            'selectedPaymentMethod' => 'required|in:GCash,Maya,Bank Transfer,Cash',
-            'paymentReferenceNumber' => $this->selectedPaymentMethod !== 'Cash' ? 'required|string|max:100' : 'nullable|string|max:100',
+            'selectedPaymentMethod' => 'required|in:GCash,Maya,Bank Transfer',
+            'paymentReferenceNumber' => 'required|string|max:100',
             'paymentAmountPaid' => 'required|numeric|min:1',
-            'paymentProofImage' => 'required|image|max:10240',
-        ], [
+        ];
+
+        // Only require new proof if no previous proof exists
+        if (!$this->previousProofImagePath) {
+            $rules['paymentProofImage'] = 'required|image|max:10240';
+        } else {
+            $rules['paymentProofImage'] = 'nullable|image|max:10240';
+        }
+
+        $this->validate($rules, [
             'paymentProofImage.required' => 'Please upload your proof of payment.',
             'paymentReferenceNumber.required' => 'Please enter the reference number from your payment receipt.',
         ]);
 
-        $proofPath = $this->paymentProofImage->store('payment_proofs', 'public');
+        // Use new upload if provided, otherwise keep previous proof
+        $proofPath = $this->paymentProofImage
+            ? $this->paymentProofImage->store('payment_proofs', 'public')
+            : $this->previousProofImagePath;
 
         PaymentRequest::create([
             'billing_id' => $this->selectedBillingId,
@@ -542,8 +573,14 @@ class TenantDashboardOverview extends Component
         $request = PaymentRequest::find($paymentRequestId);
         if (!$request || $request->tenant_id !== Auth::id() || $request->status !== 'Rejected') return;
 
-        $this->resetPaymentForm();
+        // Pre-fill with previous submission data
         $this->selectedBillingId = $request->billing_id;
+        $this->selectedPaymentMethod = $request->payment_method;
+        $this->paymentReferenceNumber = $request->reference_number ?? '';
+        $this->paymentAmountPaid = $request->amount_paid;
+        $this->previousProofImagePath = $request->proof_image;
+        $this->resubmitRejectReason = $request->reject_reason;
+        $this->paymentProofImage = null;
 
         // Load unpaid billings
         $pendingBillingIds = PaymentRequest::where('lease_id', $this->lease->lease_id)
@@ -567,16 +604,11 @@ class TenantDashboardOverview extends Component
             'contact' => $owner?->contact ?? 'N/A',
         ];
 
-        $billing = collect($this->unpaidBillings)->firstWhere('billing_id', $request->billing_id);
-        if ($billing) {
-            $this->paymentAmountPaid = $billing['to_pay'];
-        }
-
-        // Delete the rejected request so they can resubmit fresh
+        // Delete the rejected request so they can resubmit
         $request->delete();
         $this->loadPaymentRequests();
 
-        $this->paymentStep = 2;
+        $this->paymentStep = 3;
         $this->showPaymentModal = true;
     }
 
@@ -588,6 +620,8 @@ class TenantDashboardOverview extends Component
         $this->paymentReferenceNumber = '';
         $this->paymentAmountPaid = '';
         $this->paymentProofImage = null;
+        $this->previousProofImagePath = null;
+        $this->resubmitRejectReason = null;
     }
 
     protected function notifyManagerOfPaymentRequest(): void
@@ -617,6 +651,7 @@ class TenantDashboardOverview extends Component
                 'type' => 'payment_request',
                 'title' => 'Payment Submitted',
                 'message' => $msg,
+                'link' => '/manager/payment',
             ]);
         }
     }
@@ -682,6 +717,12 @@ class TenantDashboardOverview extends Component
     }
 
     // ===== MOVE-OUT ITEMS RETURNED =====
+
+    public function refreshMoveOutData()
+    {
+        $this->lease->refresh();
+        $this->loadItemsReturned();
+    }
 
     protected function loadItemsReturned()
     {
@@ -798,6 +839,7 @@ class TenantDashboardOverview extends Component
                 'type' => 'contract_signed',
                 'title' => 'Contract Signed by Tenant',
                 'message' => $user->first_name . ' ' . $user->last_name . ' has read and signed the ' . $label . '.',
+                'link' => '/manager/tenant',
             ]);
         }
     }

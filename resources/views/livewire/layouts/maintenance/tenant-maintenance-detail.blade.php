@@ -10,7 +10,6 @@
     x-data="{
         lightbox: false,
         lightboxSrc: '',
-
         feedbackOpen: false,
         rating: 0,
         hoverRating: 0,
@@ -216,6 +215,17 @@
         </div>
     </div>
 
+    {{-- ── Confirmation Modals (reusable component) ── --}}
+    <x-ui.modal-confirm name="confirm-cancel-request"
+        title="Cancel this request?"
+        description="This action cannot be undone. Your maintenance request will be permanently cancelled."
+        confirmText="Yes, Cancel Request" cancelText="Keep Request" confirmAction="cancelRequest"/>
+
+    <x-ui.modal-confirm name="confirm-reopen-request"
+        title="Reopen this request?"
+        description="The issue will be re-submitted as Pending and your manager will be notified."
+        confirmText="Yes, Reopen" cancelText="Cancel" confirmAction="reopenRequest"/>
+
     {{-- ══════════════════════════════════════════════
          MAIN DETAIL CONTENT
     ══════════════════════════════════════════════ --}}
@@ -271,11 +281,38 @@
                     <p class="text-sm text-blue-100 mt-0.5 truncate">{{ $buildingDisplay }}</p>
                 </div>
 
-                {{-- Right: Send Feedback button (only when Completed / Resolved) --}}
-                @if($isResolved)
-                    <div class="flex-shrink-0 pt-1">
+                {{-- Right: Action buttons --}}
+                <div class="flex-shrink-0 pt-1 flex items-center gap-2">
+                    {{-- Cancel button (only Pending) --}}
+                    @if($ticket->status === 'Pending')
+                        <button
+                            x-on:click="$dispatch('open-modal', 'confirm-cancel-request')"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/20 text-white text-xs font-bold hover:bg-red-500/40 transition-colors whitespace-nowrap"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Cancel Request
+                        </button>
+                    @endif
+
+                    {{-- Completed/Resolved actions --}}
+                    @if($isResolved)
+                        {{-- Reopen button --}}
+                        <button
+                            x-on:click="$dispatch('open-modal', 'confirm-reopen-request')"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-500/20 text-white text-xs font-bold hover:bg-orange-500/40 transition-colors whitespace-nowrap"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Reopen
+                        </button>
+
+                        {{-- Feedback button --}}
                         @if($feedbackSubmitted)
-                            {{-- Already submitted — show confirmation badge --}}
                             <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/20 text-white text-xs font-semibold">
                                 <svg class="w-4 h-4 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -294,8 +331,8 @@
                                 Send Feedback
                             </button>
                         @endif
-                    </div>
-                @endif
+                    @endif
+                </div>
             </div>
 
             <p class="text-xs text-blue-200 mt-3 pt-3 border-t border-blue-400/30">

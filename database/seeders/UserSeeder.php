@@ -24,9 +24,25 @@ class UserSeeder extends Seeder
         ]);
 
         User::factory()->create([
+            'first_name' => 'Tanya',
+            'last_name' => 'Torres',
+            'email' => 'tenant2@example.com',
+            'role' => 'tenant',
+            'password' => Hash::make('password'),
+        ]);
+
+        User::factory()->create([
             'first_name' => 'Marcus',
             'last_name' => 'Manager',
             'email' => 'manager@example.com',
+            'role' => 'manager',
+            'password' => Hash::make('password'),
+        ]);
+
+        User::factory()->create([
+            'first_name' => 'Mia',
+            'last_name' => 'Martinez',
+            'email' => 'manager2@example.com',
             'role' => 'manager',
             'password' => Hash::make('password'),
         ]);
@@ -40,15 +56,16 @@ class UserSeeder extends Seeder
             'company_school' => 'ABC COMPANY',
         ]);
 
+
         User::factory()
-            ->count(149)
+            ->count(148)
             ->create([
                 'role' => 'tenant',
                 'password' => Hash::make('password'),
             ]);
 
         User::factory()
-            ->count(4)
+            ->count(3)
             ->create([
                 'role' => 'manager',
                 'password' => Hash::make('password'),

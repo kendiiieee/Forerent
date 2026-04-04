@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Tenants;
 use App\Models\Lease;
 use App\Models\MoveInInspection;
 use App\Models\MoveOutInspection;
+use App\Models\Notification;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
@@ -638,6 +639,9 @@ class TenantDetail extends Component
 
     public function openSignatureModal(string $role): void
     {
+        // Manager can only sign as owner/lessor
+        if ($role !== 'owner') return;
+
         $this->signatureRole = $role;
         $this->showSignatureModal = true;
     }
@@ -650,21 +654,20 @@ class TenantDetail extends Component
 
     public function saveSignature(string $signatureData): void
     {
-        if (!$this->currentLeaseId || !$this->signatureRole) return;
+        // Manager can only sign as owner
+        if (!$this->currentLeaseId || $this->signatureRole !== 'owner') return;
 
         $lease = Lease::find($this->currentLeaseId);
         if (!$lease) return;
 
-        $result = $this->saveLeaseSignature($lease, $signatureData, $this->signatureRole, 'movein');
+        $result = $this->saveLeaseSignature($lease, $signatureData, 'owner', 'movein');
 
-        if ($this->signatureRole === 'tenant') {
-            $this->tenantSignature = $result['signature'];
-            $this->tenantSignedAt = $result['signedAt'];
-        } else {
-            $this->ownerSignature = $result['signature'];
-            $this->ownerSignedAt = $result['signedAt'];
-        }
+        $this->ownerSignature = $result['signature'];
+        $this->ownerSignedAt = $result['signedAt'];
         $this->contractAgreed = $result['agreed'];
+
+        // Notify tenant that the manager/owner signed
+        $this->notifyTenantOfContractSign($lease, 'move-in');
 
         // If both signatures exist, generate PDF
         if ($result['agreed']) {
@@ -742,6 +745,9 @@ class TenantDetail extends Component
 
     public function openMoveOutSignatureModal(string $role): void
     {
+        // Manager can only sign as owner/lessor
+        if ($role !== 'owner') return;
+
         $this->moveOutSignatureRole = $role;
         $this->showMoveOutSignatureModal = true;
     }
@@ -754,24 +760,39 @@ class TenantDetail extends Component
 
     public function saveMoveOutSignature(string $signatureData): void
     {
-        if (!$this->currentLeaseId || !$this->moveOutSignatureRole) return;
+        // Manager can only sign as owner
+        if (!$this->currentLeaseId || $this->moveOutSignatureRole !== 'owner') return;
 
         $lease = Lease::find($this->currentLeaseId);
         if (!$lease) return;
 
-        $result = $this->saveLeaseSignature($lease, $signatureData, $this->moveOutSignatureRole, 'moveout');
+        $result = $this->saveLeaseSignature($lease, $signatureData, 'owner', 'moveout');
 
-        if ($this->moveOutSignatureRole === 'tenant') {
-            $this->moveOutTenantSignature = $result['signature'];
-            $this->moveOutTenantSignedAt = $result['signedAt'];
-        } else {
-            $this->moveOutOwnerSignature = $result['signature'];
-            $this->moveOutOwnerSignedAt = $result['signedAt'];
-        }
+        $this->moveOutOwnerSignature = $result['signature'];
+        $this->moveOutOwnerSignedAt = $result['signedAt'];
         $this->moveOutContractAgreed = $result['agreed'];
+
+        // Notify tenant that the manager/owner signed
+        $this->notifyTenantOfContractSign($lease, 'move-out');
 
         $this->closeMoveOutSignatureModal();
         $this->dispatch('moveout-signature-saved');
+    }
+
+    protected function notifyTenantOfContractSign(Lease $lease, string $contractType): void
+    {
+        $tenantId = $lease->tenant_id;
+        if (!$tenantId) return;
+
+        $label = $contractType === 'move-out' ? 'move-out contract' : 'move-in contract';
+
+        Notification::create([
+            'user_id' => $tenantId,
+            'type' => 'contract_signed',
+            'title' => 'Contract Signed by Lessor',
+            'message' => 'The lessor/authorized representative has signed your ' . $label . '. Please review and sign.',
+            'link' => '/tenant?tab=inspection',
+        ]);
     }
 
     public function render()
