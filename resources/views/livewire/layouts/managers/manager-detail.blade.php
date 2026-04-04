@@ -24,11 +24,10 @@
                             {{ $currentManager->email }}
                         </span>
                         <span class="flex items-center gap-2 text-sm text-white/90">
-                            {{-- Solid Phone Icon (Fixed) --}}
                             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C6.477 18 2 13.523 2 8V3z" />
                             </svg>
-                            {{ $currentManager->contact }}
+                            {{ '(+63) ' . substr($currentManager->contact, -10, 3) . '-' . substr($currentManager->contact, -7, 3) . '-' . substr($currentManager->contact, -4) }}
                         </span>
                     </div>
                 </div>

@@ -30,7 +30,7 @@ class UserFactory extends Factory
 
             'role' => $faker->randomElement(['tenant', 'manager', 'landlord']),
 
-            'contact' => $faker->phoneNumber(),
+            'contact' => '9' . $faker->numerify('#########'),
 
             'profile_img' => 'https://i.pravatar.cc/150?u=' . $email,
 
@@ -43,7 +43,7 @@ class UserFactory extends Factory
             'position_course'                => fake()->jobTitle(),
             'emergency_contact_name'         => fake()->name(),
             'emergency_contact_relationship' => fake()->randomElement(['Parent', 'Sibling', 'Spouse', 'Friend', 'Guardian']),
-            'emergency_contact_number'       => fake()->phoneNumber(),
+            'emergency_contact_number'       => '9' . $faker->numerify('#########'),
 
             'email_verified_at' => now(),
             'phone_verified_at' => null,

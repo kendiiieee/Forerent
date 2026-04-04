@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Lease;
 use App\Models\Unit;
 use App\Models\UtilityBill;
 use Faker\Generator;
@@ -17,59 +16,78 @@ class UtilityBillSeeder extends Seeder
     {
         $this->faker = app(Generator::class);
 
-        // Get units that have active leases
-        $units = Unit::whereHas('beds', function ($q) {
-            $q->whereHas('leases', function ($q2) {
-                $q2->where('status', 'Active');
-            });
-        })->with(['beds.leases' => function ($q) {
-            $q->where('status', 'Active');
-        }])->get();
+        $units = Unit::whereHas('beds.leases')
+            ->with(['beds.leases'])
+            ->get();
 
-        $today = Carbon::now();
+        if ($units->isEmpty()) {
+            $this->command->error('No units with leases found. Run LeaseSeeder first.');
+            return;
+        }
 
         foreach ($units as $unit) {
-            // Count active tenants in this unit
-            $activeTenantCount = $unit->beds->flatMap->leases->count();
-            if ($activeTenantCount === 0) continue;
+            if (!$unit->manager_id) continue;
 
-            $managerId = $unit->manager_id;
-            if (!$managerId) continue;
+            // Collect all leases across all beds in this unit
+            $allLeases = $unit->beds->flatMap->leases;
 
-            // Generate utility bills for the last 6 months
-            for ($i = 5; $i >= 0; $i--) {
-                $billingPeriod = $today->copy()->subMonths($i)->startOfMonth();
+            if ($allLeases->isEmpty()) continue;
 
-                // Electricity bill
-                $electricityTotal = $this->faker->randomFloat(2, 1200, 2500);
+            // Dynamically determine billing range from lease dates
+            $earliestStart = $allLeases->min(fn($l) => $l->start_date);
+            $latestEnd     = $allLeases->max(fn($l) => $l->end_date);
+
+            $currentMonth = Carbon::parse($earliestStart)->startOfMonth();
+            $endMonth     = Carbon::parse($latestEnd)->startOfMonth()->min(Carbon::now()->startOfMonth());
+
+            while ($currentMonth->lte($endMonth)) {
+                // Count tenants with a lease covering this month
+                $activeTenantCount = $allLeases->filter(function ($lease) use ($currentMonth) {
+                    $leaseStart = Carbon::parse($lease->start_date)->startOfMonth();
+                    $leaseEnd   = Carbon::parse($lease->end_date)->startOfMonth();
+
+                    return $leaseStart->lte($currentMonth) && $leaseEnd->gte($currentMonth);
+                })->count();
+
+                if ($activeTenantCount === 0) {
+                    $currentMonth->addMonth();
+                    continue;
+                }
+
+                // Electricity (always)
+                $electricityTotal     = $this->faker->randomFloat(2, 1200, 2500);
                 $electricityPerTenant = round($electricityTotal / $activeTenantCount, 2);
 
                 UtilityBill::create([
                     'unit_id'           => $unit->unit_id,
                     'utility_type'      => 'electricity',
-                    'billing_period'    => $billingPeriod->format('Y-m-d'),
+                    'billing_period'    => $currentMonth->format('Y-m-d'),
                     'total_amount'      => $electricityTotal,
                     'tenant_count'      => $activeTenantCount,
                     'per_tenant_amount' => $electricityPerTenant,
-                    'entered_by'        => $managerId,
+                    'entered_by'        => $unit->manager_id,
                 ]);
 
-                // Water bill (~60% chance per month)
+                // Water (~60% chance)
                 if ($this->faker->boolean(60)) {
-                    $waterTotal = $this->faker->randomFloat(2, 200, 500);
+                    $waterTotal     = $this->faker->randomFloat(2, 200, 500);
                     $waterPerTenant = round($waterTotal / $activeTenantCount, 2);
 
                     UtilityBill::create([
                         'unit_id'           => $unit->unit_id,
                         'utility_type'      => 'water',
-                        'billing_period'    => $billingPeriod->format('Y-m-d'),
+                        'billing_period'    => $currentMonth->format('Y-m-d'),
                         'total_amount'      => $waterTotal,
                         'tenant_count'      => $activeTenantCount,
                         'per_tenant_amount' => $waterPerTenant,
-                        'entered_by'        => $managerId,
+                        'entered_by'        => $unit->manager_id,
                     ]);
                 }
+
+                $currentMonth->addMonth();
             }
         }
+
+        $this->command->info('✅ Utility bills seeded successfully!');
     }
 }
