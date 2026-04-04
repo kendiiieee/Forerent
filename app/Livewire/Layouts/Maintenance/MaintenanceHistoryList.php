@@ -50,8 +50,15 @@ class MaintenanceHistoryList extends Component
             $query->where('maintenance_requests.status', $this->filter);
         }
 
+        $historyItems = $query->orderBy('created_at', 'desc')->get();
+
+        // Auto-select first item if none is selected
+        if ($this->activeHistoryId === null && $historyItems->isNotEmpty()) {
+            $this->selectHistory($historyItems->first()->request_id);
+        }
+
         return view('livewire.layouts.maintenance.maintenance-history-list', [
-            'historyItems' => $query->orderBy('created_at', 'desc')->get()
+            'historyItems' => $historyItems,
         ]);
     }
 

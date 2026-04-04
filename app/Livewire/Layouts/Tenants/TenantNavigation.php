@@ -33,6 +33,15 @@ class TenantNavigation extends Component
         $this->loadBuildingOptions();
         $this->loadTenants();
         $this->loadCounts();
+
+        $this->autoSelectFirst();
+    }
+
+    private function autoSelectFirst(): void
+    {
+        if (!empty($this->tenants)) {
+            $this->selectTenant($this->tenants[0]['id']);
+        }
     }
 
     public function selectBuilding($id = null): void
@@ -50,6 +59,7 @@ class TenantNavigation extends Component
         $this->search = '';
         $this->loadTenants();
         $this->loadCounts();
+        $this->autoSelectFirst();
     }
 
     private function loadBuildingOptions(): void
@@ -67,6 +77,7 @@ class TenantNavigation extends Component
         $this->activeTenantId = null;
         $this->search = '';
         $this->loadTenants();
+        $this->autoSelectFirst();
     }
 
     public function updatedSortOrder(): void
@@ -78,6 +89,7 @@ class TenantNavigation extends Component
     {
         $this->activeTenantId = null;
         $this->loadTenants();
+        $this->autoSelectFirst();
     }
 
     #[On('refresh-tenant-list')]

@@ -64,8 +64,11 @@ class MessageSystem extends Component
     {
         if (in_array($tabName, $this->allowedTabs)) {
             $this->activeTab = $tabName;
-            $this->selectedUserId = null;
             $this->showProfile = false;
+
+            // Auto-select first chat in the new tab
+            $firstChat = $this->getChatsProperty()->first();
+            $this->selectedUserId = $firstChat?->user_id;
         }
     }
 

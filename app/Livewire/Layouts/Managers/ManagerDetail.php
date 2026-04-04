@@ -22,6 +22,13 @@ class ManagerDetail extends Component
     public $totalUnits = 0;
 
 
+    public function mount(?int $initialManagerId = null): void
+    {
+        if ($initialManagerId) {
+            $this->loadManager($initialManagerId);
+        }
+    }
+
     #[On('managerSelected')]
     public function loadManager(?int $managerId): void
     {

@@ -99,7 +99,7 @@
             overflow-hidden clips the detail's content to the rounded-3xl corners.
         --}}
         <div class="w-full lg:w-[70%] h-[750px] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            <livewire:layouts.maintenance.tenant-maintenance-detail />
+            <livewire:layouts.maintenance.tenant-maintenance-detail :initialRequestId="$activeRequestId" />
         </div>
 
     </div>

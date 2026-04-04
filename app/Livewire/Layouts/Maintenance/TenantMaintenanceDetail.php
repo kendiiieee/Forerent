@@ -13,6 +13,13 @@ class TenantMaintenanceDetail extends Component
     public $ticketIdDisplay    = '';
     public bool $feedbackSubmitted = false;
 
+    public function mount(?int $initialRequestId = null): void
+    {
+        if ($initialRequestId) {
+            $this->loadRequest($initialRequestId);
+        }
+    }
+
     #[On('tenantMaintenanceSelected')]
     public function loadRequest($requestId)
     {

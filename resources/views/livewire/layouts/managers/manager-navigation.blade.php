@@ -67,7 +67,7 @@
 
         {{-- Detail Card --}}
         <div id="unit-detail-card" class="w-full lg:w-[70%] h-[750px]">
-            <livewire:layouts.managers.manager-detail />
+            <livewire:layouts.managers.manager-detail :initialManagerId="$activeManagerId" />
         </div>
     </div>
 </div>

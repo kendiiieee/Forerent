@@ -60,6 +60,10 @@ class TenantDashboardOverview extends Component
     public $moveInDate = null;
     public $moveOutDate = null;
 
+    // Clearance Checklist (dynamic)
+    public $billsSettled = false;
+    public $inspectionDone = false;
+
     // Requests & Compliance
     public $openMaintenanceCount = 0;
     public $pendingMaintenanceCount = 0;
@@ -88,6 +92,9 @@ class TenantDashboardOverview extends Component
     public $showMoveOutContract = false;
     public $moveOutChecklist = [];
     public $moveOutInspectionChecklist = []; // move-in checklist for comparison
+
+    // Dashboard tab
+    public $dashTab = 'overview';
 
     // Move-out e-signature (independent from move-in)
     public $showMoveOutSignatureModal = false;
@@ -126,7 +133,24 @@ class TenantDashboardOverview extends Component
             $this->loadContractData();
             $this->loadItemsReceived();
             $this->loadItemsReturned();
+            $this->loadClearanceStatus();
         }
+    }
+
+    protected function loadClearanceStatus()
+    {
+        if (!$this->moveOutDate) return;
+
+        // Bills settled: no unpaid/overdue billings exist for this lease
+        $unpaidCount = Billing::where('lease_id', $this->lease->lease_id)
+            ->whereIn('status', ['Unpaid', 'Overdue'])
+            ->count();
+        $this->billsSettled = $unpaidCount === 0;
+
+        // Room inspection done: move-out inspection items exist
+        $this->inspectionDone = MoveOutInspection::where('lease_id', $this->lease->lease_id)
+            ->where('type', 'item_returned')
+            ->exists();
     }
 
     protected function loadBillingData()
@@ -379,6 +403,11 @@ class TenantDashboardOverview extends Component
         // Check if all items are confirmed by tenant
         $this->itemsConfirmedByTenant = count($this->itemsReceived) > 0
             && collect($this->itemsReceived)->every(fn($item) => $item['tenant_confirmed']);
+    }
+
+    public function setDashTab(string $tab): void
+    {
+        $this->dashTab = $tab;
     }
 
     public function openSignatureModal(): void

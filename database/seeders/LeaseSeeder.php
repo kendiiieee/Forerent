@@ -33,12 +33,15 @@ class LeaseSeeder extends Seeder
         $bedsToOccupy = $managedBeds->shuffle()->take($targetOccupiedCount);
 
         $tenantCycle = 0;
+        $assignedTenantIds = collect();
 
         foreach ($bedsToOccupy as $bed) {
-            $tenant = $this->pickTenantForBed($bed->unit->occupants, $tenants, $maleTenants, $femaleTenants, $tenantCycle);
+            $tenant = $this->pickTenantForBed($bed->unit->occupants, $tenants, $maleTenants, $femaleTenants, $tenantCycle, $assignedTenantIds);
             if (!$tenant) {
                 continue;
             }
+
+            $assignedTenantIds->push($tenant->user_id);
 
             $unitPrice = (float) $bed->unit->price;
             $term = $this->faker->numberBetween(9, 18);
@@ -63,7 +66,7 @@ class LeaseSeeder extends Seeder
         }
     }
 
-    private function pickTenantForBed(string $occupantsType, $allTenants, $maleTenants, $femaleTenants, int &$tenantCycle)
+    private function pickTenantForBed(string $occupantsType, $allTenants, $maleTenants, $femaleTenants, int &$tenantCycle, $assignedTenantIds)
     {
         $pool = match ($occupantsType) {
             'Male' => $maleTenants,
@@ -75,11 +78,14 @@ class LeaseSeeder extends Seeder
             $pool = $allTenants;
         }
 
-        if ($pool->isEmpty()) {
+        // Filter out already-assigned tenants
+        $available = $pool->filter(fn($t) => !$assignedTenantIds->contains($t->user_id));
+
+        if ($available->isEmpty()) {
             return null;
         }
 
-        $tenant = $pool[$tenantCycle % $pool->count()];
+        $tenant = $available->first();
         $tenantCycle++;
 
         return $tenant;

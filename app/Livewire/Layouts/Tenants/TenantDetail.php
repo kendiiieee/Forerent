@@ -88,6 +88,13 @@ class TenantDetail extends Component
         'Cabinet Key',
     ];
 
+    public function mount(?int $initialTenantId = null): void
+    {
+        if ($initialTenantId) {
+            $this->loadTenant($initialTenantId);
+        }
+    }
+
     #[On('tenantSelected')]
     public function loadTenant(int $tenantId, string $tab = 'current', ?int $buildingId = null): void
     {

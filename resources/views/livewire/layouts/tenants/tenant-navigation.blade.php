@@ -151,7 +151,7 @@
 
         {{-- RIGHT PANEL: DETAIL (70% width) --}}
         <div class="w-full lg:w-[70%] h-[750px] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            <livewire:layouts.tenants.tenant-detail />
+            <livewire:layouts.tenants.tenant-detail :initialTenantId="$activeTenantId" />
         </div>
 
     </div>

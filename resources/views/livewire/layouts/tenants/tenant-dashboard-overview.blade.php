@@ -1,236 +1,120 @@
-<div x-data="{
-    dashTab: 'overview',
-    showAllPenalties: false
-}">
+<div x-data="{ showAllPenalties: false }">
 
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- TAB NAVIGATION                                             --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] mb-5">
-        <div class="px-4 sm:px-5 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-            <button @click="dashTab = 'overview'"
-                    :class="dashTab === 'overview'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'"
-                    class="relative flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold border-b-2 transition-all duration-200 whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                Overview
-                @if(($paymentStatus === 'Overdue' || ($paymentStatus === 'Unpaid' && $daysUntilDue <= 3)) || (!$tenantSignature && $ownerSignature) || $openMaintenanceCount > 0)
-                    <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-                @endif
-            </button>
+    @php
+        $dashTabs = [
+            'overview' => 'Overview',
+            'billing' => 'Billing & Lease',
+            'inspection' => 'Inspection & Contract',
+        ];
+        $dashCounts = [];
+        if (($paymentStatus === 'Overdue' || ($paymentStatus === 'Unpaid' && $daysUntilDue <= 3)) || (!$tenantSignature && $ownerSignature) || $openMaintenanceCount > 0) {
+            $actionCount = 0;
+            if ($paymentStatus === 'Overdue' || ($paymentStatus === 'Unpaid' && $daysUntilDue <= 3)) $actionCount++;
+            if (!$tenantSignature && $ownerSignature) $actionCount++;
+            if ($moveOutDate && !$moveOutTenantSignature && $moveOutOwnerSignature) $actionCount++;
+            if ($openMaintenanceCount > 0) $actionCount++;
+            if ($lease && $daysUntilExpiry <= 30 && $daysUntilExpiry > 0) $actionCount++;
+            if ($actionCount > 0) $dashCounts['overview'] = $actionCount;
+        }
+    @endphp
 
-            <button @click="dashTab = 'billing'"
-                    :class="dashTab === 'billing'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'"
-                    class="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold border-b-2 transition-all duration-200 whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                Billing & Lease
-            </button>
-
-            <button @click="dashTab = 'inspection'"
-                    :class="dashTab === 'inspection'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'"
-                    class="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold border-b-2 transition-all duration-200 whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                Inspection & Contract
-                @if((!$tenantSignature && $ownerSignature) || (!$moveOutTenantSignature && $moveOutOwnerSignature))
-                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                @endif
-            </button>
-
-            <button @click="dashTab = 'maintenance'"
-                    :class="dashTab === 'maintenance'
-                        ? 'border-primary text-primary font-bold'
-                        : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'"
-                    class="flex items-center gap-2 px-4 py-3.5 text-[12px] font-semibold border-b-2 transition-all duration-200 whitespace-nowrap">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Maintenance
-                @if($openMaintenanceCount > 0)
-                    <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[9px] font-bold">{{ $openMaintenanceCount }}</span>
-                @endif
-            </button>
-        </div>
+    <div class="mb-5">
+        <x-ui.sort-tab
+            :tabs="$dashTabs"
+            :activeTab="$dashTab"
+            :counts="$dashCounts"
+            action="setDashTab"
+        />
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- TAB: OVERVIEW                                              --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div x-show="dashTab === 'overview'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-5">
+    @if($dashTab === 'overview')
+    <div class="space-y-5">
 
-        {{-- Action Required Banner --}}
-        @php
-            $actions = [];
-            if ($paymentStatus === 'Overdue') $actions[] = ['icon' => 'payment', 'text' => 'Payment is ' . abs($daysUntilDue) . ' ' . (abs($daysUntilDue) === 1 ? 'day' : 'days') . ' overdue', 'color' => 'red', 'tab' => 'billing'];
-            elseif ($paymentStatus === 'Unpaid' && $daysUntilDue <= 3 && $daysUntilDue >= 0) $actions[] = ['icon' => 'payment', 'text' => $daysUntilDue === 0 ? 'Payment is due today' : 'Payment due in ' . $daysUntilDue . ' ' . ($daysUntilDue === 1 ? 'day' : 'days'), 'color' => 'amber', 'tab' => 'billing'];
-            if (!$tenantSignature && $ownerSignature) $actions[] = ['icon' => 'signature', 'text' => 'Move-in contract awaiting your signature', 'color' => 'blue', 'tab' => 'inspection'];
-            if ($moveOutDate && !$moveOutTenantSignature && $moveOutOwnerSignature) $actions[] = ['icon' => 'signature', 'text' => 'Move-out contract awaiting your signature', 'color' => 'blue', 'tab' => 'inspection'];
-            if ($pendingMaintenanceCount > 0 || $ongoingMaintenanceCount > 0) $actions[] = ['icon' => 'maintenance', 'text' => $pendingMaintenanceCount . ' pending, ' . $ongoingMaintenanceCount . ' in-progress request' . ($ongoingMaintenanceCount !== 1 ? 's' : ''), 'color' => 'orange', 'tab' => 'maintenance'];
-            if ($lease && $daysUntilExpiry <= 30 && $daysUntilExpiry > 0) $actions[] = ['icon' => 'lease', 'text' => 'Lease expires in ' . $daysUntilExpiry . ' days', 'color' => 'red', 'tab' => 'billing'];
-        @endphp
-
-        @if(count($actions) > 0)
-            <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-                <div class="px-5 py-3.5 flex items-center gap-2.5 border-b border-gray-50">
-                    <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                    </div>
-                    <h3 class="text-[13px] font-bold text-gray-900">Action Required</h3>
-                    <span class="px-2 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-bold">{{ count($actions) }}</span>
-                </div>
-                <div class="px-5 py-3 space-y-1.5">
-                    @foreach($actions as $action)
-                        <button @click="dashTab = '{{ $action['tab'] }}'"
-                                class="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors group text-left">
-                            <span class="w-2 h-2 rounded-full bg-{{ $action['color'] }}-400 flex-shrink-0"></span>
-                            <span class="text-[11px] font-medium text-gray-600 flex-1">{{ $action['text'] }}</span>
-                            <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        @endif
 
         {{-- Compact Payment Banner --}}
         <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600">
-                <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/[0.06]"></div>
-                <div class="absolute -right-5 top-8 w-28 h-28 rounded-full bg-white/[0.04]"></div>
-
-                <div class="relative z-10 px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <div class="flex items-center gap-2.5 mb-1">
-                            <div class="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            </div>
-                            <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-widest">Amount Due This Month</p>
-                        </div>
-                        <p class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-1">
-                            <span class="text-xl font-bold text-white/50 mr-0.5">&#8369;</span>{{ number_format($amountDue, 2) }}
-                        </p>
-                        <div class="mt-2">
-                            @if($paymentStatus === 'Paid')
-                                <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                                    Paid in full
-                                </span>
-                            @elseif($paymentStatus === 'No Billing')
-                                <span class="text-[11px] font-medium text-white/50">No billing</span>
-                            @elseif($daysUntilDue > 0)
-                                <span class="text-[11px] font-semibold text-amber-300">{{ $daysUntilDue }} {{ $daysUntilDue === 1 ? 'day' : 'days' }} left to pay</span>
-                            @elseif($daysUntilDue == 0)
-                                <span class="text-[11px] font-bold text-red-300 animate-pulse">Due today!</span>
-                            @else
-                                <span class="text-[11px] font-bold text-red-300">{{ abs($daysUntilDue) }} {{ abs($daysUntilDue) === 1 ? 'day' : 'days' }} overdue</span>
-                            @endif
-                        </div>
-                    </div>
-                    @if($paymentStatus !== 'No Billing')
-                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                            {{ $paymentStatus === 'Paid' ? 'bg-emerald-400/20 text-emerald-300 ring-1 ring-emerald-400/30' : '' }}
-                            {{ $paymentStatus === 'Unpaid' ? 'bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/30' : '' }}
-                            {{ $paymentStatus === 'Overdue' ? 'bg-red-400/20 text-red-300 ring-1 ring-red-400/30' : '' }}">
-                            <span class="w-1.5 h-1.5 rounded-full mr-1.5
-                                {{ $paymentStatus === 'Paid' ? 'bg-emerald-400' : '' }}
-                                {{ $paymentStatus === 'Unpaid' ? 'bg-amber-400' : '' }}
-                                {{ $paymentStatus === 'Overdue' ? 'bg-red-400' : '' }}"></span>
-                            {{ $paymentStatus }}
-                        </span>
-                    @endif
-                </div>
-            </div>
+            @include('partials.tenant-payment-banner')
 
             {{-- Quick Stats --}}
             <div class="px-5 py-4">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <button @click="dashTab = 'billing'" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
+                    <button wire:click="setDashTab('billing')" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
                         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Due Date</p>
                         <p class="text-sm font-extrabold text-gray-900">
                             {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}
                         </p>
                     </button>
-                    <button @click="dashTab = 'billing'" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
+                    <button wire:click="setDashTab('billing')" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
                         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Lease Status</p>
                         <p class="text-sm font-extrabold {{ $leaseStatus === 'Active' ? 'text-emerald-600' : 'text-red-600' }}">
                             {{ $leaseStatus }}
                         </p>
                     </button>
-                    <button @click="dashTab = 'inspection'" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
+                    <button wire:click="setDashTab('inspection')" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
                         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Contract</p>
                         <p class="text-sm font-extrabold {{ $contractAgreed ? 'text-emerald-600' : 'text-amber-600' }}">
                             {{ $contractAgreed ? 'Signed' : 'Pending' }}
                         </p>
                     </button>
-                    <button @click="dashTab = 'maintenance'" class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors text-left">
+                    <div class="p-3.5 rounded-xl bg-[#F4F7FC] text-left">
                         <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Maintenance</p>
                         <p class="text-sm font-extrabold {{ $openMaintenanceCount > 0 ? 'text-orange-600' : 'text-gray-900' }}">
                             {{ $openMaintenanceCount }} Open
                         </p>
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        {{-- Maintenance Widget --}}
+        <a href="{{ route('tenant.maintenance') }}" class="block bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden hover:shadow-md transition-shadow group">
+            <div class="px-5 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+                        <svg class="w-[18px] h-[18px] text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-[13px] font-bold text-gray-900">Maintenance Requests</h3>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>{{ $pendingMaintenanceCount }} Pending
+                            </span>
+                            <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>{{ $ongoingMaintenanceCount }} In Progress
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    @if($openMaintenanceCount > 0)
+                        <span class="px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-bold uppercase">
+                            {{ $openMaintenanceCount }} Open
+                        </span>
+                    @endif
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </div>
+        </a>
 
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- TAB: BILLING & LEASE                                       --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div x-show="dashTab === 'billing'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-5">
+    @elseif($dashTab === 'billing')
+    <div class="space-y-5">
 
         {{-- Payment & Billing Card --}}
         <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
 
             {{-- Amount Due Banner --}}
-            <div class="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600">
-                <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/[0.06]"></div>
-                <div class="absolute -right-5 top-8 w-28 h-28 rounded-full bg-white/[0.04]"></div>
-                <div class="absolute left-1/3 -bottom-12 w-36 h-36 rounded-full bg-blue-400/[0.08]"></div>
-
-                <div class="relative z-10 px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <div class="flex items-center gap-2.5 mb-1">
-                            <div class="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center">
-                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            </div>
-                            <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-widest">Amount Due This Month</p>
-                        </div>
-                        <p class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-1">
-                            <span class="text-xl font-bold text-white/50 mr-0.5">&#8369;</span>{{ number_format($amountDue, 2) }}
-                        </p>
-                        <div class="mt-2">
-                            @if($paymentStatus === 'Paid')
-                                <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300">
-                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                                    Paid in full
-                                </span>
-                            @elseif($paymentStatus === 'No Billing')
-                                <span class="text-[11px] font-medium text-white/50">No billing</span>
-                            @elseif($daysUntilDue > 0)
-                                <span class="text-[11px] font-semibold text-amber-300">{{ $daysUntilDue }} {{ $daysUntilDue === 1 ? 'day' : 'days' }} left to pay</span>
-                            @elseif($daysUntilDue == 0)
-                                <span class="text-[11px] font-bold text-red-300 animate-pulse">Due today!</span>
-                            @else
-                                <span class="text-[11px] font-bold text-red-300">{{ abs($daysUntilDue) }} {{ abs($daysUntilDue) === 1 ? 'day' : 'days' }} overdue</span>
-                            @endif
-                        </div>
-                    </div>
-                    @if($paymentStatus !== 'No Billing')
-                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                            {{ $paymentStatus === 'Paid' ? 'bg-emerald-400/20 text-emerald-300 ring-1 ring-emerald-400/30' : '' }}
-                            {{ $paymentStatus === 'Unpaid' ? 'bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/30' : '' }}
-                            {{ $paymentStatus === 'Overdue' ? 'bg-red-400/20 text-red-300 ring-1 ring-red-400/30' : '' }}">
-                            <span class="w-1.5 h-1.5 rounded-full mr-1.5
-                                {{ $paymentStatus === 'Paid' ? 'bg-emerald-400' : '' }}
-                                {{ $paymentStatus === 'Unpaid' ? 'bg-amber-400' : '' }}
-                                {{ $paymentStatus === 'Overdue' ? 'bg-red-400' : '' }}"></span>
-                            {{ $paymentStatus }}
-                        </span>
-                    @endif
-                </div>
-            </div>
+            @include('partials.tenant-payment-banner')
 
             {{-- Overdue warning --}}
             @if($daysUntilDue < 0 && $paymentStatus !== 'Paid')
@@ -395,31 +279,6 @@
                     </div>
                 </div>
 
-                @if($moveOutDate)
-                    <div class="pt-4">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Clearance Checklist</p>
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2.5 text-[11px]">
-                                <span class="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-2.5 h-2.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                </span>
-                                <span class="text-gray-600">Documents returned</span>
-                            </div>
-                            <div class="flex items-center gap-2.5 text-[11px]">
-                                <span class="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                </span>
-                                <span class="text-gray-400">Bills settled</span>
-                            </div>
-                            <div class="flex items-center gap-2.5 text-[11px]">
-                                <span class="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                </span>
-                                <span class="text-gray-400">Room inspection done</span>
-                            </div>
-                        </div>
-                    </div>
-                @endif
             </div>
         </div>
 
@@ -428,7 +287,8 @@
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- TAB: INSPECTION & CONTRACT                                 --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div x-show="dashTab === 'inspection'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-5">
+    @elseif($dashTab === 'inspection')
+    <div class="space-y-5">
 
         @if($lease)
         <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden" x-data="{ activeTab: 'movein' }" wire:ignore.self>
@@ -691,6 +551,47 @@
             @endif
 
         </div>
+
+        {{-- Clearance Checklist Card --}}
+        @if($moveOutDate)
+        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div class="px-5 py-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+                        <svg class="w-[18px] h-[18px] text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </div>
+                    <h3 class="text-[15px] font-bold text-gray-900">Clearance Checklist</h3>
+                </div>
+            </div>
+            <div class="px-5 pb-5">
+                <div class="space-y-2">
+                    @php
+                        $checklistItems = [
+                            ['label' => 'Documents returned', 'done' => $itemsReturnedConfirmedByTenant],
+                            ['label' => 'Bills settled', 'done' => $billsSettled],
+                            ['label' => 'Room inspection done', 'done' => $inspectionDone],
+                        ];
+                    @endphp
+                    @foreach($checklistItems as $item)
+                        <div class="flex items-center gap-2.5 text-[11px]">
+                            @if($item['done'])
+                                <span class="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-2.5 h-2.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                </span>
+                                <span class="text-gray-600">{{ $item['label'] }}</span>
+                            @else
+                                <span class="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                </span>
+                                <span class="text-gray-400">{{ $item['label'] }}</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
         @else
             <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-10 text-center">
                 <p class="text-sm text-gray-400">No active lease found</p>
@@ -699,75 +600,7 @@
 
     </div>
 
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    {{-- TAB: MAINTENANCE                                           --}}
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    <div x-show="dashTab === 'maintenance'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-5">
-
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="px-5 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-                        <svg class="w-[18px] h-[18px] text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </div>
-                    <h3 class="text-[15px] font-bold text-gray-900">Maintenance Requests</h3>
-                </div>
-                <div class="flex items-center gap-2">
-                    @if($openMaintenanceCount > 0)
-                        <span class="px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-bold uppercase">
-                            {{ $openMaintenanceCount }} Open
-                        </span>
-                    @endif
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50/70 text-[10px] font-semibold text-amber-600">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>{{ $pendingMaintenanceCount }} Pending
-                    </span>
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50/70 text-[10px] font-semibold text-blue-600">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>{{ $ongoingMaintenanceCount }} In Progress
-                    </span>
-                </div>
-            </div>
-
-            <div class="px-5 pb-5">
-                @if(count($recentRequests) > 0)
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        @foreach($recentRequests as $request)
-                            <div class="p-3.5 rounded-xl bg-[#F4F7FC] hover:bg-[#EDF1F9] transition-colors duration-200">
-                                <div class="flex items-start justify-between gap-2 mb-2">
-                                    <p class="text-[11px] font-bold text-gray-800 truncate flex-1">{{ $request->problem }}</p>
-                                    <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold
-                                        {{ $request->status === 'Pending' ? 'bg-amber-100 text-amber-600' : '' }}
-                                        {{ $request->status === 'Ongoing' ? 'bg-blue-100 text-blue-600' : '' }}
-                                        {{ $request->status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : '' }}
-                                    ">{{ $request->status }}</span>
-                                </div>
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-[10px] text-gray-400">{{ $request->category }}</span>
-                                    <span class="text-[10px] text-gray-300">&bull;</span>
-                                    <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($request->log_date)->format('M d') }}</span>
-                                    <span class="text-[10px] text-gray-300">&bull;</span>
-                                    <span class="text-[10px] font-semibold
-                                        {{ $request->urgency === 'Level 4' ? 'text-red-500' : '' }}
-                                        {{ $request->urgency === 'Level 3' ? 'text-orange-500' : '' }}
-                                        {{ $request->urgency === 'Level 2' ? 'text-amber-500' : '' }}
-                                        {{ $request->urgency === 'Level 1' ? 'text-gray-400' : '' }}
-                                    ">{{ $request->urgency }}</span>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="text-center py-8">
-                        <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-2">
-                            <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                        </div>
-                        <p class="text-[11px] font-semibold text-gray-600">All clear!</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">No maintenance requests at the moment</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-    </div>
+    @endif
 
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- MODALS (available across all tabs)                         --}}

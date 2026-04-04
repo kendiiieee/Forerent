@@ -17,6 +17,7 @@ class ManagerNavigation extends Component
     public function mount(): void
     {
         $this->loadManagers();
+        $this->autoSelectFirst();
     }
 
     public function booted(): void
@@ -82,6 +83,15 @@ class ManagerNavigation extends Component
     public function updatedSearch(): void
     {
         $this->loadManagers();
+        $this->autoSelectFirst();
+    }
+
+    private function autoSelectFirst(): void
+    {
+        if (count($this->managers) > 0) {
+            $first = $this->managers[0];
+            $this->selectManager($first->user_id);
+        }
     }
 
     public function render()

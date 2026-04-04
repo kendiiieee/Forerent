@@ -22,6 +22,13 @@ class ManagerMaintenanceDetail extends Component
     public $unitTotal       = 0;
     public $unitId          = null;
 
+    public function mount(?int $initialRequestId = null): void
+    {
+        if ($initialRequestId) {
+            $this->loadRequest($initialRequestId);
+        }
+    }
+
     #[On('managerMaintenanceSelected')]
     public function loadRequest($requestId)
     {

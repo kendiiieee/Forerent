@@ -113,6 +113,11 @@ class ManagerMaintenanceList extends Component
         $direction = $this->sortOrder === 'newest' ? 'desc' : 'asc';
         $requests = $listQuery->orderBy('maintenance_requests.created_at', $direction)->get();
 
+        // Auto-select first request if none is selected
+        if ($this->activeRequestId === null && $requests->isNotEmpty()) {
+            $this->selectRequest($requests->first()->request_id);
+        }
+
         // Build autocomplete suggestions from unfiltered results
         $allRequests = (clone $baseQuery)->orderBy('maintenance_requests.created_at', 'desc')->limit(200)->get();
         $suggestions = collect()
