@@ -428,8 +428,15 @@ class AddTenantModal extends Component
             if ($unit) {
                 $this->dormType    = $unit->occupants;
                 $this->monthlyRate = $unit->price;
+                $this->securityDeposit = $unit->price;
             }
         }
+    }
+
+    // Auto-sync security deposit when monthly rate changes
+    public function updatedMonthlyRate($value)
+    {
+        $this->securityDeposit = $value;
     }
 
     // Auto-compute short-term premium when term changes (does NOT affect monthlyRate)
@@ -541,7 +548,7 @@ class AddTenantModal extends Component
                     'move_in'               => $this->startDate,
                     'shift'                 => $this->shift,
                     'monthly_due_date'      => $this->monthlyDueDate,
-                    'late_payment_penalty'  => 100,
+                    'late_payment_penalty'  => 1,
                     'short_term_premium'    => $this->shortTermPremium,
                     'reservation_fee_paid'  => 0,
                     'early_termination_fee' => 0,
@@ -774,7 +781,7 @@ class AddTenantModal extends Component
                 'move_in'               => $this->startDate,
                 'shift'                 => $this->shift,
                 'monthly_due_date'      => $this->monthlyDueDate,
-                'late_payment_penalty'  => 100,
+                'late_payment_penalty'  => 1,
                 'short_term_premium'    => $this->shortTermPremium,
                 'reservation_fee_paid'  => 0,
                 'early_termination_fee' => 0,
@@ -900,7 +907,7 @@ class AddTenantModal extends Component
                         'move_in'               => $this->startDate,
                         'shift'                 => $this->shift,
                         'monthly_due_date'      => $this->monthlyDueDate,
-                        'late_payment_penalty'  => 100,
+                        'late_payment_penalty'  => 1,
                         'short_term_premium'    => $this->shortTermPremium,
                         'reservation_fee_paid'  => 0,
                         'early_termination_fee' => 0,

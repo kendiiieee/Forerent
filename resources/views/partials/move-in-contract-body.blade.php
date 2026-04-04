@@ -115,7 +115,7 @@
         <tr><td class="p-2 font-semibold text-gray-600 w-1/3 border-r bg-gray-50">Accepted Payment Methods:</td><td class="p-2">GCash, Maya, Bank Transfer, Cash</td></tr>
     </tbody></table>
     <p class="text-xs text-gray-700 leading-relaxed mb-2"><strong>Short-Term Premium:</strong> A fixed charge of PHP 500.00 per month is automatically applied when the lease term is below six (6) months. This will be reflected in the monthly billing statement.</p>
-    <p class="text-xs text-gray-700 leading-relaxed mb-3"><strong>Late Payment Penalty:</strong> A fixed penalty of PHP 100.00 per day of delay shall be automatically computed and applied to any rent payment received after the monthly due date.</p>
+    <p class="text-xs text-gray-700 leading-relaxed mb-3"><strong>Late Payment Penalty:</strong> A penalty of {{ $t['move_in_details']['late_payment_penalty'] ?? 1 }}% of the monthly rent per day of delay shall be automatically computed and applied to any rent payment received after the monthly due date.</p>
     <ul class="text-xs text-gray-600 space-y-1 list-disc pl-5">
         <li>Under RA 9653, the Lessor cannot demand more than one (1) month advance rent and two (2) months' security deposit.</li>
         <li>The security deposit shall be placed in a bank account under the Lessor's name. Interest earned shall be returned to the Lessee upon lease expiration.</li>
@@ -211,7 +211,7 @@
         <li>A monthly billing statement shall be generated and issued to the Lessee on or before the 1st of each month, showing all charges due for the current period.</li>
         <li>The billing statement shall include the base monthly rent, electricity share, water share, short-term premium (if applicable at PHP 500/month for leases under 6 months), and any conditional charges.</li>
         <li>Electricity and water utility charges shall be computed by dividing the total unit bill equally among all active tenants in the room. Mid-month move-ins shall be prorated by the number of days occupied.</li>
-        <li>Late Payment Penalty: PHP 100.00 per day shall be automatically computed and added to the next billing statement for any payment received after the monthly due date.</li>
+        <li>Late Payment Penalty: {{ $t['move_in_details']['late_payment_penalty'] ?? 1 }}% of the monthly rent per day shall be automatically computed and added to the next billing statement for any payment received after the monthly due date.</li>
         <li>A payment receipt with an Official Receipt (OR) number shall be generated upon confirmed payment, as required by RA 9653 and BIR regulations.</li>
         <li>Accepted payment methods, payment history, and downloadable receipts shall be made available to the Lessee.</li>
     </ul>

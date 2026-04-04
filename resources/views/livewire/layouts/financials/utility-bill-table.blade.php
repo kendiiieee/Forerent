@@ -71,7 +71,7 @@
                         </x-ui.td>
 
                         <x-ui.td>
-                            <span class="px-2 py-1 rounded-full text-xs font-bold {{ $bill->utility_type === 'electricity' ? 'bg-orange-200 text-orange-800' : 'bg-blue-100 text-blue-700' }}">
+                            <span class="px-2 py-1 rounded-full text-xs font-bold {{ $bill->utility_type === 'electricity' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-700' }}">
                                 {{ ucfirst($bill->utility_type) }}
                             </span>
                         </x-ui.td>

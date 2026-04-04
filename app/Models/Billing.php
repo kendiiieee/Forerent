@@ -137,4 +137,9 @@ class Billing extends Model
     {
         return $this->hasMany(BillingItem::class, 'billing_id', 'billing_id');
     }
+
+    public function paymentRequests(): HasMany
+    {
+        return $this->hasMany(PaymentRequest::class, 'billing_id', 'billing_id');
+    }
 }

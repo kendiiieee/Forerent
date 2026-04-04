@@ -32,7 +32,16 @@ class UtilityBillEntry extends Component
         'selectedUnit'  => 'required|exists:units,unit_id',
         'utilityType'   => 'required|in:electricity,water',
         'billingPeriod' => 'required|date',
-        'totalAmount'   => 'required|numeric|min:1',
+        'totalAmount'   => 'required|numeric|min:1|max:999999.99',
+    ];
+
+    protected $messages = [
+        'totalAmount.required' => 'Please enter the bill amount.',
+        'totalAmount.min'      => 'Amount must be at least ₱1.00.',
+        'totalAmount.max'      => 'Amount cannot exceed ₱999,999.99.',
+        'totalAmount.numeric'  => 'Please enter a valid number.',
+        'selectedUnit.required' => 'Please select a unit.',
+        'billingPeriod.required' => 'Please select a billing period.',
     ];
 
     public function mount()

@@ -421,26 +421,40 @@
 
                             @if(!empty($data['items']))
                                 @foreach($data['items'] as $item)
+                                    @php
+                                        $categoryColors = [
+                                            'recurring' => 'bg-blue-100 text-blue-700',
+                                            'conditional' => 'bg-amber-100 text-amber-700',
+                                            'move_in' => 'bg-green-100 text-green-700',
+                                            'move_out' => 'bg-red-100 text-red-700',
+                                        ];
+                                        $categoryLabels = [
+                                            'recurring' => 'Recurring',
+                                            'conditional' => 'One-Time',
+                                            'move_in' => 'Move-In',
+                                            'move_out' => 'Move-Out',
+                                        ];
+                                        $catClass = $categoryColors[$item['category']] ?? 'bg-gray-100 text-gray-700';
+                                        $catLabel = $categoryLabels[$item['category']] ?? ucfirst($item['category']);
+
+                                        // Split late fee description into label + breakdown
+                                        $isLateFee = ($item['type'] ?? '') === 'late_fee';
+                                        $mainLabel = $item['description'];
+                                        $subLabel = null;
+                                        if ($isLateFee && preg_match('/^(.+?)\s*\((.+)\)$/', $item['description'], $m)) {
+                                            $mainLabel = $m[1];
+                                            $subLabel = $m[2];
+                                        }
+                                    @endphp
                                     <div class="financial-row bg-white px-6 py-4 flex justify-between items-center border-b border-gray-100 min-h-[50px]">
                                         <div class="flex items-center gap-3">
-                                            @php
-                                                $categoryColors = [
-                                                    'recurring' => 'bg-blue-100 text-blue-700',
-                                                    'conditional' => 'bg-amber-100 text-amber-700',
-                                                    'move_in' => 'bg-green-100 text-green-700',
-                                                    'move_out' => 'bg-red-100 text-red-700',
-                                                ];
-                                                $categoryLabels = [
-                                                    'recurring' => 'Recurring',
-                                                    'conditional' => 'One-Time',
-                                                    'move_in' => 'Move-In',
-                                                    'move_out' => 'Move-Out',
-                                                ];
-                                                $catClass = $categoryColors[$item['category']] ?? 'bg-gray-100 text-gray-700';
-                                                $catLabel = $categoryLabels[$item['category']] ?? ucfirst($item['category']);
-                                            @endphp
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $catClass }}">{{ $catLabel }}</span>
-                                            <span class="detail-label text-sm font-medium text-gray-800">{{ $item['description'] }}</span>
+                                            <div class="flex flex-col">
+                                                <span class="detail-label text-sm font-medium text-gray-800">{{ $mainLabel }}</span>
+                                                @if($subLabel)
+                                                    <span class="text-[11px] text-gray-400 mt-0.5">{{ $subLabel }}</span>
+                                                @endif
+                                            </div>
                                         </div>
                                         <span class="detail-value text-sm font-bold text-gray-800">&#8369; {{ number_format($item['amount'], 2) }}</span>
                                     </div>

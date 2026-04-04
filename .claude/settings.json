@@ -41,7 +41,12 @@
       "Bash(grep -n '@if\\($dashTab\\\\|@elseif\\($dashTab\\\\|^    @endif' resources/views/livewire/layouts/tenants/tenant-dashboard-overview.blade.php)",
       "Bash(grep -n '$rate\\\\|$deposit\\\\|$premium\\\\|$dueDay\\\\|$totalMoveIn' /e/reigne/Citispace-Forerent/resources/views/livewire/layouts/tenants/tenant-detail.blade.php)",
       "Bash(find database/migrations -name \"*.php\" -exec grep -l \"tenant_id\" {} \\\\;)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(ls /c/xampp/php/php.exe /c/laragon/bin/php-*/php.exe /c/herd/bin/php.exe)",
+      "Bash(cmd.exe /c \"php artisan tinker --execute=\\\\\"\\\\\\\\App\\\\\\\\Models\\\\\\\\Lease::query\\(\\)->update\\(['late_payment_penalty' => 1]\\);\\\\\"\")",
+      "Bash(cmd.exe /c \"php artisan tinker --execute=\\\\\"echo \\\\\\\\App\\\\\\\\Models\\\\\\\\Lease::query\\(\\)->update\\(['late_payment_penalty' => 1]\\);\\\\\"\")",
+      "Bash(cmd.exe /c \"cd /d E:\\\\reigne\\\\Citispace-Forerent && php --version\")",
+      "Read(//c/Program Files/PHP/**)"
     ]
   }
 }

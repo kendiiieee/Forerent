@@ -93,31 +93,9 @@ class BillingSeeder extends Seeder
                 ]);
                 $totalCharges += $contractPrice;
 
-                // A. Recurring: Electricity Share (~70% chance)
-                if ($this->faker->boolean(70)) {
-                    $electricityShare = $this->faker->randomFloat(2, 300, 600);
-                    BillingItem::create([
-                        'billing_id'      => $billing->billing_id,
-                        'charge_category' => 'recurring',
-                        'charge_type'     => 'electricity_share',
-                        'description'     => 'Electricity Share (Meralco split)',
-                        'amount'          => $electricityShare,
-                    ]);
-                    $totalCharges += $electricityShare;
-                }
-
-                // A. Recurring: Water Share (~40% chance)
-                if ($this->faker->boolean(40)) {
-                    $waterShare = $this->faker->randomFloat(2, 50, 150);
-                    BillingItem::create([
-                        'billing_id'      => $billing->billing_id,
-                        'charge_category' => 'recurring',
-                        'charge_type'     => 'water_share',
-                        'description'     => 'Water Share (split)',
-                        'amount'          => $waterShare,
-                    ]);
-                    $totalCharges += $waterShare;
-                }
+                // NOTE: Utility shares (electricity_share, water_share) are created
+                // by UtilityBillSeeder which also creates the matching UtilityBill records.
+                // This keeps seeded data consistent with the production flow.
 
                 // B. Conditional: Short-Term Premium (if lease term < 6 months)
                 if ($leaseTerm < 6) {
@@ -132,13 +110,17 @@ class BillingSeeder extends Seeder
                 }
 
                 // B. Conditional: Late Payment Fee (~10% chance, only for past months)
+                // Penalty = (late_payment_penalty% of contract_rate) × days late
                 if ($isPast && $this->faker->boolean(10)) {
-                    $lateFee = $this->faker->randomElement([100, 200, 300]);
+                    $penaltyRate = $lease->late_payment_penalty ?? 1; // percentage
+                    $daysLate = $this->faker->numberBetween(1, 10);
+                    $dailyPenalty = round(($penaltyRate / 100) * $lease->contract_rate, 2);
+                    $lateFee = $dailyPenalty * $daysLate;
                     BillingItem::create([
                         'billing_id'      => $billing->billing_id,
                         'charge_category' => 'conditional',
                         'charge_type'     => 'late_fee',
-                        'description'     => 'Late Payment Fee',
+                        'description'     => "Late Payment Fee ({$daysLate} day(s) × ₱" . number_format($dailyPenalty, 2) . "/day)",
                         'amount'          => $lateFee,
                     ]);
                     $totalCharges += $lateFee;

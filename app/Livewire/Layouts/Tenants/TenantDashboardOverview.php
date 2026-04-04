@@ -10,16 +10,18 @@ use App\Models\MaintenanceRequest;
 use App\Models\MoveInInspection;
 use App\Models\MoveOutInspection;
 use App\Models\Notification;
+use App\Models\PaymentRequest;
 use App\Models\UtilityBill;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class TenantDashboardOverview extends Component
 {
-    use WithESignature;
+    use WithESignature, WithFileUploads;
     // Payment & Billing
     public $currentBilling = null;
     public $amountDue = 0;
@@ -96,9 +98,18 @@ class TenantDashboardOverview extends Component
     // Dashboard tab
     public $dashTab = 'overview';
 
-    // Payment instructions modal
-    public $showPaymentInstructions = false;
-    public $paymentInstructionsData = [];
+    // Payment request modal
+    public $showPaymentModal = false;
+    public $paymentStep = 1; // 1: select billing, 2: select method + instructions, 3: proof form, 4: success
+    public $unpaidBillings = [];
+    public $selectedBillingId = null;
+    public $selectedPaymentMethod = null;
+    public $paymentReferenceNumber = '';
+    public $paymentAmountPaid = '';
+    public $paymentProofImage = null;
+    public $paymentOwnerInfo = [];
+    public $pendingPaymentRequests = [];
+    public $rejectedPaymentRequests = [];
 
     // Move-out e-signature (independent from move-in)
     public $showMoveOutSignatureModal = false;
@@ -138,6 +149,7 @@ class TenantDashboardOverview extends Component
             $this->loadItemsReceived();
             $this->loadItemsReturned();
             $this->loadClearanceStatus();
+            $this->loadPaymentRequests();
         }
     }
 
@@ -415,26 +427,198 @@ class TenantDashboardOverview extends Component
         $this->dashTab = $tab;
     }
 
-    public function openPaymentInstructions(): void
+    protected function loadPaymentRequests(): void
     {
+        $this->pendingPaymentRequests = PaymentRequest::where('lease_id', $this->lease->lease_id)
+            ->where('tenant_id', Auth::id())
+            ->where('status', 'Pending')
+            ->with('billing')
+            ->latest()
+            ->get()
+            ->toArray();
+
+        $this->rejectedPaymentRequests = PaymentRequest::where('lease_id', $this->lease->lease_id)
+            ->where('tenant_id', Auth::id())
+            ->where('status', 'Rejected')
+            ->with('billing')
+            ->latest()
+            ->get()
+            ->toArray();
+    }
+
+    public function openPaymentModal(): void
+    {
+        $this->resetPaymentForm();
+
+        // Load unpaid/overdue billings that don't have a pending request
+        $pendingBillingIds = PaymentRequest::where('lease_id', $this->lease->lease_id)
+            ->where('status', 'Pending')
+            ->pluck('billing_id')
+            ->toArray();
+
+        $this->unpaidBillings = Billing::where('lease_id', $this->lease->lease_id)
+            ->whereIn('status', ['Unpaid', 'Overdue'])
+            ->whereNotIn('billing_id', $pendingBillingIds)
+            ->orderBy('due_date', 'asc')
+            ->get()
+            ->toArray();
+
+        // Load owner info for payment instructions
         $property = $this->lease->bed->unit->property ?? null;
         $owner = $property?->owner;
-
-        $this->paymentInstructionsData = [
+        $this->paymentOwnerInfo = [
             'property_name' => $property?->building_name ?? 'N/A',
             'owner_name' => $owner ? ($owner->first_name . ' ' . $owner->last_name) : 'N/A',
             'contact' => $owner?->contact ?? 'N/A',
-            'amount_due' => $this->amountDue,
-            'outstanding' => $this->outstandingBalance,
-            'due_date' => $this->dueDate,
         ];
 
-        $this->showPaymentInstructions = true;
+        $this->showPaymentModal = true;
     }
 
-    public function closePaymentInstructions(): void
+    public function closePaymentModal(): void
     {
-        $this->showPaymentInstructions = false;
+        $this->showPaymentModal = false;
+        $this->resetPaymentForm();
+    }
+
+    public function selectBilling(int $billingId): void
+    {
+        $this->selectedBillingId = $billingId;
+        $billing = collect($this->unpaidBillings)->firstWhere('billing_id', $billingId);
+        if ($billing) {
+            $this->paymentAmountPaid = $billing['to_pay'];
+        }
+        $this->paymentStep = 2;
+    }
+
+    public function selectPaymentMethod(string $method): void
+    {
+        $this->selectedPaymentMethod = $method;
+        $this->paymentStep = 3;
+    }
+
+    public function goToPaymentStep(int $step): void
+    {
+        if ($step < $this->paymentStep) {
+            $this->paymentStep = $step;
+        }
+    }
+
+    public function submitPaymentRequest(): void
+    {
+        $this->validate([
+            'selectedBillingId' => 'required',
+            'selectedPaymentMethod' => 'required|in:GCash,Maya,Bank Transfer,Cash',
+            'paymentReferenceNumber' => $this->selectedPaymentMethod !== 'Cash' ? 'required|string|max:100' : 'nullable|string|max:100',
+            'paymentAmountPaid' => 'required|numeric|min:1',
+            'paymentProofImage' => 'required|image|max:10240',
+        ], [
+            'paymentProofImage.required' => 'Please upload your proof of payment.',
+            'paymentReferenceNumber.required' => 'Please enter the reference number from your payment receipt.',
+        ]);
+
+        $proofPath = $this->paymentProofImage->store('payment_proofs', 'public');
+
+        PaymentRequest::create([
+            'billing_id' => $this->selectedBillingId,
+            'lease_id' => $this->lease->lease_id,
+            'tenant_id' => Auth::id(),
+            'payment_method' => $this->selectedPaymentMethod,
+            'reference_number' => $this->paymentReferenceNumber ?: null,
+            'amount_paid' => $this->paymentAmountPaid,
+            'proof_image' => $proofPath,
+            'status' => 'Pending',
+        ]);
+
+        // Notify manager
+        $this->notifyManagerOfPaymentRequest();
+
+        $this->paymentStep = 4;
+        $this->loadPaymentRequests();
+    }
+
+    public function resubmitPayment(int $paymentRequestId): void
+    {
+        $request = PaymentRequest::find($paymentRequestId);
+        if (!$request || $request->tenant_id !== Auth::id() || $request->status !== 'Rejected') return;
+
+        $this->resetPaymentForm();
+        $this->selectedBillingId = $request->billing_id;
+
+        // Load unpaid billings
+        $pendingBillingIds = PaymentRequest::where('lease_id', $this->lease->lease_id)
+            ->where('status', 'Pending')
+            ->pluck('billing_id')
+            ->toArray();
+
+        $this->unpaidBillings = Billing::where('lease_id', $this->lease->lease_id)
+            ->whereIn('status', ['Unpaid', 'Overdue'])
+            ->whereNotIn('billing_id', $pendingBillingIds)
+            ->orWhere('billing_id', $request->billing_id)
+            ->orderBy('due_date', 'asc')
+            ->get()
+            ->toArray();
+
+        $property = $this->lease->bed->unit->property ?? null;
+        $owner = $property?->owner;
+        $this->paymentOwnerInfo = [
+            'property_name' => $property?->building_name ?? 'N/A',
+            'owner_name' => $owner ? ($owner->first_name . ' ' . $owner->last_name) : 'N/A',
+            'contact' => $owner?->contact ?? 'N/A',
+        ];
+
+        $billing = collect($this->unpaidBillings)->firstWhere('billing_id', $request->billing_id);
+        if ($billing) {
+            $this->paymentAmountPaid = $billing['to_pay'];
+        }
+
+        // Delete the rejected request so they can resubmit fresh
+        $request->delete();
+        $this->loadPaymentRequests();
+
+        $this->paymentStep = 2;
+        $this->showPaymentModal = true;
+    }
+
+    protected function resetPaymentForm(): void
+    {
+        $this->paymentStep = 1;
+        $this->selectedBillingId = null;
+        $this->selectedPaymentMethod = null;
+        $this->paymentReferenceNumber = '';
+        $this->paymentAmountPaid = '';
+        $this->paymentProofImage = null;
+    }
+
+    protected function notifyManagerOfPaymentRequest(): void
+    {
+        $user = Auth::user();
+        $unit = $this->lease->bed->unit ?? null;
+        $billing = Billing::find($this->selectedBillingId);
+        $period = $billing?->billing_date ? Carbon::parse($billing->billing_date)->format('M Y') : 'N/A';
+        $msg = $user->first_name . ' ' . $user->last_name . ' submitted a payment of ₱' . number_format($this->paymentAmountPaid, 2) . ' for ' . $period . ' billing.';
+
+        $notifyIds = [];
+
+        // Notify the manager if assigned
+        if ($unit?->manager_id) {
+            $notifyIds[] = $unit->manager_id;
+        }
+
+        // Also notify the property owner
+        $ownerId = $unit?->property?->owner_id;
+        if ($ownerId && !in_array($ownerId, $notifyIds)) {
+            $notifyIds[] = $ownerId;
+        }
+
+        foreach ($notifyIds as $id) {
+            Notification::create([
+                'user_id' => $id,
+                'type' => 'payment_request',
+                'title' => 'Payment Submitted',
+                'message' => $msg,
+            ]);
+        }
     }
 
     public function openSignatureModal(): void

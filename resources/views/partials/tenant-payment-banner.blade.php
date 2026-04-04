@@ -44,11 +44,16 @@
                     {{ $paymentStatus }}
                 </span>
             @endif
-            @if(in_array($paymentStatus, ['Unpaid', 'Overdue']))
-                <button wire:click="openPaymentInstructions" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wide transition ring-1 ring-white/25">
+            @if(in_array($paymentStatus, ['Unpaid', 'Overdue']) && count($pendingPaymentRequests) === 0)
+                <button wire:click="openPaymentModal" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-[11px] font-bold uppercase tracking-wide transition ring-1 ring-white/25">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     Pay Now
                 </button>
+            @elseif(count($pendingPaymentRequests) > 0)
+                <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-amber-400/20 text-amber-300 text-[11px] font-bold uppercase tracking-wide ring-1 ring-amber-400/30">
+                    <svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Pending Verification
+                </span>
             @endif
         </div>
     </div>

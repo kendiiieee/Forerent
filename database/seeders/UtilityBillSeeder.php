@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Billing;
+use App\Models\BillingItem;
 use App\Models\Lease;
 use App\Models\Unit;
 use App\Models\UtilityBill;
@@ -30,7 +32,8 @@ class UtilityBillSeeder extends Seeder
 
         foreach ($units as $unit) {
             // Count active tenants in this unit
-            $activeTenantCount = $unit->beds->flatMap->leases->count();
+            $activeLeases = $unit->beds->flatMap->leases;
+            $activeTenantCount = $activeLeases->count();
             if ($activeTenantCount === 0) continue;
 
             $managerId = $unit->manager_id;
@@ -54,6 +57,12 @@ class UtilityBillSeeder extends Seeder
                     'entered_by'        => $managerId,
                 ]);
 
+                // Add electricity share to each tenant's billing
+                $this->addUtilityToTenantBillings(
+                    $activeLeases, $billingPeriod, 'electricity',
+                    $electricityTotal, $electricityPerTenant, $activeTenantCount
+                );
+
                 // Water bill (~60% chance per month)
                 if ($this->faker->boolean(60)) {
                     $waterTotal = $this->faker->randomFloat(2, 200, 500);
@@ -68,8 +77,49 @@ class UtilityBillSeeder extends Seeder
                         'per_tenant_amount' => $waterPerTenant,
                         'entered_by'        => $managerId,
                     ]);
+
+                    // Add water share to each tenant's billing
+                    $this->addUtilityToTenantBillings(
+                        $activeLeases, $billingPeriod, 'water',
+                        $waterTotal, $waterPerTenant, $activeTenantCount
+                    );
                 }
             }
+        }
+    }
+
+    /**
+     * Add a utility billing item to each tenant's monthly billing.
+     * Mirrors the logic in UtilityBillEntry::save().
+     */
+    private function addUtilityToTenantBillings($leases, Carbon $period, string $utilityType, float $totalAmount, float $perTenantAmount, int $tenantCount): void
+    {
+        $chargeType = $utilityType === 'electricity' ? 'electricity_share' : 'water_share';
+        $description = $utilityType === 'electricity'
+            ? "Electricity Share (Meralco ₱" . number_format($totalAmount, 2) . " ÷ {$tenantCount} tenants)"
+            : "Water Share (₱" . number_format($totalAmount, 2) . " ÷ {$tenantCount} tenants)";
+
+        foreach ($leases as $lease) {
+            $billing = Billing::where('lease_id', $lease->lease_id)
+                ->where('billing_type', 'monthly')
+                ->whereMonth('billing_date', $period->month)
+                ->whereYear('billing_date', $period->year)
+                ->first();
+
+            if (!$billing) continue;
+
+            BillingItem::create([
+                'billing_id'      => $billing->billing_id,
+                'charge_category' => 'recurring',
+                'charge_type'     => $chargeType,
+                'description'     => $description,
+                'amount'          => $perTenantAmount,
+            ]);
+
+            $billing->update([
+                'to_pay' => $billing->to_pay + $perTenantAmount,
+                'amount' => $billing->amount + $perTenantAmount,
+            ]);
         }
     }
 }

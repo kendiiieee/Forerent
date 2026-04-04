@@ -41,7 +41,7 @@ class LeaseFactory extends Factory
             'security_deposit' => $this->faker->randomFloat(2, 500, 5000),
 
             'monthly_due_date'      => $this->faker->randomElement([1, 5, 15]),
-            'late_payment_penalty'  => $this->faker->randomElement([50, 100, 150, 200]),
+            'late_payment_penalty'  => $this->faker->randomElement([1, 1.5, 2]),
             'short_term_premium'    => $isShortTerm ? 500.00 : 0.00,
             'reservation_fee_paid'  => $this->faker->randomElement([0, 500, 1000, 1500]),
             'early_termination_fee' => $this->faker->randomElement([1000, 2000, 3000, 5000]),

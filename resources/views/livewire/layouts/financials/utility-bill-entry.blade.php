@@ -65,7 +65,15 @@
                         {{-- Total Amount --}}
                         <div class="md:col-span-2">
                             <label for="totalAmount" class="block text-sm font-semibold text-gray-700 mb-2">Total Bill Amount (PHP)</label>
-                            <input type="number" step="0.01" min="0" wire:model.live.debounce.300ms="totalAmount" id="totalAmount" placeholder="0.00" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            <input type="number" step="0.01" min="1" max="999999.99" wire:model.live.debounce.300ms="totalAmount" id="totalAmount" placeholder="e.g. 500"
+                                   x-on:keydown="if (['-', 'e', 'E', '+'].includes($event.key)) $event.preventDefault(); if ($event.key === '0' && ($el.value === '' || $el.value === '0')) $event.preventDefault()"
+                                   x-on:paste.prevent
+                                   class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                            @if($totalAmount !== '' && $totalAmount !== null && (! is_numeric($totalAmount) || (float) $totalAmount < 1))
+                                <p class="mt-1 text-xs text-red-600">Amount must be at least ₱1.00.</p>
+                            @elseif($totalAmount !== '' && $totalAmount !== null && is_numeric($totalAmount) && (float) $totalAmount > 999999.99)
+                                <p class="mt-1 text-xs text-red-600">Amount cannot exceed ₱999,999.99.</p>
+                            @endif
                             @error('totalAmount') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
                     </div>
