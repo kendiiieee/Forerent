@@ -73,8 +73,11 @@ class PaymentReceipts extends Component
 
         if (!$record) return;
 
+        // Always 'Rent Payment' in seeder/markAsPaid regardless of billing_type,
+        // filter by transaction_type Credit to avoid pulling wrong records
         $txn = Transaction::where('billing_id', $billingId)
-            ->whereIn('category', ['Rent Payment', 'Advance', 'Deposit'])
+            ->where('transaction_type', 'Credit')
+            ->where('category', 'Rent Payment')
             ->orderByDesc('transaction_date')
             ->orderByDesc('created_at')
             ->first();
@@ -106,12 +109,19 @@ class PaymentReceipts extends Component
             ]];
         }
 
+        // Derive txn_id from payment_method + or_number to keep it stable across reloads
+        $txnId = 'Pending';
+        if ($txn?->payment_method && $txn?->or_number && $txn->or_number !== 'Pending') {
+            $prefix = ['GCash' => 'GC', 'Maya' => 'MY', 'Bank Transfer' => 'BT', 'Cash' => 'CS'][$txn->payment_method] ?? 'XX';
+            $txnId  = $prefix . '-' . $txn->or_number;
+        }
+
         $data = [
-            'invoice_no'    => '20250825-' . str_pad($record->billing_id, 3, '0', STR_PAD_LEFT),
-            'issued_date'   => $billingDate->format('F d, Y'),
-            'due_date'      => $dueDate,
-            'status'        => $record->status,
-            'billing_type'  => $record->billing_type ?? 'monthly',
+            'invoice_no'       => 'FRNT-' . strtoupper($billingDate->format('M')) . $billingDate->format('Y') . '-' . $billingId,
+            'issued_date'      => $billingDate->format('F d, Y'),
+            'due_date'         => $dueDate,
+            'status'           => $record->status,
+            'billing_type'     => $record->billing_type ?? 'monthly',
             'previous_balance' => $record->previous_balance ?? 0,
             'tenant' => [
                 'name'         => $record->tenant_first_name . ' ' . $record->tenant_last_name,
@@ -123,23 +133,22 @@ class PaymentReceipts extends Component
                 'lease_type'   => $record->term . '-Month Contract',
             ],
             'payment' => [
-                'date_paid'       => $txn?->transaction_date ? Carbon::parse($txn->transaction_date)->format('F d, Y') : 'Pending',
-                'payment_method'  => $txn?->payment_method ?? 'Pending',
-                'txn_id'          => $txn?->payment_method
-                    ? ['GCash' => 'GC', 'Maya' => 'MY', 'Bank Transfer' => 'BT', 'Cash' => 'CS'][$txn->payment_method] . '-' . mt_rand(1000000000, 9999999999)
+                'date_paid'      => $txn?->transaction_date
+                    ? Carbon::parse($txn->transaction_date)->format('F d, Y')
                     : 'Pending',
-                'reference_no'    => $txn?->reference_number ?? 'Pending',
-                'or_number'       => $txn?->or_number ?? 'Pending',
-                'period'          => $billingDate->format('F Y'),
+                'payment_method' => $txn?->payment_method ?? 'Pending',
+                'txn_id'         => $txnId,
+                'reference_no'   => $txn?->reference_number ?? 'Pending',
+                'or_number'      => $txn?->or_number ?? 'Pending',
+                'period'         => $billingDate->format('F Y'),
             ],
             'recipient' => [
                 'name'     => $record->manager_first_name . ' ' . $record->manager_last_name,
                 'position' => 'Property Manager',
                 'contact'  => $record->manager_contact ?? 'N/A',
             ],
-            'items' => $billingItems,
-            'total' => $record->to_pay,
-            // Keep legacy financials for backward compat
+            'items'      => $billingItems,
+            'total'      => $record->to_pay,
             'financials' => [
                 'description' => 'Unit ' . $record->unit_number . ' - Monthly Rent',
                 'amount'      => $record->to_pay,
@@ -148,7 +157,6 @@ class PaymentReceipts extends Component
 
         $this->dispatch('open-payment-receipt', data: $data);
     }
-
     public function markAsPaid()
     {
         if (!$this->billingIdToMarkPaid) {
@@ -176,13 +184,13 @@ class PaymentReceipts extends Component
                 ]);
 
             $category = match ($billing->billing_type ?? 'monthly') {
-                'move_in' => 'Advance',
+                'move_in'  => 'Advance',
                 'move_out' => 'Deposit',
-                default => 'Rent Payment',
+                default    => 'Rent Payment',
             };
 
             $existing = Transaction::where('billing_id', $billingId)
-                ->where('transaction_type', 'Debit')
+                ->where('transaction_type', 'Credit')
                 ->where('category', $category)
                 ->first();
 
@@ -191,13 +199,24 @@ class PaymentReceipts extends Component
             }
 
             $transaction = null;
+            $date        = Carbon::parse($billing->billing_date);
 
             for ($attempt = 1; $attempt <= 3; $attempt++) {
                 try {
+                    Transaction::syncPrimaryKeySequence();
+
+                    $name = match ($billing->billing_type ?? 'monthly') {
+                        'move_in'  => "Move-In Payment - Billing #{$billingId}",
+                        'move_out' => "Move-Out Settlement - Billing #{$billingId}",
+                        default    => "Rent Payment - Billing #{$billingId}",
+                    };
+
                     $transaction = Transaction::createWithSequenceRetry([
                         'billing_id'       => $billingId,
+                        'name'             => $name,
                         'reference_number' => 'placeholder',
-                        'transaction_type' => 'Debit',
+                        'or_number'        => 'placeholder',
+                        'transaction_type' => 'Credit',
                         'category'         => $category,
                         'payment_method'   => 'Cash',
                         'transaction_date' => today(),
@@ -214,7 +233,7 @@ class PaymentReceipts extends Component
                     }
 
                     $alreadyInserted = Transaction::where('billing_id', $billingId)
-                        ->where('transaction_type', 'Debit')
+                        ->where('transaction_type', 'Credit')
                         ->where('category', $category)
                         ->first();
 
@@ -228,14 +247,11 @@ class PaymentReceipts extends Component
                 return;
             }
 
-            $prefix = match ($category) {
-                'Advance' => 'ADV',
-                'Deposit' => 'DEP',
-                default => 'RENT',
-            };
+            $sequenceId = str_pad($transaction->transaction_id, 4, '0', STR_PAD_LEFT);
 
             $transaction->update([
-                'reference_number' => $prefix . now()->format('Ymd') . '-' . str_pad($transaction->transaction_id, 6, '0', STR_PAD_LEFT),
+                'reference_number' => 'FRNT-' . strtoupper($date->format('M')) . $date->format('Y') . '-' . $sequenceId,
+                'or_number'        => 'OR-' . $date->format('Ymd') . '-' . $sequenceId,
             ]);
         });
 
@@ -243,7 +259,6 @@ class PaymentReceipts extends Component
         $this->dispatch('close-modal', 'mark-as-paid-confirmation');
         $this->billingIdToMarkPaid = null;
     }
-
     // ─── helpers ────────────────────────────────────────────────────────────
 
     private function isManager(): bool

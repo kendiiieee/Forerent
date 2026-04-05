@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Tenants;
 use App\Models\Lease;
 use App\Models\MoveInInspection;
 use App\Models\MoveOutInspection;
+use App\Models\Billing;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
@@ -26,14 +27,14 @@ class TenantDetail extends Component
 
     // E-signature fields (move-in)
     public $showSignatureModal = false;
-    public $signatureRole = ''; // 'tenant' or 'owner'
+    public $signatureRole = '';
     public $tenantSignature = null;
     public $ownerSignature = null;
     public $tenantSignedAt = null;
     public $ownerSignedAt = null;
     public $contractAgreed = false;
 
-    // E-signature fields (move-out) — independent from move-in
+    // E-signature fields (move-out)
     public $showMoveOutSignatureModal = false;
     public $moveOutSignatureRole = '';
     public $moveOutTenantSignature = null;
@@ -59,7 +60,6 @@ class TenantDetail extends Component
     public $itemsReturned = [];
     public $moveOutInspectionSaved = false;
 
-    // Default checklist items
     public const CHECKLIST_ITEMS = [
         'Bed Frame & Mattress / Foam',
         'Cabinet / Wardrobe (doors & locks)',
@@ -80,7 +80,6 @@ class TenantDetail extends Component
         'Cabinet Key',
     ];
 
-    // Items that should be returned at move-out (same as received items)
     public const RETURNED_ITEMS = [
         'Unit Key(s)',
         'Building Access Card / Fob',
@@ -110,9 +109,6 @@ class TenantDetail extends Component
                 ->latest()
                 ->with([
                     'bed.unit.property',
-                    'billings' => fn($q) => $q
-                        ->latest('billing_date')
-                        ->limit(1),
                     'moveInInspections',
                     'moveOutInspections',
                 ])
@@ -122,9 +118,6 @@ class TenantDetail extends Component
                 ->where('status', 'Expired')
                 ->with([
                     'bed.unit.property',
-                    'billings' => fn($q) => $q
-                        ->latest('billing_date')
-                        ->limit(1),
                     'moveInInspections',
                     'moveOutInspections',
                 ]);
@@ -136,11 +129,17 @@ class TenantDetail extends Component
             $lease = $leaseQuery->latest()->first();
         }
 
+        $allLeaseIds = Lease::where('tenant_id', $tenantId)->pluck('lease_id');
+
+        $allBillings = Billing::whereIn('lease_id', $allLeaseIds)->get();
+
+        $billing = $allBillings->firstWhere('status', 'Overdue')
+            ?? $allBillings->sortByDesc('billing_date')->first();
+
         $bed      = $lease?->bed;
         $unit     = $bed?->unit;
         $property = $unit?->property;
         $owner    = $property?->owner;
-        $billing  = $lease?->billings->first();
 
         $this->currentTenantId = $tenantId;
         $this->currentLeaseId = $lease?->lease_id;
@@ -160,12 +159,12 @@ class TenantDetail extends Component
                 'address'          => $property?->address,
                 'property'         => $property?->building_name,
                 'unit'             => $unit?->unit_number,
-                'permanent_address' => $tenant->permanent_address,
-                'government_id_type'   => $tenant->government_id_type,
-                'government_id_number' => $tenant->government_id_number,
-                'government_id_image'  => $tenant->government_id_image,
-                'company_school'       => $tenant->company_school,
-                'position_course'      => $tenant->position_course,
+                'permanent_address'            => $tenant->permanent_address,
+                'government_id_type'           => $tenant->government_id_type,
+                'government_id_number'         => $tenant->government_id_number,
+                'government_id_image'          => $tenant->government_id_image,
+                'company_school'               => $tenant->company_school,
+                'position_course'              => $tenant->position_course,
                 'emergency_contact_name'         => $tenant->emergency_contact_name,
                 'emergency_contact_relationship' => $tenant->emergency_contact_relationship,
                 'emergency_contact_number'       => $tenant->emergency_contact_number,
@@ -204,28 +203,28 @@ class TenantDetail extends Component
                 'deposit_refund_account' => $lease?->deposit_refund_account,
             ],
             'signature_info' => [
-                'tenant_signature'      => $lease?->tenant_signature,
-                'tenant_signed_at'      => $lease?->tenant_signed_at?->format('M d, Y h:i A'),
-                'owner_signature'       => $lease?->owner_signature,
-                'owner_signed_at'       => $lease?->owner_signed_at?->format('M d, Y h:i A'),
-                'contract_agreed'       => (bool) $lease?->contract_agreed,
-                'signed_contract_path'  => $lease?->signed_contract_path,
+                'tenant_signature'     => $lease?->tenant_signature,
+                'tenant_signed_at'     => $lease?->tenant_signed_at?->format('M d, Y h:i A'),
+                'owner_signature'      => $lease?->owner_signature,
+                'owner_signed_at'      => $lease?->owner_signed_at?->format('M d, Y h:i A'),
+                'contract_agreed'      => (bool) $lease?->contract_agreed,
+                'signed_contract_path' => $lease?->signed_contract_path,
             ],
         ];
 
         // Load move-in signature state
         $this->tenantSignature = $lease?->tenant_signature;
-        $this->ownerSignature = $lease?->owner_signature;
-        $this->tenantSignedAt = $lease?->tenant_signed_at?->format('M d, Y h:i A');
-        $this->ownerSignedAt = $lease?->owner_signed_at?->format('M d, Y h:i A');
-        $this->contractAgreed = (bool) $lease?->contract_agreed;
+        $this->ownerSignature  = $lease?->owner_signature;
+        $this->tenantSignedAt  = $lease?->tenant_signed_at?->format('M d, Y h:i A');
+        $this->ownerSignedAt   = $lease?->owner_signed_at?->format('M d, Y h:i A');
+        $this->contractAgreed  = (bool) $lease?->contract_agreed;
 
-        // Load move-out signature state (independent)
+        // Load move-out signature state
         $this->moveOutTenantSignature = $lease?->moveout_tenant_signature;
-        $this->moveOutOwnerSignature = $lease?->moveout_owner_signature;
-        $this->moveOutTenantSignedAt = $lease?->moveout_tenant_signed_at?->format('M d, Y h:i A');
-        $this->moveOutOwnerSignedAt = $lease?->moveout_owner_signed_at?->format('M d, Y h:i A');
-        $this->moveOutContractAgreed = (bool) $lease?->moveout_contract_agreed;
+        $this->moveOutOwnerSignature  = $lease?->moveout_owner_signature;
+        $this->moveOutTenantSignedAt  = $lease?->moveout_tenant_signed_at?->format('M d, Y h:i A');
+        $this->moveOutOwnerSignedAt   = $lease?->moveout_owner_signed_at?->format('M d, Y h:i A');
+        $this->moveOutContractAgreed  = (bool) $lease?->moveout_contract_agreed;
 
         $this->loadInspectionData($lease);
         $this->loadMoveOutInspectionData($lease);
@@ -236,11 +235,10 @@ class TenantDetail extends Component
         $existingInspections = $lease?->moveInInspections ?? collect();
 
         $savedChecklist = $existingInspections->where('type', 'checklist');
-        $savedItems = $existingInspections->where('type', 'item_received');
+        $savedItems     = $existingInspections->where('type', 'item_received');
 
         $this->inspectionSaved = $savedChecklist->isNotEmpty() || $savedItems->isNotEmpty();
 
-        // Build checklist array
         $this->inspectionChecklist = [];
         foreach (self::CHECKLIST_ITEMS as $item) {
             $saved = $savedChecklist->firstWhere('item_name', $item);
@@ -251,7 +249,6 @@ class TenantDetail extends Component
             ];
         }
 
-        // Build items received array
         $this->itemsReceived = [];
         foreach (self::RECEIVED_ITEMS as $item) {
             $saved = $savedItems->firstWhere('item_name', $item);
@@ -266,7 +263,6 @@ class TenantDetail extends Component
 
     public function updatedInspectionChecklist($value, $key): void
     {
-        // key is like "0.condition" — clear error when user selects a condition
         $parts = explode('.', $key);
         if (count($parts) === 2 && $parts[1] === 'condition') {
             $this->resetErrorBag("inspectionChecklist.{$parts[0]}.condition");
@@ -282,7 +278,6 @@ class TenantDetail extends Component
         $field = $parts[1];
 
         if ($field === 'quantity') {
-            // Strip non-numeric characters
             $cleaned = preg_replace('/[^0-9]/', '', (string) $value);
             $this->itemsReceived[$index]['quantity'] = $cleaned;
 
@@ -306,7 +301,6 @@ class TenantDetail extends Component
     {
         if (!$this->currentLeaseId) return;
 
-        // Validate all checklist items have a condition selected
         $errors = [];
         foreach ($this->inspectionChecklist as $index => $item) {
             if (empty($item['condition'])) {
@@ -314,7 +308,6 @@ class TenantDetail extends Component
             }
         }
 
-        // Validate all items received have quantity (numeric) and condition
         foreach ($this->itemsReceived as $index => $item) {
             if ($item['quantity'] === '' || $item['quantity'] === null) {
                 $errors["itemsReceived.{$index}.quantity"] = "Enter quantity for \"{$item['item_name']}\".";
@@ -334,10 +327,8 @@ class TenantDetail extends Component
             return;
         }
 
-        // Delete existing inspection data for this lease
         MoveInInspection::where('lease_id', $this->currentLeaseId)->delete();
 
-        // Save checklist items
         foreach ($this->inspectionChecklist as $item) {
             if (!empty($item['condition'])) {
                 MoveInInspection::create([
@@ -350,7 +341,6 @@ class TenantDetail extends Component
             }
         }
 
-        // Save items received
         foreach ($this->itemsReceived as $item) {
             if (!empty($item['quantity']) || !empty($item['condition']) || $item['tenant_confirmed']) {
                 MoveInInspection::create([
@@ -371,7 +361,6 @@ class TenantDetail extends Component
 
     public function cancelInspection(): void
     {
-        // Reload from database
         if ($this->currentLeaseId) {
             $lease = Lease::with('moveInInspections')->find($this->currentLeaseId);
             $this->loadInspectionData($lease);
@@ -379,18 +368,15 @@ class TenantDetail extends Component
         $this->dispatch('inspection-cancelled');
     }
 
-    // ===== MOVE-OUT INSPECTION METHODS =====
-
     private function loadMoveOutInspectionData($lease): void
     {
         $existingInspections = $lease?->moveOutInspections ?? collect();
 
         $savedChecklist = $existingInspections->where('type', 'checklist');
-        $savedItems = $existingInspections->where('type', 'item_returned');
+        $savedItems     = $existingInspections->where('type', 'item_returned');
 
         $this->moveOutInspectionSaved = $savedChecklist->isNotEmpty() || $savedItems->isNotEmpty();
 
-        // Build checklist array (same items as move-in for comparison)
         $this->moveOutChecklist = [];
         foreach (self::CHECKLIST_ITEMS as $item) {
             $saved = $savedChecklist->firstWhere('item_name', $item);
@@ -401,7 +387,6 @@ class TenantDetail extends Component
             ];
         }
 
-        // Build items returned array
         $this->itemsReturned = [];
         foreach (self::RETURNED_ITEMS as $item) {
             $saved = $savedItems->firstWhere('item_name', $item);
@@ -454,7 +439,6 @@ class TenantDetail extends Component
     {
         if (!$this->currentLeaseId) return;
 
-        // Validate all checklist items have a condition selected
         $errors = [];
         foreach ($this->moveOutChecklist as $index => $item) {
             if (empty($item['condition'])) {
@@ -462,7 +446,6 @@ class TenantDetail extends Component
             }
         }
 
-        // Validate all items returned have quantity and condition
         foreach ($this->itemsReturned as $index => $item) {
             if ($item['quantity'] === '' || $item['quantity'] === null) {
                 $errors["itemsReturned.{$index}.quantity"] = "Enter quantity for \"{$item['item_name']}\".";
@@ -482,10 +465,8 @@ class TenantDetail extends Component
             return;
         }
 
-        // Delete existing move-out inspection data for this lease
         MoveOutInspection::where('lease_id', $this->currentLeaseId)->delete();
 
-        // Save checklist items
         foreach ($this->moveOutChecklist as $item) {
             if (!empty($item['condition'])) {
                 MoveOutInspection::create([
@@ -498,7 +479,6 @@ class TenantDetail extends Component
             }
         }
 
-        // Save items returned
         foreach ($this->itemsReturned as $item) {
             if (!empty($item['quantity']) || !empty($item['condition']) || $item['tenant_confirmed']) {
                 MoveOutInspection::create([
@@ -529,19 +509,19 @@ class TenantDetail extends Component
     private function resetTenantData(): void
     {
         $this->currentTenantId = null;
-        $this->currentTenant = null;
-        $this->currentLeaseId = null;
+        $this->currentTenant   = null;
+        $this->currentLeaseId  = null;
         $this->inspectionChecklist = [];
-        $this->itemsReceived = [];
-        $this->inspectionSaved = false;
-        $this->moveOutChecklist = [];
-        $this->itemsReturned = [];
-        $this->moveOutInspectionSaved = false;
-        $this->moveOutTenantSignature = null;
-        $this->moveOutOwnerSignature = null;
-        $this->moveOutTenantSignedAt = null;
-        $this->moveOutOwnerSignedAt = null;
-        $this->moveOutContractAgreed = false;
+        $this->itemsReceived       = [];
+        $this->inspectionSaved     = false;
+        $this->moveOutChecklist    = [];
+        $this->itemsReturned       = [];
+        $this->moveOutInspectionSaved    = false;
+        $this->moveOutTenantSignature    = null;
+        $this->moveOutOwnerSignature     = null;
+        $this->moveOutTenantSignedAt     = null;
+        $this->moveOutOwnerSignedAt      = null;
+        $this->moveOutContractAgreed     = false;
     }
 
     public function editTenant(): void
@@ -609,7 +589,7 @@ class TenantDetail extends Component
 
     public function openMoveInContract(): void
     {
-        $this->showMoveInContract = true;
+        $this->showMoveInContract  = true;
         $this->showMoveOutContract = false;
     }
 
@@ -621,7 +601,7 @@ class TenantDetail extends Component
     public function openMoveOutContract(): void
     {
         $this->showMoveOutContract = true;
-        $this->showMoveInContract = false;
+        $this->showMoveInContract  = false;
     }
 
     public function closeMoveOutContract(): void
@@ -631,14 +611,14 @@ class TenantDetail extends Component
 
     public function openSignatureModal(string $role): void
     {
-        $this->signatureRole = $role;
+        $this->signatureRole      = $role;
         $this->showSignatureModal = true;
     }
 
     public function closeSignatureModal(): void
     {
         $this->showSignatureModal = false;
-        $this->signatureRole = '';
+        $this->signatureRole      = '';
     }
 
     public function saveSignature(string $signatureData): void
@@ -652,28 +632,26 @@ class TenantDetail extends Component
 
         if ($this->signatureRole === 'tenant') {
             $this->tenantSignature = $result['signature'];
-            $this->tenantSignedAt = $result['signedAt'];
+            $this->tenantSignedAt  = $result['signedAt'];
         } else {
             $this->ownerSignature = $result['signature'];
-            $this->ownerSignedAt = $result['signedAt'];
+            $this->ownerSignedAt  = $result['signedAt'];
         }
         $this->contractAgreed = $result['agreed'];
 
-        // If both signatures exist, generate PDF
         if ($result['agreed']) {
             $lease->refresh();
             $this->generateSignedPdf($lease);
         }
 
-        // Update signature_info in currentTenant
         $lease->refresh();
         $this->currentTenant['signature_info'] = [
-            'tenant_signature'      => $lease->tenant_signature,
-            'tenant_signed_at'      => $lease->tenant_signed_at?->format('M d, Y h:i A'),
-            'owner_signature'       => $lease->owner_signature,
-            'owner_signed_at'       => $lease->owner_signed_at?->format('M d, Y h:i A'),
-            'contract_agreed'       => (bool) $lease->contract_agreed,
-            'signed_contract_path'  => $lease->signed_contract_path,
+            'tenant_signature'     => $lease->tenant_signature,
+            'tenant_signed_at'     => $lease->tenant_signed_at?->format('M d, Y h:i A'),
+            'owner_signature'      => $lease->owner_signature,
+            'owner_signed_at'      => $lease->owner_signed_at?->format('M d, Y h:i A'),
+            'contract_agreed'      => (bool) $lease->contract_agreed,
+            'signed_contract_path' => $lease->signed_contract_path,
         ];
 
         $this->closeSignatureModal();
@@ -684,23 +662,17 @@ class TenantDetail extends Component
     {
         $lease->load(['tenant', 'bed.unit.property']);
 
-        $tenant = $lease->tenant;
-        $bed = $lease->bed;
-        $unit = $bed?->unit;
-        $property = $unit?->property;
-        $owner = $property?->owner;
-
         $tenantSigPath = Storage::disk('public')->path($lease->tenant_signature);
-        $ownerSigPath = Storage::disk('public')->path($lease->owner_signature);
+        $ownerSigPath  = Storage::disk('public')->path($lease->owner_signature);
 
         $data = [
-            'tenant' => $this->currentTenant,
-            'lessor' => $this->currentTenant['lessor_info'],
-            't' => $this->currentTenant,
+            'tenant'                => $this->currentTenant,
+            'lessor'                => $this->currentTenant['lessor_info'],
+            't'                     => $this->currentTenant,
             'tenantSignatureBase64' => 'data:image/png;base64,' . base64_encode(file_get_contents($tenantSigPath)),
             'ownerSignatureBase64'  => 'data:image/png;base64,' . base64_encode(file_get_contents($ownerSigPath)),
-            'tenantSignedAt' => $lease->tenant_signed_at->format('M d, Y'),
-            'ownerSignedAt'  => $lease->owner_signed_at->format('M d, Y'),
+            'tenantSignedAt'        => $lease->tenant_signed_at->format('M d, Y'),
+            'ownerSignedAt'         => $lease->owner_signed_at->format('M d, Y'),
         ];
 
         $pdf = Pdf::loadView('pdf.move-in-contract', $data)
@@ -710,7 +682,6 @@ class TenantDetail extends Component
         $pdfPath = "contracts/lease_{$lease->lease_id}_signed_" . time() . '.pdf';
         Storage::disk('public')->put($pdfPath, $pdf->output());
 
-        // Delete old signed PDF if exists
         if ($lease->signed_contract_path) {
             Storage::disk('public')->delete($lease->signed_contract_path);
         }
@@ -731,18 +702,16 @@ class TenantDetail extends Component
         );
     }
 
-    // ===== MOVE-OUT E-SIGNATURE METHODS (independent from move-in) =====
-
     public function openMoveOutSignatureModal(string $role): void
     {
-        $this->moveOutSignatureRole = $role;
+        $this->moveOutSignatureRole      = $role;
         $this->showMoveOutSignatureModal = true;
     }
 
     public function closeMoveOutSignatureModal(): void
     {
         $this->showMoveOutSignatureModal = false;
-        $this->moveOutSignatureRole = '';
+        $this->moveOutSignatureRole      = '';
     }
 
     public function saveMoveOutSignature(string $signatureData): void
@@ -756,10 +725,10 @@ class TenantDetail extends Component
 
         if ($this->moveOutSignatureRole === 'tenant') {
             $this->moveOutTenantSignature = $result['signature'];
-            $this->moveOutTenantSignedAt = $result['signedAt'];
+            $this->moveOutTenantSignedAt  = $result['signedAt'];
         } else {
             $this->moveOutOwnerSignature = $result['signature'];
-            $this->moveOutOwnerSignedAt = $result['signedAt'];
+            $this->moveOutOwnerSignedAt  = $result['signedAt'];
         }
         $this->moveOutContractAgreed = $result['agreed'];
 

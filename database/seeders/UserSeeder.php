@@ -41,7 +41,7 @@ class UserSeeder extends Seeder
         ]);
 
         User::factory()
-            ->count(24)
+            ->count(49)
             ->create([
                 'role' => 'tenant',
                 'password' => Hash::make('password'),

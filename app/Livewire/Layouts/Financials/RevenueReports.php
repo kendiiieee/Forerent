@@ -41,7 +41,7 @@ class RevenueReports extends Component
         $expenses = array_fill(0, 12, 0);
 
         // Revenue/inflow source: credit transactions.
-        $monthlyIncome = Transaction::where('transaction_type', 'Credit')
+        $monthlyIncome = Transaction::where('category', 'Rent Payment')
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$transactionMonthExpr} as month, SUM(amount) as total")
             ->groupBy('month')

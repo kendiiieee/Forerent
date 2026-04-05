@@ -16,17 +16,35 @@ class MaintenanceStats extends Component
     public function mount()
     {
         // 1. Total Maintenance Cost: Sum of 'cost' from 'maintenance_logs'
-        $this->totalCost = DB::table('maintenance_logs')->sum('cost');
+        $this->totalCost = DB::table('maintenance_logs')
+            ->whereYear('completion_date', now()->year)
+            ->sum('cost');
 
         // 2. New Requests: Count of requests created in the current month
         $this->newRequests = DB::table('maintenance_requests')
-            ->whereYear('created_at', Carbon::now()->year)
-            ->whereMonth('created_at', Carbon::now()->month)
+            ->whereYear('maintenance_requests.created_at', Carbon::now()->year)
+            ->whereMonth('maintenance_requests.created_at', Carbon::now()->month)
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('leases')
+                    ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
+                    ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+                    ->whereColumn('leases.lease_id', 'maintenance_requests.lease_id')
+                    ->where('units.manager_id', auth()->id());
+            })
             ->count();
 
         // 3. Pending Requests: Count of requests with status 'Pending'
         $this->pendingRequests = DB::table('maintenance_requests')
-            ->where('status', 'Pending')
+            ->where('maintenance_requests.status', 'Pending')
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('leases')
+                    ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
+                    ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+                    ->whereColumn('leases.lease_id', 'maintenance_requests.lease_id')
+                    ->where('units.manager_id', auth()->id());
+            })
             ->count();
 
         // 4. Current Date for display
