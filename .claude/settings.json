@@ -78,7 +78,16 @@
       "Bash(/c/xampp/php/php.exe -l \"e:/reigne/Citispace-Forerent/app/Livewire/Layouts/Tenants/PaymentHistory.php\")",
       "Bash(/c/xampp/php/php.exe -l \"e:/reigne/Citispace-Forerent/app/Livewire/Layouts/Tenants/TenantDashboardOverview.php\")",
       "Bash(cmd.exe /c \"php -l e:\\\\reigne\\\\Citispace-Forerent\\\\app\\\\Livewire\\\\Layouts\\\\Tenants\\\\PaymentHistory.php\")",
-      "Bash(cmd.exe /c \"php -l e:\\\\reigne\\\\Citispace-Forerent\\\\app\\\\Livewire\\\\Layouts\\\\Tenants\\\\TenantDashboardOverview.php\")"
+      "Bash(cmd.exe /c \"php -l e:\\\\reigne\\\\Citispace-Forerent\\\\app\\\\Livewire\\\\Layouts\\\\Tenants\\\\TenantDashboardOverview.php\")",
+      "Bash(grep -n \"tenant_id\" \"e:/reigne/Citispace-Forerent/database/migrations/\"*.php)",
+      "Bash(grep -r '$dispatch.*toast\\\\|toast.*event\\\\|notify\\\\|success\\\\|error' /e/reigne/Citispace-Forerent/app/Livewire '--include=*.php')",
+      "Bash(grep -r '$this->dispatch\\('\\\\''notify'\\\\''' /e/reigne/Citispace-Forerent/app/Livewire '--include=*.php')",
+      "Bash(grep -E \"\\\\.\\(php\\)$\")",
+      "Bash(php -l app/Livewire/Layouts/Tenants/TenantDetail.php)",
+      "Bash(php -l app/Livewire/Concerns/WithESignature.php)",
+      "Bash(php -l resources/views/pdf/move-out-contract.blade.php)",
+      "Read(//e/laragon/bin/**)",
+      "Read(//d/laragon/bin/**)"
     ],
     "additionalDirectories": [
       "\\tmp"

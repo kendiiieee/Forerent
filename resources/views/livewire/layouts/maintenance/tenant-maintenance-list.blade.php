@@ -27,6 +27,7 @@
 
             <x-ui.button-add
                 text="Add Maintenance Request"
+                tooltip="Submit a new repair or maintenance ticket"
                 x-on:click="$dispatch('open-maintenance-modal')"
             />
         </div>
@@ -73,9 +74,9 @@
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <h3 class="font-bold text-[#2B66F5] text-sm">{{ $ticketId }}</h3>
-                                <p class="text-[10px] text-gray-400 mt-0.5">{{ \Carbon\Carbon::parse($req->created_at)->format('M d, Y') }}</p>
+                                <p class="text-[11px] text-gray-400 mt-0.5">{{ \Carbon\Carbon::parse($req->created_at)->format('M d, Y') }}</p>
                             </div>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $statusStyles }}">{{ $req->status }}</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ $statusStyles }}">{{ $req->status }}</span>
                         </div>
                         <p class="text-sm text-gray-600 mt-2 font-medium">{{ $req->category ?? 'General Maintenance' }}</p>
                     </div>

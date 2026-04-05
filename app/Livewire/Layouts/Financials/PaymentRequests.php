@@ -12,10 +12,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
+use App\Livewire\Concerns\WithNotifications;
 
 class PaymentRequests extends Component
 {
-    use WithPagination;
+    use WithPagination, WithNotifications;
 
     public $activeTab = 'All';
     public $selectedRequest = null;
@@ -140,6 +141,7 @@ class PaymentRequests extends Component
             ]);
         });
 
+        $this->notifySuccess('Payment Confirmed', 'The payment has been verified and confirmed.');
         $this->closeDetailModal();
     }
 
@@ -198,6 +200,7 @@ class PaymentRequests extends Component
             'link' => '/tenant/payment',
         ]);
 
+        $this->notifySuccess('Payment Rejected', 'The payment request has been rejected and the tenant has been notified.');
         $this->closeDetailModal();
     }
 

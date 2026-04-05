@@ -18,6 +18,7 @@
             @if(auth()->user()->role === 'landlord')
                 <x-ui.button-add
                     text="Add Unit"
+                    tooltip="Create a new unit in this building"
                     wire:click="$dispatch('open-add-unit-modal')"
                 />
             @endif
@@ -89,22 +90,26 @@
                                     <span class="{{ $this->getStatusTextClass($status) }}">{{ $status }}</span>
                                 </span>
 
-                                <button
-                                    wire:click.prevent="$dispatch('open-unit-modal', { unitId: {{ $unit->unit_id }} })"
-                                    class="flex items-center gap-1.5 bg-white text-[#2360E8] rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-50 transition-colors border border-white"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                    Edit
-                                </button>
+                                <flux:tooltip :content="'Edit this unit\'s details and specifications'" position="bottom">
+                                    <button
+                                        wire:click.prevent="$dispatch('open-unit-modal', { unitId: {{ $unit->unit_id }} })"
+                                        class="flex items-center gap-1.5 bg-white text-[#2360E8] rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-50 transition-colors border border-white"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
+                                </flux:tooltip>
 
-                                <button @click="openId = null; $wire.toggleUnit({{ $unit->unit_id }})"
-                                        class="text-white hover:text-blue-100 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
+                                <flux:tooltip :content="'Collapse this unit panel'" position="bottom">
+                                    <button @click="openId = null; $wire.toggleUnit({{ $unit->unit_id }})"
+                                            class="text-white hover:text-blue-100 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </flux:tooltip>
                             </div>
                         </div>
                     </div>
@@ -165,9 +170,11 @@
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 </button>
             @else
-                <button wire:click="previousPage" class="w-9 h-9 flex items-center justify-center border-2 border-[#2360E8] bg-[#2360E8] text-white rounded-lg hover:bg-[#1d4eb8] transition-colors">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                </button>
+                <flux:tooltip :content="'Go to the previous page'" position="bottom">
+                    <button wire:click="previousPage" class="w-9 h-9 flex items-center justify-center border-2 border-[#2360E8] bg-[#2360E8] text-white rounded-lg hover:bg-[#1d4eb8] transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    </button>
+                </flux:tooltip>
             @endif
 
             @for ($page = 1; $page <= $units->lastPage(); $page++)
@@ -178,9 +185,11 @@
             @endfor
 
             @if ($units->hasMorePages())
-                <button wire:click="nextPage" class="w-9 h-9 flex items-center justify-center border-2 border-[#2360E8] bg-[#2360E8] text-white rounded-lg hover:bg-[#1d4eb8] transition-colors">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-                </button>
+                <flux:tooltip :content="'Go to the next page'" position="bottom">
+                    <button wire:click="nextPage" class="w-9 h-9 flex items-center justify-center border-2 border-[#2360E8] bg-[#2360E8] text-white rounded-lg hover:bg-[#1d4eb8] transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                    </button>
+                </flux:tooltip>
             @else
                 <button disabled class="w-9 h-9 flex items-center justify-center border-2 border-gray-300 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>

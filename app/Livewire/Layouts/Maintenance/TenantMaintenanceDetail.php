@@ -7,9 +7,11 @@ use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Notification;
+use App\Livewire\Concerns\WithNotifications;
 
 class TenantMaintenanceDetail extends Component
 {
+    use WithNotifications;
     public $ticket             = null;
     public $ticketIdDisplay    = '';
     public bool $feedbackSubmitted = false;
@@ -109,6 +111,7 @@ class TenantMaintenanceDetail extends Component
         }
 
         $this->feedbackSubmitted = true;
+        $this->notifySuccess('Feedback Submitted', 'Thank you for your feedback on this maintenance request.');
     }
 
     /**
@@ -159,6 +162,7 @@ class TenantMaintenanceDetail extends Component
 
         $this->feedbackSubmitted = false;
         $this->fetchTicket($this->ticket->request_id);
+        $this->notifySuccess('Request Reopened', 'Your maintenance request has been reopened and set back to Pending.');
         $this->dispatch('close-modal', 'confirm-reopen-request');
         $this->dispatch('refresh-maintenance-list');
     }
@@ -188,6 +192,7 @@ class TenantMaintenanceDetail extends Component
 
         $this->ticket = null;
         $this->ticketIdDisplay = '';
+        $this->notifySuccess('Request Cancelled', 'Your maintenance request has been cancelled.');
         $this->dispatch('close-modal', 'confirm-cancel-request');
         $this->dispatch('refresh-maintenance-list');
     }

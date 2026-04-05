@@ -55,14 +55,16 @@
         style="display: none;"
     >
         <img :src="lightboxSrc" class="max-w-full max-h-full object-contain rounded-xl shadow-2xl" @click.stop>
-        <button
-            @click="lightbox = false"
-            class="absolute top-5 right-5 w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-colors"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
+        <flux:tooltip :content="'Close the image viewer'" position="bottom">
+            <button
+                @click="lightbox = false"
+                class="absolute top-5 right-5 w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-colors"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </flux:tooltip>
     </div>
 
     {{-- ══════════════════════════════════════════════
@@ -106,15 +108,17 @@
             {{-- ── Sticky Header ── --}}
             <div class="flex-shrink-0 bg-[#2B66F5] px-6 py-5 flex justify-between items-center rounded-t-2xl">
                 <h3 class="text-xl font-bold text-white">Maintenance Feedback</h3>
-                <button
-                    @click="feedbackOpen = false"
-                    type="button"
-                    class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors text-white"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+                <flux:tooltip :content="'Close the feedback form'" position="bottom">
+                    <button
+                        @click="feedbackOpen = false"
+                        type="button"
+                        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors text-white"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </flux:tooltip>
             </div>
 
             {{-- ── Scrollable Body ── --}}
@@ -355,11 +359,11 @@
                     </h3>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
-                            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Ticket Number</p>
+                            <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Ticket Number</p>
                             <p class="text-[#070642] font-semibold font-mono text-sm">{{ $ticketIdDisplay }}</p>
                         </div>
                         <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
-                            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Priority Level</p>
+                            <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Priority Level</p>
                             <div class="flex items-center gap-1.5">
                                 <span class="w-2 h-2 rounded-full {{ $uc['dot'] }}"></span>
                                 <span class="text-[#070642] font-semibold text-sm">{{ $ticket->urgency }}</span>
@@ -367,11 +371,11 @@
                             </div>
                         </div>
                         <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
-                            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Category</p>
+                            <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Category</p>
                             <p class="text-[#070642] font-semibold text-sm">{{ $ticket->category ?? 'General Maintenance' }}</p>
                         </div>
                         <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
-                            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Status</p>
+                            <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Status</p>
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold {{ $statusStyles }}">
                                 {{ $ticket->status }}
                             </span>
@@ -396,7 +400,7 @@
                         <h3 class="text-sm font-bold text-[#070642] mb-3 flex items-center gap-2">
                             <span class="w-1 h-4 bg-[#2B66F5] rounded-full"></span>
                             Photos
-                            <span class="text-[10px] text-gray-400 font-normal ml-1">(click to enlarge)</span>
+                            <span class="text-[11px] text-gray-400 font-normal ml-1">(click to enlarge)</span>
                         </h3>
                         <div class="grid {{ count($imagePaths) === 1 ? 'grid-cols-1' : 'grid-cols-2' }} gap-3">
                             @foreach($imagePaths as $imgPath)

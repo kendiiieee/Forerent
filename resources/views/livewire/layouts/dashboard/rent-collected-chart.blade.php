@@ -173,13 +173,13 @@
                 <template x-if="hoveredSegment === 'collected'">
                     <div class="flex flex-col items-center transition-all duration-300">
                         <span class="text-sm font-bold text-[#1a237e] leading-tight" x-text="formatCurrency(totalCollected)"></span>
-                        <span class="text-[10px] text-gray-400 mt-0.5">Collected</span>
+                        <span class="text-[11px] text-gray-400 mt-0.5">Collected</span>
                     </div>
                 </template>
                 <template x-if="hoveredSegment === 'uncollected'">
                     <div class="flex flex-col items-center transition-all duration-300">
                         <span class="text-sm font-bold text-[#4fc3f7] leading-tight" x-text="formatCurrency(totalUncollected)"></span>
-                        <span class="text-[10px] text-gray-400 mt-0.5">Uncollected</span>
+                        <span class="text-[11px] text-gray-400 mt-0.5">Uncollected</span>
                     </div>
                 </template>
             </div>
@@ -202,7 +202,7 @@
                                 <span class="font-semibold text-[13px]">Collected</span>
                             </div>
                             <div class="text-white font-medium" x-text="formatCurrency(totalCollected)"></div>
-                            <div class="text-gray-400 text-[10px]" x-text="Math.round(collected * 10) / 10 + '% of expected rent'"></div>
+                            <div class="text-gray-400 text-[11px]" x-text="Math.round(collected * 10) / 10 + '% of expected rent'"></div>
                         </div>
                     </template>
                     <template x-if="hoveredSegment === 'uncollected'">
@@ -212,7 +212,7 @@
                                 <span class="font-semibold text-[13px]">Uncollected</span>
                             </div>
                             <div class="text-white font-medium" x-text="formatCurrency(totalUncollected)"></div>
-                            <div class="text-gray-400 text-[10px]" x-text="Math.round(uncollected * 10) / 10 + '% of expected rent'"></div>
+                            <div class="text-gray-400 text-[11px]" x-text="Math.round(uncollected * 10) / 10 + '% of expected rent'"></div>
                         </div>
                     </template>
                     <div class="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-[#070642] rotate-45"></div>
@@ -228,7 +228,7 @@
                  @mouseleave="handleLeave()">
                 <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#1a237e] shrink-0 ring-4 ring-[#1a237e]/10 transition-all duration-200 group-hover:ring-[#1a237e]/25"></span>
                 <div class="flex-1 min-w-0">
-                    <p class="text-[10px] sm:text-[11px] text-gray-400 uppercase tracking-wider">Collected</p>
+                    <p class="text-[11px] sm:text-[11px] text-gray-400 uppercase tracking-wider">Collected</p>
                     <p class="text-xs sm:text-sm font-bold text-[#070642] truncate">₱ {{ number_format($totalRentCollected, 2) }}</p>
                 </div>
                 <span class="text-sm sm:text-base font-bold text-[#1a237e] shrink-0">{{ round($rentCollectedPercentage, 1) }}%</span>
@@ -240,7 +240,7 @@
                  @mouseleave="handleLeave()">
                 <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#4fc3f7] shrink-0 ring-4 ring-[#4fc3f7]/10 transition-all duration-200 group-hover:ring-[#4fc3f7]/25"></span>
                 <div class="flex-1 min-w-0">
-                    <p class="text-[10px] sm:text-[11px] text-gray-400 uppercase tracking-wider">Uncollected</p>
+                    <p class="text-[11px] sm:text-[11px] text-gray-400 uppercase tracking-wider">Uncollected</p>
                     <p class="text-xs sm:text-sm font-bold text-[#070642] truncate">₱ {{ number_format($totalUncollectedRent, 2) }}</p>
                 </div>
                 <span class="text-sm sm:text-base font-bold text-[#4fc3f7] shrink-0">{{ round($uncollectedPercentage, 1) }}%</span>

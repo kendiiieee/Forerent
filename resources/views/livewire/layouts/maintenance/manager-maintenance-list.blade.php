@@ -23,7 +23,7 @@
         {{-- Right Side: Building Filter & Sort --}}
         <div class="flex items-center gap-3 w-full md:w-auto justify-end">
             {{-- Building Filter --}}
-            <x-dropdown label="{{ $selectedBuilding ? Str::before($selectedBuilding, ' ') . '...' : 'Building' }}">
+            <x-dropdown label="{{ $selectedBuilding ? Str::before($selectedBuilding, ' ') . '...' : 'Building' }}" tooltip="Filter requests by building">
                 <x-dropdown-item wire:click="$set('selectedBuilding', null)" @click="open = false">
                     All Buildings
                 </x-dropdown-item>
@@ -39,37 +39,10 @@
             </x-dropdown>
 
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
-
-            {{-- Export CSV --}}
-            <button wire:click="exportCsv"
-                class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                Export
-            </button>
         </div>
 
     </div>
 
-    {{-- BULK ACTION BAR --}}
-    @if(!empty($selectedIds))
-        <div class="flex items-center gap-3 mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
-            <p class="text-sm font-semibold text-[#070642]">{{ count($selectedIds) }} selected</p>
-            <button wire:click="bulkUpdateStatus('Ongoing')"
-                class="px-3 py-1.5 rounded-lg text-xs font-bold bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors">
-                Mark Ongoing
-            </button>
-            <button wire:click="bulkUpdateStatus('Completed')"
-                class="px-3 py-1.5 rounded-lg text-xs font-bold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
-                Mark Completed
-            </button>
-            <button wire:click="$set('selectedIds', [])"
-                class="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors">
-                Clear
-            </button>
-        </div>
-    @endif
 
     {{-- 2. MAIN CONTENT GRID --}}
     <div class="flex flex-col lg:flex-row gap-6 w-full">
@@ -121,15 +94,10 @@
 
                         {{-- Top Row: Checkbox + Ticket ID and Status Badge --}}
                         <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" value="{{ $req->request_id }}" wire:model.live="selectedIds"
-                                    @click.stop
-                                    class="w-3.5 h-3.5 rounded border-gray-300 text-[#2B66F5] focus:ring-blue-200">
-                                <h3 class="font-bold text-sm {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
-                                    {{ $ticketId }}
-                                </h3>
-                            </div>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $statusStyles }}">
+                            <h3 class="font-bold text-sm {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
+                                {{ $ticketId }}
+                            </h3>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ $statusStyles }}">
                                 {{ $req->status }}
                             </span>
                         </div>
@@ -146,7 +114,7 @@
                             <p class="text-sm font-medium {{ $isActive ? 'text-white' : 'text-gray-600' }}">
                                 {{ $req->category ?? 'General Maintenance' }}
                             </p>
-                            <p class="text-[10px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
+                            <p class="text-[11px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
                                 {{ \Carbon\Carbon::parse($req->created_at)->format('M d, Y') }}
                             </p>
                         </div>

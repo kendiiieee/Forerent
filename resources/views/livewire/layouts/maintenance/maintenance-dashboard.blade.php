@@ -18,6 +18,7 @@
         </div>
         <x-ui.button-add
             text="Add Maintenance Request"
+            tooltip="Submit a new repair or maintenance ticket"
             class="mt-4 md:mt-0"
         />
     </div>
@@ -99,8 +100,12 @@
                             </div>
                         </div>
                         <div class="flex gap-4 pt-4 border-t border-gray-100">
-                            <button class="flex-1 bg-[#2B66F5] hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg shadow-blue-200">Delete</button>
-                            <button class="flex-1 bg-[#070642] hover:bg-blue-900 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg">Resolved</button>
+                            <flux:tooltip :content="'Permanently remove this maintenance request'" position="bottom">
+                                <button class="flex-1 bg-[#2B66F5] hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg shadow-blue-200">Delete</button>
+                            </flux:tooltip>
+                            <flux:tooltip :content="'Mark this request as completed and resolved'" position="bottom">
+                                <button class="flex-1 bg-[#070642] hover:bg-blue-900 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-lg">Resolved</button>
+                            </flux:tooltip>
                         </div>
                     </div>
                 </div>

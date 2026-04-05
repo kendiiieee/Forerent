@@ -9,10 +9,11 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
 use App\Services\UrgencyEvaluator;
+use App\Livewire\Concerns\WithNotifications;
 
 class AddMaintenanceModal extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithNotifications;
 
     public $modalId;
     public $isOpen = false;
@@ -148,6 +149,7 @@ class AddMaintenanceModal extends Component
             ]);
         });
 
+        $this->notifySuccess('Request Submitted', 'Your maintenance request has been submitted successfully.');
         $this->dispatch('close-modal', 'save-maintenance-confirmation');
         $this->dispatch('refresh-maintenance-list');
         $this->close();

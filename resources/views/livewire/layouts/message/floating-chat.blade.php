@@ -1,26 +1,28 @@
 <div wire:poll.3s x-data="{ open: @entangle('isOpen') }">
 
     {{-- Floating Chat Toggle Button --}}
-    <button
-        x-show="!open"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="scale-50 opacity-0"
-        x-transition:enter-end="scale-100 opacity-100"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="scale-100 opacity-100"
-        x-transition:leave-end="scale-50 opacity-0"
-        @click="open = true"
-        class="w-14 h-14 rounded-full bg-[#070589] text-white shadow-lg hover:bg-[#0a07b5] transition-all duration-200 flex items-center justify-center relative"
-    >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-        </svg>
-        @if($totalUnread > 0)
-            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
-                {{ $totalUnread > 99 ? '99+' : $totalUnread }}
-            </span>
-        @endif
-    </button>
+    <flux:tooltip :content="'Open the messaging panel'" position="bottom">
+        <button
+            x-show="!open"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="scale-50 opacity-0"
+            x-transition:enter-end="scale-100 opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="scale-100 opacity-100"
+            x-transition:leave-end="scale-50 opacity-0"
+            @click="open = true"
+            class="w-14 h-14 rounded-full bg-[#070589] text-white shadow-lg hover:bg-[#0a07b5] transition-all duration-200 flex items-center justify-center relative"
+        >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            @if($totalUnread > 0)
+                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+                    {{ $totalUnread > 99 ? '99+' : $totalUnread }}
+                </span>
+            @endif
+        </button>
+    </flux:tooltip>
 
     {{-- Chat Window --}}
     <div
@@ -41,11 +43,13 @@
 
             {{-- Chat Header --}}
             <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-100 bg-[#070589] text-white">
-                <button wire:click="backToList" class="hover:bg-white/20 rounded-full p-1 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                </button>
+                <flux:tooltip :content="'Return to your contact list'" position="bottom">
+                    <button wire:click="backToList" class="hover:bg-white/20 rounded-full p-1 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                </flux:tooltip>
                 <img src="{{ $chatUser->profile_image_url }}" class="w-8 h-8 rounded-full object-cover border border-white/30 flex-shrink-0">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold truncate">{{ $chatUser->first_name }} {{ $chatUser->last_name }}</p>
@@ -55,11 +59,13 @@
                         <p class="text-xs text-white/70 capitalize">{{ $chatUser->role === 'landlord' ? 'Owner' : $chatUser->role }}</p>
                     @endif
                 </div>
-                <button @click="open = false" class="hover:bg-white/20 rounded-full p-1 transition flex-shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+                <flux:tooltip :content="'Close the messaging panel'" position="bottom">
+                    <button @click="open = false" class="hover:bg-white/20 rounded-full p-1 transition flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </flux:tooltip>
             </div>
 
             {{-- Messages --}}
@@ -81,7 +87,7 @@
                         <div class="flex-1 overflow-y-auto px-2 pb-3 space-y-3" style="scrollbar-width: thin;">
                             @foreach($concernCategories as $categoryName => $topicKeys)
                                 <div>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 mb-1.5">{{ $categoryName }}</p>
+                                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 mb-1.5">{{ $categoryName }}</p>
                                     <div class="space-y-1.5">
                                         @foreach($topicKeys as $key)
                                             @if(isset($concernTopics[$key]))
@@ -120,7 +126,7 @@
                         {{-- Auto-reply banner (manager view) --}}
                         @if($isMyAutoReply)
                             <div class="flex justify-center my-1">
-                                <span class="text-[9px] font-medium text-amber-500 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Auto-reply sent on your behalf</span>
+                                <span class="text-[11px] font-medium text-amber-500 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Auto-reply sent on your behalf</span>
                             </div>
                         @endif
 
@@ -137,7 +143,7 @@
 
                                 {{-- Auto-reply badge (tenant view) --}}
                                 @if($isAutoReply && !$isMine)
-                                    <p class="text-[10px] font-medium text-blue-400 mb-1 flex items-center gap-1">
+                                    <p class="text-[11px] font-medium text-blue-400 mb-1 flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                         </svg>
@@ -152,7 +158,7 @@
                                 @else
                                     <p class="whitespace-pre-line">{{ $msg->message }}</p>
                                 @endif
-                                <p class="text-[10px] mt-1 {{ $isMine ? 'text-white/60' : 'text-slate-400' }} text-right">
+                                <p class="text-[11px] mt-1 {{ $isMine ? 'text-white/60' : 'text-slate-400' }} text-right">
                                     {{ $msg->created_at->format('g:i A') }}
                                 </p>
                             </div>
@@ -164,9 +170,9 @@
                                 @if(($msg->read_at ?? null) || $msg->is_read)
                                     <img src="{{ $chatUser->profile_image_url }}" class="w-4 h-4 rounded-full object-cover" title="Seen by {{ $chatUser->first_name }}">
                                 @elseif($msg->delivered_at ?? null)
-                                    <span class="text-[10px] text-slate-400">Delivered</span>
+                                    <span class="text-[11px] text-slate-400">Delivered</span>
                                 @else
-                                    <span class="text-[10px] text-slate-400">Sent</span>
+                                    <span class="text-[11px] text-slate-400">Sent</span>
                                 @endif
                             </div>
                         @endif
@@ -214,14 +220,16 @@
                         class="flex-1 bg-[#F4F6FB] border border-slate-200 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 placeholder-slate-400"
                         autocomplete="off"
                     >
-                    <button
-                        type="submit"
-                        class="w-9 h-9 rounded-full bg-[#070589] text-white flex items-center justify-center hover:bg-[#0a07b5] transition flex-shrink-0"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'Send your message now'" position="bottom">
+                        <button
+                            type="submit"
+                            class="w-9 h-9 rounded-full bg-[#070589] text-white flex items-center justify-center hover:bg-[#0a07b5] transition flex-shrink-0"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                        </button>
+                    </flux:tooltip>
                 </form>
             </div>
 
@@ -231,11 +239,13 @@
             {{-- Header --}}
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-[#070589] text-white">
                 <h3 class="text-sm font-bold tracking-wide">MESSAGES</h3>
-                <button @click="open = false" class="hover:bg-white/20 rounded-full p-1 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+                <flux:tooltip :content="'Close the messaging panel'" position="bottom">
+                    <button @click="open = false" class="hover:bg-white/20 rounded-full p-1 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </flux:tooltip>
             </div>
 
             {{-- Search --}}
@@ -264,12 +274,12 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between">
                                 <p class="text-sm font-semibold text-slate-800 truncate">{{ $contact->first_name }} {{ $contact->last_name }}</p>
-                                <span class="text-[10px] text-slate-400 flex-shrink-0 ml-2">{{ $contact->last_time }}</span>
+                                <span class="text-[11px] text-slate-400 flex-shrink-0 ml-2">{{ $contact->last_time }}</span>
                             </div>
                             <p class="text-xs text-slate-500 truncate mt-0.5">{{ $contact->last_message }}</p>
                         </div>
                         @if($contact->unread_count > 0)
-                            <span class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0">
+                            <span class="bg-red-500 text-white text-[11px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 flex-shrink-0">
                                 {{ $contact->unread_count }}
                             </span>
                         @endif

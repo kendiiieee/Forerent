@@ -64,18 +64,34 @@ class AddPropertyModal extends Component
 
     protected function rules()
     {
-        return [
+        $hasExistingPhotos = count($this->existingPhotos) > 0;
+        $photoRule = $hasExistingPhotos ? 'nullable' : 'required';
+
+        $documentFields = ['businessPermit', 'bir2303', 'inspectionReport', 'barangayClearance', 'occupancyPermit'];
+        $categoryMap = [
+            'businessPermit' => 'business_permit',
+            'bir2303' => 'bir_2303',
+            'inspectionReport' => 'inspection_report',
+            'barangayClearance' => 'barangay_clearance',
+            'occupancyPermit' => 'occupancy_permit',
+        ];
+
+        $rules = [
             'buildingName' => 'required|string|max:255',
             'address' => 'required|string',
             'description' => 'required|string',
-            'propertyPhotos.*' => 'nullable|image|max:10240',
+            'propertyPhotos' => $photoRule . '|array|min:1',
+            'propertyPhotos.*' => 'image|max:10240',
             'newPhotos.*' => 'nullable|image|max:10240',
-            'businessPermit' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'bir2303' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'inspectionReport' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'barangayClearance' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'occupancyPermit' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ];
+
+        foreach ($documentFields as $field) {
+            $hasExisting = collect($this->existingDocuments)->contains('category', $categoryMap[$field]);
+            $docRule = $hasExisting ? 'nullable' : 'required';
+            $rules[$field] = $docRule . '|file|mimes:pdf,jpg,jpeg,png|max:10240';
+        }
+
+        return $rules;
     }
 
     protected function messages()
@@ -84,16 +100,23 @@ class AddPropertyModal extends Component
             'buildingName.required' => 'Property name is required.',
             'address.required' => 'Address is required.',
             'description.required' => 'Description is required.',
+            'propertyPhotos.required' => 'At least one property photo is required.',
+            'propertyPhotos.min' => 'At least one property photo is required.',
             'propertyPhotos.*.max' => 'Each photo must be under 10MB.',
             'propertyPhotos.*.image' => 'Only image files are allowed.',
+            'businessPermit.required' => 'Business Permit is required.',
             'businessPermit.mimes' => 'Only PDF, JPG, PNG files are allowed.',
             'businessPermit.max' => 'File must be under 10MB.',
+            'bir2303.required' => 'BIR 2303 is required.',
             'bir2303.mimes' => 'Only PDF, JPG, PNG files are allowed.',
             'bir2303.max' => 'File must be under 10MB.',
+            'inspectionReport.required' => 'Inspection Report is required.',
             'inspectionReport.mimes' => 'Only PDF, JPG, PNG files are allowed.',
             'inspectionReport.max' => 'File must be under 10MB.',
+            'barangayClearance.required' => 'Barangay Clearance is required.',
             'barangayClearance.mimes' => 'Only PDF, JPG, PNG files are allowed.',
             'barangayClearance.max' => 'File must be under 10MB.',
+            'occupancyPermit.required' => 'Occupancy Permit is required.',
             'occupancyPermit.mimes' => 'Only PDF, JPG, PNG files are allowed.',
             'occupancyPermit.max' => 'File must be under 10MB.',
         ];

@@ -16,15 +16,17 @@
                             </p>
                         </div>
 
-                        <button
-                            type="button"
-                            x-on:click="$dispatch('open-modal', 'discard-property-confirmation')"
-                            class="text-white hover:text-blue-200 transition-colors focus:outline-none">
-                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            <span class="sr-only">Close modal</span>
-                        </button>
+                        <flux:tooltip :content="'Close property form without saving'" position="bottom">
+                            <button
+                                type="button"
+                                x-on:click="$dispatch('open-modal', 'discard-property-confirmation')"
+                                class="text-white hover:text-blue-200 transition-colors focus:outline-none">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                <span class="sr-only">Close modal</span>
+                            </button>
+                        </flux:tooltip>
 
                     </div>
                 </div>
@@ -131,7 +133,7 @@
                                 </div>
 
                                 <p class="text-sm text-gray-600 mb-6">
-                                    Upload up to 5 photos of your property. (optional, max 10MB each)
+                                    Upload up to 5 photos of your property. <span class="text-red-500">*</span> (max 10MB each)
                                 </p>
 
                                 <div x-data="{
@@ -163,14 +165,16 @@
                                             @foreach($existingPhotos as $photo)
                                                 <div class="relative group rounded-lg overflow-hidden border border-gray-300 aspect-square bg-gray-50">
                                                     <img src="{{ $photo['url'] }}" class="w-full h-full object-cover" alt="{{ $photo['name'] }}">
-                                                    <button
-                                                        type="button"
-                                                        @click.prevent="removeExisting({{ $photo['id'] }})"
-                                                        class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
-                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                                                        </svg>
-                                                    </button>
+                                                    <flux:tooltip :content="'Remove this photo from the upload'" position="bottom">
+                                                        <button
+                                                            type="button"
+                                                            @click.prevent="removeExisting({{ $photo['id'] }})"
+                                                            class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </flux:tooltip>
                                                 </div>
                                             @endforeach
 
@@ -178,14 +182,16 @@
                                             <template x-for="(src, i) in previews" :key="i">
                                                 <div class="relative group rounded-lg overflow-hidden border border-gray-300 aspect-square bg-gray-50">
                                                     <img :src="src" class="w-full h-full object-cover">
-                                                    <button
-                                                        type="button"
-                                                        @click.prevent="removePreview(i)"
-                                                        class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
-                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                                                        </svg>
-                                                    </button>
+                                                    <flux:tooltip :content="'Remove this photo from the upload'" position="bottom">
+                                                        <button
+                                                            type="button"
+                                                            @click.prevent="removePreview(i)"
+                                                            class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </flux:tooltip>
                                                 </div>
                                             </template>
 
@@ -220,6 +226,7 @@
                                         </div>
                                     </template>
 
+                                    @error('propertyPhotos') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                                     @error('propertyPhotos.*') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                                 </div>
                             </div>
@@ -234,7 +241,7 @@
                                 </svg>
                                 <h3 class="text-base font-semibold text-gray-900">Property Documents</h3>
                             </div>
-                            <p class="text-xs text-gray-500 mb-5">Optional — PDF or image, max 10MB each</p>
+                            <p class="text-xs text-gray-500 mb-5">Required <span class="text-red-500">*</span> — PDF or image, max 10MB each</p>
 
                             @php
                                 $allDocs = [
@@ -293,18 +300,18 @@
                                     >
                                         {{-- Group badge --}}
                                         @if($isOwnerOnly)
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
+                                            <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
                                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                                 Private
                                             </span>
                                         @else
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
+                                            <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1.5">
                                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 Visible to tenants
                                             </span>
                                         @endif
 
-                                        <p class="text-sm font-medium text-gray-700 mb-2">{{ $docLabel }}</p>
+                                        <p class="text-sm font-medium text-gray-700 mb-2">{{ $docLabel }} <span class="text-red-500">*</span></p>
 
                                         @if($existingDoc)
                                             {{-- Existing file uploaded --}}
@@ -321,9 +328,11 @@
                                                         <input type="file" wire:model="{{ $docField }}" accept=".pdf,.jpg,.jpeg,.png"
                                                             @change="validateFile($event)" class="hidden">
                                                     </label>
-                                                    <button type="button" wire:click="removeExistingDocument({{ $existingDoc['id'] }})" class="text-gray-400 hover:text-red-500 transition-colors">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                    </button>
+                                                    <flux:tooltip :content="'Remove this document from the upload'" position="bottom">
+                                                        <button type="button" wire:click="removeExistingDocument({{ $existingDoc['id'] }})" class="text-gray-400 hover:text-red-500 transition-colors">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        </button>
+                                                    </flux:tooltip>
                                                 </div>
                                             </div>
                                         @elseif($this->{$docField})
@@ -335,9 +344,11 @@
                                                     </svg>
                                                     <span class="text-xs text-gray-600 truncate">{{ $this->{$docField}->getClientOriginalName() }}</span>
                                                 </div>
+                                                <flux:tooltip :content="'Remove this document from the upload'" position="bottom">
                                                 <button type="button" wire:click="$set('{{ $docField }}', null)" class="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
+                                            </flux:tooltip>
                                             </div>
                                         @else
                                             {{-- Empty upload --}}
@@ -359,16 +370,16 @@
                                                 <div class="bg-[#2360E8] h-1 rounded-full transition-all duration-300 ease-out"
                                                      :style="'width: ' + progress + '%'"></div>
                                             </div>
-                                            <p class="text-[10px] text-gray-400 mt-1" x-text="progress < 100 ? 'Uploading... ' + progress + '%' : 'Complete'"></p>
+                                            <p class="text-[11px] text-gray-400 mt-1" x-text="progress < 100 ? 'Uploading... ' + progress + '%' : 'Complete'"></p>
                                         </div>
 
                                         {{-- Client-side validation error --}}
                                         <template x-if="error">
-                                            <p class="text-red-500 text-[10px] mt-1.5" x-text="error"></p>
+                                            <p class="text-red-500 text-[11px] mt-1.5" x-text="error"></p>
                                         </template>
 
                                         {{-- Server-side validation error --}}
-                                        @error($docField) <p class="text-red-500 text-[10px] mt-1.5">{{ $message }}</p> @enderror
+                                        @error($docField) <p class="text-red-500 text-[11px] mt-1.5">{{ $message }}</p> @enderror
                                     </div>
                                 @endforeach
                             </div>
@@ -426,9 +437,11 @@
             </div>
 
             <div x-show="show" class="bg-white rounded-[20px] overflow-hidden shadow-xl transform transition-all sm:w-full sm:max-w-[480px] p-8 relative z-[100]">
-                <button @click="show = false" class="absolute top-5 right-5 text-[#0C0B50] hover:text-blue-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+                <flux:tooltip :content="'Close this confirmation'" position="bottom">
+                    <button @click="show = false" class="absolute top-5 right-5 text-[#0C0B50] hover:text-blue-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </flux:tooltip>
 
                 <div class="text-center mt-4 mb-8">
                     <h3 class="text-2xl font-bold text-[#0C0B50] mb-3">Discard Unsaved Changes?</h3>

@@ -228,7 +228,7 @@
                                 <div class="flex items-center gap-1.5 flex-shrink-0">
                                     <div class="bg-[#070589]/10 rounded-lg px-2.5 py-1.5 text-center">
                                         <p class="text-[#070589] text-sm font-bold leading-none">{{ count($photos) }}</p>
-                                        <p class="text-[#070589]/60 text-[9px] uppercase tracking-wider mt-0.5 font-medium">Photos</p>
+                                        <p class="text-[#070589]/60 text-[11px] uppercase tracking-wider mt-0.5 font-medium">Photos</p>
                                     </div>
                                 </div>
                             </div>
@@ -259,7 +259,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                             </svg>
                                             <h4 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Documents</h4>
-                                            <span class="bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full px-1.5 py-0.5">{{ count($documents) }}</span>
+                                            <span class="bg-gray-100 text-gray-500 text-[11px] font-bold rounded-full px-1.5 py-0.5">{{ count($documents) }}</span>
                                         </div>
                                         @if(count($documents) > 2)
                                             <button
@@ -298,7 +298,7 @@
                                                     <p class="text-xs font-semibold text-gray-700 group-hover:text-[#2360E8] transition-colors truncate">
                                                         {{ $this->getCategoryLabel($doc['category']) }}
                                                     </p>
-                                                    <p class="text-[10px] text-gray-400 truncate">{{ $doc['name'] }}</p>
+                                                    <p class="text-[11px] text-gray-400 truncate">{{ $doc['name'] }}</p>
                                                 </div>
 
                                                 <div class="flex items-center gap-2 flex-shrink-0">
@@ -404,7 +404,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
                     </svg>
                     <h4 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Unit Amenities</h4>
-                    <span class="bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full px-1.5 py-0.5">{{ count($amenities) }}</span>
+                    <span class="bg-gray-100 text-gray-500 text-[11px] font-bold rounded-full px-1.5 py-0.5">{{ count($amenities) }}</span>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5">

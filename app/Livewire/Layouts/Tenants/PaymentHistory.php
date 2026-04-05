@@ -13,10 +13,11 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Livewire\Concerns\WithNotifications;
 
 class PaymentHistory extends Component
 {
-    use WithPagination, WithFileUploads;
+    use WithPagination, WithFileUploads, WithNotifications;
 
     public $activeTab = 'all';
     public $search = '';
@@ -216,6 +217,7 @@ class PaymentHistory extends Component
 
         $this->notifyManagerOfPaymentRequest();
 
+        $this->notifySuccess('Payment Submitted', 'Your payment request has been submitted and is awaiting confirmation.');
         $this->paymentStep = 4;
         $this->loadPaymentRequests();
         $this->loadBannerData();

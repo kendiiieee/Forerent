@@ -210,5 +210,174 @@ Artisan::command('billings:apply-late-fees {--dry-run : Show what would change w
     }
 })->purpose('Mark overdue billings and apply percentage-based late payment fees');
 
+/*
+|--------------------------------------------------------------------------
+| leases:handle-expiration
+|--------------------------------------------------------------------------
+| Runs daily. Handles three scenarios:
+|   1. Expiry warnings — Notify tenants 30, 15, and 7 days before lease end.
+|   2. Auto-renew — If auto_renew is true, extend the lease by the same term.
+|   3. Auto-expire — If end_date has passed, mark the lease as Expired.
+*/
+Artisan::command('leases:handle-expiration {--dry-run : Show what would change without writing data}', function () {
+    $dryRun = (bool) $this->option('dry-run');
+    $today = Carbon::today();
+
+    $this->info('Processing lease expirations...');
+    if ($dryRun) {
+        $this->comment('Dry run mode enabled. No data will be written.');
+    }
+
+    $warned = 0;
+    $renewed = 0;
+    $expired = 0;
+
+    // 1. Expiry warnings (30, 15, 7 days before end_date)
+    foreach ([30, 15, 7] as $days) {
+        $targetDate = $today->copy()->addDays($days);
+
+        $expiringLeases = \App\Models\Lease::where('status', 'Active')
+            ->whereDate('end_date', $targetDate)
+            ->with('tenant')
+            ->get();
+
+        foreach ($expiringLeases as $lease) {
+            if (!$lease->tenant) continue;
+
+            $this->line("  Warning ({$days}d): Lease #{$lease->lease_id} — {$lease->tenant->first_name} {$lease->tenant->last_name}");
+
+            if (!$dryRun) {
+                \App\Models\Notification::create([
+                    'user_id' => $lease->tenant_id,
+                    'type' => 'lease_expiring',
+                    'title' => "Lease Expiring in {$days} Days",
+                    'message' => "Your lease ends on " . $lease->end_date->format('M d, Y') . ". " .
+                        ($lease->auto_renew ? 'Your lease is set to auto-renew.' : 'Please contact management if you wish to renew.'),
+                    'link' => '/tenant',
+                ]);
+                $warned++;
+            }
+        }
+    }
+
+    // 2. Auto-renew leases past their end_date with auto_renew = true
+    $autoRenewLeases = \App\Models\Lease::where('status', 'Active')
+        ->where('auto_renew', true)
+        ->whereDate('end_date', '<', $today)
+        ->get();
+
+    foreach ($autoRenewLeases as $lease) {
+        $newEndDate = Carbon::parse($lease->end_date)->addMonths($lease->term ?: 6);
+
+        $this->line("  Auto-renew: Lease #{$lease->lease_id} → new end {$newEndDate->format('Y-m-d')}");
+
+        if (!$dryRun) {
+            $oldEndDate = $lease->end_date->format('Y-m-d');
+            $lease->update([
+                'end_date' => $newEndDate,
+                'contract_status' => 'draft',
+                'contract_agreed' => false,
+                'tenant_signature' => null,
+                'owner_signature' => null,
+                'tenant_signed_at' => null,
+                'owner_signed_at' => null,
+                'signed_contract_path' => null,
+            ]);
+
+            \App\Models\ContractAuditLog::log($lease->lease_id, 'lease_auto_renewed', [
+                'field_changed' => 'end_date',
+                'old_value' => $oldEndDate,
+                'new_value' => $newEndDate->format('Y-m-d'),
+                'metadata' => ['term' => $lease->term],
+            ]);
+
+            \App\Models\Notification::create([
+                'user_id' => $lease->tenant_id,
+                'type' => 'lease_renewed',
+                'title' => 'Lease Auto-Renewed',
+                'message' => "Your lease has been automatically renewed until " . $newEndDate->format('M d, Y') . ". A new contract will need to be signed.",
+                'link' => '/tenant?tab=inspection',
+            ]);
+
+            // Notify manager
+            $managerId = \Illuminate\Support\Facades\DB::table('beds')
+                ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+                ->where('beds.bed_id', $lease->bed_id)
+                ->value('units.manager_id');
+
+            if ($managerId) {
+                \App\Models\Notification::create([
+                    'user_id' => $managerId,
+                    'type' => 'lease_renewed',
+                    'title' => 'Lease Auto-Renewed',
+                    'message' => "Lease #{$lease->lease_id} has been auto-renewed until " . $newEndDate->format('M d, Y') . ". Please prepare a new contract.",
+                    'link' => '/manager/tenant',
+                ]);
+            }
+
+            $renewed++;
+        }
+    }
+
+    // 3. Auto-expire leases past their end_date (non auto-renew)
+    $expiredLeases = \App\Models\Lease::where('status', 'Active')
+        ->where('auto_renew', false)
+        ->whereDate('end_date', '<', $today)
+        ->get();
+
+    foreach ($expiredLeases as $lease) {
+        $this->line("  Expire: Lease #{$lease->lease_id}");
+
+        if (!$dryRun) {
+            $lease->update([
+                'status' => 'Expired',
+                'move_out' => $today,
+            ]);
+
+            // Free the bed
+            if ($lease->bed_id) {
+                \App\Models\Bed::where('bed_id', $lease->bed_id)
+                    ->update(['status' => 'Vacant']);
+            }
+
+            // Auto-calculate deposit refund
+            $refundData = $lease->calculateDepositRefund();
+            $lease->update([
+                'deposit_refund_amount' => $refundData['refund_amount'],
+                'deposit_deductions' => $refundData['deductions'],
+            ]);
+
+            \App\Models\ContractAuditLog::log($lease->lease_id, 'lease_auto_expired', [
+                'metadata' => [
+                    'end_date' => $lease->end_date->format('Y-m-d'),
+                    'deposit_refund' => $refundData['refund_amount'],
+                ],
+            ]);
+
+            \App\Models\Notification::create([
+                'user_id' => $lease->tenant_id,
+                'type' => 'lease_expired',
+                'title' => 'Lease Expired',
+                'message' => 'Your lease has expired. Deposit refund: PHP ' . number_format($refundData['refund_amount'], 2) . '. Please coordinate with management for move-out.',
+                'link' => '/tenant',
+            ]);
+
+            $expired++;
+        }
+    }
+
+    $this->newLine();
+    $this->line("Warnings sent: {$warned}");
+    $this->line("Auto-renewed: {$renewed}");
+    $this->line("Auto-expired: {$expired}");
+
+    if ($dryRun) {
+        $this->comment('Run without --dry-run to apply changes.');
+    } else {
+        $this->info('Lease expiration processing completed.');
+    }
+})->purpose('Handle lease expiry warnings, auto-renewals, and auto-expiration');
+
 // Schedule: run daily at midnight
 Schedule::command('billings:apply-late-fees')->daily();
+Schedule::command('leases:handle-expiration')->daily();

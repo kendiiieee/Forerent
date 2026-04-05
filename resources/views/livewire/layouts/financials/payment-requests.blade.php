@@ -20,7 +20,7 @@
             </div>
 
             {{-- Month Filter --}}
-            <x-dropdown label="{{ $selectedMonth ? ($monthOptions[$selectedMonth] ?? 'Month') : 'Month' }}">
+            <x-dropdown label="{{ $selectedMonth ? ($monthOptions[$selectedMonth] ?? 'Month') : 'Month' }}" tooltip="Filter requests by month">
                 <x-dropdown-item wire:click="$set('selectedMonth', '')" @click="open = false">
                     All Months
                 </x-dropdown-item>
@@ -36,7 +36,7 @@
             </x-dropdown>
 
             {{-- Building Filter --}}
-            <x-dropdown label="{{ $selectedBuilding ?: 'Building' }}">
+            <x-dropdown label="{{ $selectedBuilding ?: 'Building' }}" tooltip="Filter requests by building">
                 <x-dropdown-item wire:click="$set('selectedBuilding', '')" @click="open = false">
                     All Buildings
                 </x-dropdown-item>
@@ -72,7 +72,7 @@
 
                         <x-ui.td class="group-hover:text-blue-600 font-medium">
                             {{ $req->tenant?->first_name }} {{ $req->tenant?->last_name }}
-                            <br><span class="text-[10px] text-gray-400">{{ $req->lease?->bed?->unit?->unit_number ?? '' }}</span>
+                            <br><span class="text-[11px] text-gray-400">{{ $req->lease?->bed?->unit?->unit_number ?? '' }}</span>
                         </x-ui.td>
 
                         <x-ui.td>
@@ -91,16 +91,18 @@
 
                         <x-ui.td>
                             {{ $req->created_at->format('M d, Y') }}
-                            <br><span class="text-[10px] text-gray-400">{{ $req->created_at->format('h:i A') }}</span>
+                            <br><span class="text-[11px] text-gray-400">{{ $req->created_at->format('h:i A') }}</span>
                         </x-ui.td>
 
                         <x-ui.td class="text-center" @click.stop>
-                            <button
-                                wire:click.stop="viewRequest({{ $req->id }})"
-                                class="inline-flex items-center px-3 py-1 border border-[#0906ae] text-[#0906ae] rounded-md text-xs font-bold hover:bg-blue-50 transition-colors"
-                            >
-                                Review
-                            </button>
+                            <flux:tooltip :content="'Review and manage this payment request'" position="bottom">
+                                <button
+                                    wire:click.stop="viewRequest({{ $req->id }})"
+                                    class="inline-flex items-center px-3 py-1 border border-[#0906ae] text-[#0906ae] rounded-md text-xs font-bold hover:bg-blue-50 transition-colors"
+                                >
+                                    Review
+                                </button>
+                            </flux:tooltip>
                         </x-ui.td>
                     </x-ui.tr>
                 @empty
@@ -141,11 +143,13 @@
                             @else
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">Rejected</span>
                             @endif
-                            <button type="button" x-on:click="$dispatch('open-modal', 'cancel-payment-review')" class="text-white/70 hover:text-white transition-colors focus:outline-none">
-                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+                            <flux:tooltip :content="'Close this review panel'" position="bottom">
+                                <button type="button" x-on:click="$dispatch('open-modal', 'cancel-payment-review')" class="text-white/70 hover:text-white transition-colors focus:outline-none">
+                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </flux:tooltip>
                         </div>
                     </div>
                     <p class="text-xs text-blue-200 mt-3 pt-3 border-t border-blue-400/30">
@@ -166,11 +170,11 @@
                             <div class="bg-[#2672EC] rounded-xl p-5 text-white shadow-lg">
                                 <div class="flex justify-between items-start">
                                     <div>
-                                        <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">Amount Paid</p>
+                                        <p class="text-[11px] opacity-60 uppercase tracking-widest font-bold">Amount Paid</p>
                                         <h3 class="text-2xl font-bold mt-0.5">&#8369;{{ number_format($selectedRequest['amount_paid'], 2) }}</h3>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">Amount Due</p>
+                                        <p class="text-[11px] opacity-60 uppercase tracking-widest font-bold">Amount Due</p>
                                         <p class="text-lg font-bold mt-0.5">&#8369;{{ number_format($selectedRequest['billing_amount'], 2) }}</p>
                                     </div>
                                 </div>
@@ -204,15 +208,15 @@
                             </h3>
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
-                                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Due Date</p>
+                                    <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Due Date</p>
                                     <p class="text-[#070642] font-semibold text-sm">{{ $selectedRequest['billing_due'] }}</p>
                                 </div>
                                 <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50">
-                                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Payment Method</p>
+                                    <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Payment Method</p>
                                     <p class="text-[#070642] font-semibold text-sm">{{ $selectedRequest['payment_method'] }}</p>
                                 </div>
                                 <div class="bg-[#F4F7FF] p-4 rounded-xl border border-blue-50 col-span-2">
-                                    <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wide mb-1">Reference Number</p>
+                                    <p class="text-gray-400 text-[11px] uppercase font-bold tracking-wide mb-1">Reference Number</p>
                                     <p class="text-[#070642] font-semibold text-sm font-mono">{{ $selectedRequest['reference_number'] ?: '—' }}</p>
                                 </div>
                             </div>

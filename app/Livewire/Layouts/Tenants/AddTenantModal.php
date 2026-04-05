@@ -382,6 +382,11 @@ class AddTenantModal extends Component
                     $bedQuery->where('status', 'Vacant');
                 });
             }
+
+            // Filter units by tenant gender (Male → Male/Co-ed, Female → Female/Co-ed)
+            if ($this->gender) {
+                $query->whereIn('occupants', [$this->gender, 'Co-ed']);
+            }
         })->pluck('owner_id')->unique();
 
         $this->buildings = Property::whereIn('owner_id', $ownerIds)
@@ -407,8 +412,28 @@ class AddTenantModal extends Component
                 });
             }
 
+            // Filter units by tenant gender (Male → Male/Co-ed, Female → Female/Co-ed)
+            if ($this->gender) {
+                $unitQuery->whereIn('occupants', [$this->gender, 'Co-ed']);
+            }
+
             $this->units = $unitQuery->get(['unit_id', 'unit_number']);
         }
+    }
+
+    public function updatedGender($value)
+    {
+        // Reset rent details when gender changes since available units depend on gender
+        $this->selectedBuilding = '';
+        $this->selectedUnit     = '';
+        $this->selectedBed      = '';
+        $this->units            = [];
+        $this->beds             = [];
+        $this->dormType         = '';
+        $this->monthlyRate      = '';
+        $this->securityDeposit  = '';
+
+        $this->loadBuildings();
     }
 
     public function updatedSelectedUnit($unitId)
@@ -538,6 +563,7 @@ class AddTenantModal extends Component
                     'tenant_id'             => $createdUser->user_id,
                     'bed_id'                => $this->selectedBed,
                     'status'                => 'Active',
+                    'contract_status'       => 'draft',
                     'term'                  => $this->term,
                     'auto_renew'            => $this->autoRenew,
                     'start_date'            => $this->startDate,
@@ -771,6 +797,7 @@ class AddTenantModal extends Component
                 'tenant_id'             => $this->transferFromTenantId,
                 'bed_id'                => $this->selectedBed,
                 'status'                => 'Active',
+                'contract_status'       => 'draft',
                 'term'                  => $this->term,
                 'auto_renew'            => $this->autoRenew,
                 'start_date'            => $this->startDate,

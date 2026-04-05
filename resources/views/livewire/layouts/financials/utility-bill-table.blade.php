@@ -15,7 +15,7 @@
             />
 
             {{-- Month Filter --}}
-            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}">
+            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}" tooltip="Filter bills by month">
                 <x-dropdown-item wire:click="$set('selectedMonth', null)" @click="open = false">
                     All Months
                 </x-dropdown-item>
@@ -31,7 +31,7 @@
             </x-dropdown>
 
             {{-- Building Filter --}}
-            <x-dropdown label="{{ $selectedBuilding ? Str::before($selectedBuilding, ' ') . '...' : 'Building' }}">
+            <x-dropdown label="{{ $selectedBuilding ? Str::before($selectedBuilding, ' ') . '...' : 'Building' }}" tooltip="Filter bills by building">
                 <x-dropdown-item wire:click="$set('selectedBuilding', null)" @click="open = false">
                     All Buildings
                 </x-dropdown-item>

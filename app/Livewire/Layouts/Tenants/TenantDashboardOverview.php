@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Tenants;
 use App\Livewire\Concerns\WithESignature;
 use App\Models\Billing;
 use App\Models\BillingItem;
+use App\Models\ContractAuditLog;
 use App\Models\Lease;
 use App\Models\MaintenanceRequest;
 use App\Models\MoveInInspection;
@@ -683,6 +684,28 @@ class TenantDashboardOverview extends Component
         // Notify the manager that the tenant signed the contract
         $this->notifyManagerOfContractSign($this->lease, 'move-in');
 
+        // If contract is now fully executed (tenant signed last), notify manager
+        if ($result['agreed']) {
+            $this->lease->refresh();
+            $this->signedContractPath = $this->lease->signed_contract_path;
+
+            $managerId = DB::table('beds')
+                ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+                ->where('beds.bed_id', $this->lease->bed_id)
+                ->value('units.manager_id');
+
+            if ($managerId) {
+                $user = Auth::user();
+                Notification::create([
+                    'user_id' => $managerId,
+                    'type' => 'contract_executed',
+                    'title' => 'Contract Fully Executed',
+                    'message' => $user->first_name . ' ' . $user->last_name . '\'s move-in contract is now fully signed by both parties.',
+                    'link' => '/manager/tenant',
+                ]);
+            }
+        }
+
         $this->closeSignatureModal();
         $this->dispatch('signature-saved');
     }
@@ -842,6 +865,118 @@ class TenantDashboardOverview extends Component
                 'link' => '/manager/tenant',
             ]);
         }
+    }
+
+    // ===== TENANT DISPUTE WORKFLOW =====
+
+    public function disputeInspectionItem(int $inspectionId, string $remarks): void
+    {
+        $item = MoveInInspection::where('id', $inspectionId)
+            ->where('lease_id', $this->lease->lease_id)
+            ->first();
+
+        if (!$item || $item->dispute_status === 'disputed') return;
+
+        $item->update([
+            'dispute_status' => 'disputed',
+            'dispute_remarks' => $remarks,
+            'disputed_at' => now(),
+        ]);
+
+        // Audit log
+        ContractAuditLog::log($this->lease->lease_id, 'item_disputed', [
+            'field_changed' => $item->item_name,
+            'new_value' => $remarks,
+            'metadata' => [
+                'inspection_type' => 'move_in',
+                'item_type' => $item->type,
+            ],
+        ]);
+
+        // Notify manager
+        $managerId = DB::table('beds')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('beds.bed_id', $this->lease->bed_id)
+            ->value('units.manager_id');
+
+        if ($managerId) {
+            $user = Auth::user();
+            Notification::create([
+                'user_id' => $managerId,
+                'type' => 'inspection_disputed',
+                'title' => 'Inspection Item Disputed',
+                'message' => $user->first_name . ' ' . $user->last_name . ' has disputed "' . $item->item_name . '": ' . $remarks,
+                'link' => '/manager/tenant',
+            ]);
+        }
+
+        $this->loadItemsReceived();
+        $this->dispatch('notify', type: 'info', title: 'Dispute Submitted', description: 'Your dispute has been submitted. The manager will review it.');
+    }
+
+    public function disputeMoveOutItem(int $inspectionId, string $remarks): void
+    {
+        $item = MoveOutInspection::where('id', $inspectionId)
+            ->where('lease_id', $this->lease->lease_id)
+            ->first();
+
+        if (!$item || $item->dispute_status === 'disputed') return;
+
+        $item->update([
+            'dispute_status' => 'disputed',
+            'dispute_remarks' => $remarks,
+            'disputed_at' => now(),
+        ]);
+
+        ContractAuditLog::log($this->lease->lease_id, 'item_disputed', [
+            'field_changed' => $item->item_name,
+            'new_value' => $remarks,
+            'metadata' => [
+                'inspection_type' => 'move_out',
+                'item_type' => $item->type,
+            ],
+        ]);
+
+        $managerId = DB::table('beds')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('beds.bed_id', $this->lease->bed_id)
+            ->value('units.manager_id');
+
+        if ($managerId) {
+            $user = Auth::user();
+            Notification::create([
+                'user_id' => $managerId,
+                'type' => 'inspection_disputed',
+                'title' => 'Move-Out Item Disputed',
+                'message' => $user->first_name . ' ' . $user->last_name . ' has disputed "' . $item->item_name . '": ' . $remarks,
+                'link' => '/manager/tenant',
+            ]);
+        }
+
+        $this->loadItemsReturned();
+        $this->dispatch('notify', type: 'info', title: 'Dispute Submitted', description: 'Your dispute has been submitted. The manager will review it.');
+    }
+
+    // ===== CONTRACT DOWNLOAD FOR TENANT =====
+
+    public function downloadSignedContract()
+    {
+        if (!$this->lease?->signed_contract_path) return;
+
+        return Storage::disk('public')->download(
+            $this->lease->signed_contract_path,
+            'Move-In-Contract-' . Auth::user()->last_name . '.pdf'
+        );
+    }
+
+    public function downloadMoveOutSignedContract()
+    {
+        if (!$this->lease?->moveout_signed_contract_path) return;
+
+        return Storage::disk('public')->download(
+            $this->lease->moveout_signed_contract_path,
+            'Move-Out-Contract-' . Auth::user()->last_name . '.pdf'
+        );
     }
 
     public function render()

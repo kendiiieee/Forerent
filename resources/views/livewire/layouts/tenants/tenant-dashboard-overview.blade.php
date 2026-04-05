@@ -779,11 +779,13 @@
                             <h2 class="text-xl font-bold uppercase">PAY NOW</h2>
                             <p class="mt-1 text-sm text-blue-100">Submit your payment for verification</p>
                         </div>
-                        <button type="button" x-on:click="$dispatch('open-modal', 'cancel-payment-modal')" class="text-white hover:text-blue-200 transition-colors focus:outline-none">
-                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <flux:tooltip :content="'Close payment details'" position="bottom">
+                            <button type="button" x-on:click="$dispatch('open-modal', 'cancel-payment-modal')" class="text-white hover:text-blue-200 transition-colors focus:outline-none">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </flux:tooltip>
                     </div>
 
                     {{-- Stepper --}}
@@ -1062,7 +1064,7 @@
                                         @elseif($previousProofImagePath)
                                             <img src="{{ asset('storage/' . $previousProofImagePath) }}" alt="Previous proof" class="absolute inset-0 w-full h-full object-contain p-2 opacity-60">
                                             <div class="absolute bottom-1 left-0 right-0 text-center">
-                                                <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Previous upload — click to replace</span>
+                                                <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Previous upload — click to replace</span>
                                             </div>
                                         @else
                                             <div class="flex flex-col items-center justify-center pt-5 pb-6" x-show="!uploading">

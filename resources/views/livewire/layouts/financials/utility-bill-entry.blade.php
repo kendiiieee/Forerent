@@ -10,11 +10,13 @@
                             <h2 class="text-xl font-bold uppercase">Utility Bill Entry</h2>
                             <p class="mt-1 text-sm text-blue-100">Input total Meralco or water bill for a unit. The system will auto-split among active tenants.</p>
                         </div>
-                        <button type="button" wire:click="close" class="text-white hover:text-blue-200 transition-colors focus:outline-none">
-                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <flux:tooltip :content="'Close utility bill form'" position="bottom">
+                            <button type="button" wire:click="close" class="text-white hover:text-blue-200 transition-colors focus:outline-none">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </flux:tooltip>
                     </div>
                 </div>
 

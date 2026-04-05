@@ -7,7 +7,7 @@
     >
         {{-- FILTERS SLOT --}}
         <x-slot:filters>
-            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}">
+            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}" tooltip="Filter utility history by month">
                 <x-dropdown-item wire:click="$set('selectedMonth', null)" @click="open = false">
                     All Months
                 </x-dropdown-item>
@@ -101,15 +101,15 @@
                                         @if($expandedBill)
                                             <div class="grid grid-cols-3 gap-3">
                                                 <div class="rounded-lg p-3 bg-gray-50">
-                                                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Unit Bill</p>
+                                                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Unit Bill</p>
                                                     <p class="text-base font-extrabold text-gray-900">&#8369; {{ number_format($expandedBill->total_amount, 2) }}</p>
                                                 </div>
                                                 <div class="rounded-lg p-3 bg-gray-50">
-                                                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Split Between</p>
+                                                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Split Between</p>
                                                     <p class="text-base font-extrabold text-gray-900">{{ $expandedBill->tenant_count }} {{ $expandedBill->tenant_count === 1 ? 'tenant' : 'tenants' }}</p>
                                                 </div>
                                                 <div class="rounded-lg p-3 {{ $isElectricity ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-blue-50 ring-1 ring-blue-200' }}">
-                                                    <p class="text-[10px] font-semibold {{ $isElectricity ? 'text-orange-500' : 'text-blue-500' }} uppercase tracking-wider mb-1">Your Share</p>
+                                                    <p class="text-[11px] font-semibold {{ $isElectricity ? 'text-orange-500' : 'text-blue-500' }} uppercase tracking-wider mb-1">Your Share</p>
                                                     <p class="text-base font-extrabold {{ $isElectricity ? 'text-orange-700' : 'text-blue-700' }}">&#8369; {{ number_format($expandedBill->per_tenant_amount, 2) }}</p>
                                                 </div>
                                             </div>
@@ -119,11 +119,11 @@
                                         @else
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="rounded-lg p-3 bg-gray-50">
-                                                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Description</p>
+                                                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Description</p>
                                                     <p class="text-sm font-bold text-gray-900">{{ $item->description }}</p>
                                                 </div>
                                                 <div class="rounded-lg p-3 {{ $isElectricity ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-blue-50 ring-1 ring-blue-200' }}">
-                                                    <p class="text-[10px] font-semibold {{ $isElectricity ? 'text-orange-500' : 'text-blue-500' }} uppercase tracking-wider mb-1">Your Share</p>
+                                                    <p class="text-[11px] font-semibold {{ $isElectricity ? 'text-orange-500' : 'text-blue-500' }} uppercase tracking-wider mb-1">Your Share</p>
                                                     <p class="text-base font-extrabold {{ $isElectricity ? 'text-orange-700' : 'text-blue-700' }}">&#8369; {{ number_format($item->amount, 2) }}</p>
                                                 </div>
                                             </div>

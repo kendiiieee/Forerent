@@ -5,7 +5,6 @@ namespace App\Livewire\Layouts;
 use Livewire\Component;
 use Livewire\Attributes\On;
 use App\Models\Unit;
-use App\Models\Bed;
 
 class PropertyWidgets extends Component
 {
@@ -20,8 +19,11 @@ class PropertyWidgets extends Component
     public float $occupancyRate = 0.0;
     public int $availableUnits = 0;
 
-    // Donut chart data
-    public array $unitStatusData = [];
+    // Vacancy Metrics (merged from VacancyMetrics component)
+    public int $totalBeds = 0;
+    public int $occupiedBeds = 0;
+    public int $vacantBeds = 0;
+    public int $vacancyPercent = 0;
 
     public function mount()
     {
@@ -30,24 +32,26 @@ class PropertyWidgets extends Component
 
     private function loadUnitStats()
     {
-        // Calculate unit status based on active leases in beds
-        $this->totalUnits = Unit::count();
-
-        // Get units with their beds and active leases
+        // Single query for all unit/bed/lease data
         $units = Unit::with(['beds.leases' => function($query) {
             $query->where('status', 'Active');
         }])->get();
 
+        $this->totalUnits = $units->count();
+
         $occupiedUnits = 0;
         $vacantUnits = 0;
         $moveInReadyUnits = 0;
+        $totalBeds = 0;
+        $occupiedBeds = 0;
 
         foreach ($units as $unit) {
             $hasAnyActiveLease = false;
             $allBedsOccupied = true;
-            $totalBeds = $unit->beds->count();
-            
-            if ($totalBeds === 0) {
+            $bedCount = $unit->beds->count();
+            $totalBeds += $bedCount;
+
+            if ($bedCount === 0) {
                 $vacantUnits++;
                 continue;
             }
@@ -55,19 +59,17 @@ class PropertyWidgets extends Component
             foreach ($unit->beds as $bed) {
                 if ($bed->leases->isNotEmpty()) {
                     $hasAnyActiveLease = true;
+                    $occupiedBeds++;
                 } else {
                     $allBedsOccupied = false;
                 }
             }
 
             if ($allBedsOccupied && $hasAnyActiveLease) {
-                // All beds have active leases
                 $occupiedUnits++;
             } elseif ($hasAnyActiveLease) {
-                // Some beds have active leases - move-in ready
                 $moveInReadyUnits++;
             } else {
-                // No active leases at all - fully vacant
                 $vacantUnits++;
             }
         }
@@ -76,7 +78,13 @@ class PropertyWidgets extends Component
         $this->vacant = $vacantUnits;
         $this->moveInReady = $moveInReadyUnits;
 
-        // Calculate percentages
+        // Bed-level vacancy metrics
+        $this->totalBeds = $totalBeds;
+        $this->occupiedBeds = $occupiedBeds;
+        $this->vacantBeds = $totalBeds - $occupiedBeds;
+        $this->vacancyPercent = $totalBeds > 0 ? round(($this->vacantBeds / $totalBeds) * 100) : 0;
+
+        // Unit-level percentages
         if ($this->totalUnits > 0) {
             $this->occupiedPercent = round(($this->occupied / $this->totalUnits) * 100);
             $this->vacantPercent = round(($this->vacant / $this->totalUnits) * 100);
@@ -85,22 +93,6 @@ class PropertyWidgets extends Component
             $this->occupancyRate = round(($this->occupied / $this->totalUnits) * 100, 1);
             $this->availableUnits = $this->vacant + $this->moveInReady;
         }
-
-        // Prepare data for donut chart
-        $this->unitStatusData = [
-            ['label' => 'Occupied', 'value' => $this->occupiedPercent, 'count' => $this->occupied],
-            ['label' => 'Available', 'value' => $this->moveInReadyPercent, 'count' => $this->moveInReady],
-            ['label' => 'Vacant', 'value' => $this->vacantPercent, 'count' => $this->vacant],
-        ];
-    }
-
-    public function getUnitStatusChartData()
-    {
-        return [
-            ['label' => 'Occupied', 'value' => $this->occupiedPercent, 'count' => $this->occupied],
-            ['label' => 'Available', 'value' => $this->moveInReadyPercent, 'count' => $this->moveInReady],
-            ['label' => 'Vacant', 'value' => $this->vacantPercent, 'count' => $this->vacant],
-        ];
     }
 
     #[On('refresh-property-list')]
@@ -112,8 +104,6 @@ class PropertyWidgets extends Component
 
     public function render()
     {
-        return view('livewire.layouts.property-widgets', [
-            'unitStatusData' => $this->getUnitStatusChartData()
-        ]);
+        return view('livewire.layouts.property-widgets');
     }
 }

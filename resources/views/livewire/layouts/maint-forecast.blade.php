@@ -3,7 +3,7 @@
         <h2 class="text-2xl font-bold text-gray-800">Maintenance Cost Forecast</h2>
 
         <div class="flex items-center">
-            <x-dropdown label="{{ $year }}" width="w-36">
+            <x-dropdown label="{{ $year }}" width="w-36" tooltip="Select forecast year">
                 @for($y = date('Y'); $y <= date('Y') + 3; $y++)
                     <x-dropdown-item wire:click="$set('year', {{ $y }})" :active="$year == $y">
                         {{ $y }}
@@ -44,7 +44,7 @@
             <div class="bg-white rounded-2xl shadow-lg p-6 lg:col-span-2">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-[#070642]">Monthly Maintenance Costs</h3>
-                    <x-dropdown label="Download" width="w-44">
+                    <x-dropdown label="Download" width="w-44" tooltip="Download chart as image or CSV">
                         <x-dropdown-item @click="open = false; window.maintenanceChartInstance?.dataURI().then(uri => { const a = document.createElement('a'); a.href = uri.imgURI; a.download = 'maintenance-costs-{{ $year }}.png'; a.click(); })">
                             Download PNG
                         </x-dropdown-item>

@@ -27,7 +27,7 @@
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
 
             {{-- Building Filter Dropdown --}}
-            <x-dropdown label="{{ $selectedBuildingName ? explode(' ', $selectedBuildingName)[0] : 'Building' }}">
+            <x-dropdown label="{{ $selectedBuildingName ? explode(' ', $selectedBuildingName)[0] : 'Building' }}" tooltip="Filter tenants by building">
                 <x-dropdown-item
                     wire:click="selectBuilding(null)"
                     @click="open = false"
@@ -49,6 +49,7 @@
 
             <x-ui.button-add
                 text="Add Tenant"
+                tooltip="Register a new tenant to a unit"
                 x-on:click="$dispatch('open-add-tenant-modal')"
             />
         </div>
@@ -110,7 +111,7 @@
                             <h3 class="font-bold text-sm {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
                                 {{ $tenant['first_name'] }} {{ $tenant['last_name'] }}
                             </h3>
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border {{ $statusStyles }}">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border {{ $statusStyles }}">
                                 <span class="w-1.5 h-1.5 rounded-full {{ $dotStyles }}"></span>
                                 {{ $tenant['payment_status'] }}
                             </span>
@@ -124,11 +125,11 @@
                                 Bed {{ $tenant['bed_number'] }}
                             </p>
                             @if($tenant['next_billing'])
-                                <p class="text-[10px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
+                                <p class="text-[11px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
                                     {{ \Carbon\Carbon::parse($tenant['next_billing'])->format('M d, Y') }}
                                 </p>
                             @else
-                                <p class="text-[10px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
+                                <p class="text-[11px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
                                     No date
                                 </p>
                             @endif

@@ -23,6 +23,44 @@
     $inspectionChecklist = $inspectionChecklist ?? [];
     $itemsReceived = $itemsReceived ?? [];
     $signatureMode = $signatureMode ?? 'tenant';
+    $contractSettings = $contractSettings ?? [];
+
+    $defaultInclusions = [
+        'Association dues / condo or building fees',
+        'Wi-Fi / Internet access',
+        'Access to building amenities (pool, gym, function areas, etc.)',
+        'Housekeeping / common-area cleaning',
+        'Use of shared appliances',
+        '24/7 building security',
+        'Furnished room (bed, cabinet, air conditioning, etc.)',
+        'Water utility',
+    ];
+    $defaultExclusions = [
+        'Electricity (split equally among unit tenants)',
+        'Water (if not included above)',
+        'Laundry services',
+        'Parking fees',
+    ];
+    $defaultHouseRules = [
+        'No overnight visitors or unauthorized guests. Visitors must leave by the designated curfew time.',
+        'No smoking inside the unit or building common areas.',
+        'No illegal drugs, substances, or activities of any kind.',
+        'No pets allowed within the premises unless explicitly permitted in writing.',
+        'Observe quiet hours from 10:00 PM to 6:00 AM.',
+        'No unauthorized room transfers, subletting, or sharing of assigned bed with another person.',
+        'No tampering with air conditioning units, electrical systems, or building infrastructure.',
+        'Report all maintenance issues to the dormitory administration promptly.',
+        'Keep personal area and all shared spaces clean and orderly.',
+        'Follow proper garbage disposal and recycling procedures.',
+        'Respect fellow tenants\' privacy, belongings, and personal space.',
+        'Comply with all building management rules and regulations.',
+    ];
+    $defaultPenalties = 'First offense — written warning. Second offense — fine of PHP 500.00. Third offense — grounds for lease termination with possible deposit forfeiture. Serious violations (illegal activity, property destruction) may result in immediate termination.';
+
+    $inclusions = data_get($contractSettings, 'inclusions', $defaultInclusions);
+    $exclusions = data_get($contractSettings, 'exclusions', $defaultExclusions);
+    $houseRules = data_get($contractSettings, 'house_rules', $defaultHouseRules);
+    $penaltySchedule = data_get($contractSettings, 'penalty_schedule', $defaultPenalties);
 @endphp
 
 {{-- Page Header --}}
@@ -135,11 +173,11 @@
     <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 5 — Rent Inclusions and Exclusions</h3>
     <p class="text-xs font-bold text-gray-700 mb-1">The following items are included in the monthly rent:</p>
     <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-3">
-        <li>Association dues / condo or building fees</li><li>Wi-Fi / Internet access</li><li>Access to building amenities (pool, gym, function areas, etc.)</li><li>Housekeeping / common-area cleaning</li><li>Use of shared appliances</li><li>24/7 building security</li><li>Furnished room (bed, cabinet, air conditioning, etc.)</li><li>Water utility</li>
+        @foreach($inclusions as $item)<li>{{ $item }}</li>@endforeach
     </ul>
     <p class="text-xs font-bold text-gray-700 mb-1">The following items are NOT included and will be billed separately:</p>
     <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5">
-        <li>Electricity (split equally among unit tenants)</li><li>Water (if not included above)</li><li>Laundry services</li><li>Parking fees</li>
+        @foreach($exclusions as $item)<li>{{ $item }}</li>@endforeach
     </ul>
 </div>
 
@@ -148,9 +186,9 @@
     <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 6 — House Rules and Policies</h3>
     <p class="text-xs text-gray-700 mb-2">The Lessee agrees to abide by the following rules at all times:</p>
     <ul class="text-xs text-gray-600 list-disc pl-5 space-y-0.5 mb-3">
-        <li>No overnight visitors or unauthorized guests. Visitors must leave by the designated curfew time.</li><li>No smoking inside the unit or building common areas.</li><li>No illegal drugs, substances, or activities of any kind.</li><li>No pets allowed within the premises unless explicitly permitted in writing.</li><li>Observe quiet hours from 10:00 PM to 6:00 AM.</li><li>No unauthorized room transfers, subletting, or sharing of assigned bed with another person.</li><li>No tampering with air conditioning units, electrical systems, or building infrastructure.</li><li>Report all maintenance issues to the dormitory administration promptly.</li><li>Keep personal area and all shared spaces clean and orderly.</li><li>Follow proper garbage disposal and recycling procedures.</li><li>Respect fellow tenants' privacy, belongings, and personal space.</li><li>Comply with all building management rules and regulations.</li>
+        @foreach($houseRules as $rule)<li>{{ $rule }}</li>@endforeach
     </ul>
-    <p class="text-xs text-gray-700"><strong>Violation Penalties:</strong> First offense — written warning. Second offense — fine of PHP 500.00. Third offense — grounds for lease termination with possible deposit forfeiture. Serious violations (illegal activity, property destruction) may result in immediate termination.</p>
+    <p class="text-xs text-gray-700"><strong>Violation Penalties:</strong> {{ $penaltySchedule }}</p>
 </div>
 
 {{-- SECTION 7 --}}
@@ -264,14 +302,14 @@
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-800">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
-                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $tenantSignedAt }}</p>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $tenantSignedAt }}</p>
             @else
                 <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                    <span class="text-[10px] text-gray-400">Awaiting tenant signature</span>
+                    <span class="text-[11px] text-gray-400">Awaiting tenant signature</span>
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
-                <p class="text-[10px] text-gray-400 mt-1">Tenant's Signature</p>
+                <p class="text-[11px] text-gray-400 mt-1">Tenant's Signature</p>
             @endif
         </div>
 
@@ -283,7 +321,7 @@
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-800">{{ $t['lessor_info']['representative'] }}</p>
-                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $ownerSignedAt }}</p>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $ownerSignedAt }}</p>
             @else
                 @if($signatureMode === 'manager')
                     <button
@@ -291,16 +329,16 @@
                         class="w-full border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-indigo-50 hover:border-indigo-400 transition-all cursor-pointer group"
                     >
                         <svg class="w-6 h-6 text-indigo-400 group-hover:text-indigo-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="text-[10px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
+                        <span class="text-[11px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
                     </button>
                 @else
                     <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
+                        <span class="text-[11px] text-gray-400">Awaiting signature</span>
                     </div>
                 @endif
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['lessor_info']['representative'] }}</p>
-                <p class="text-[10px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
+                <p class="text-[11px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
             @endif
         </div>
     </div>
@@ -309,7 +347,7 @@
     @if($contractAgreed)
         <div class="mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
             <span class="text-sm font-bold text-emerald-700">Contract Fully Signed</span>
-            <p class="text-[10px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
+            <p class="text-[11px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
         </div>
     @endif
 
@@ -343,5 +381,5 @@
 
 {{-- Footer --}}
 <div class="border-t pt-3 mt-6 text-center">
-    <p class="text-[10px] text-gray-400">This document is confidential and intended solely for the parties named herein.</p>
+    <p class="text-[11px] text-gray-400">This document is confidential and intended solely for the parties named herein.</p>
 </div>

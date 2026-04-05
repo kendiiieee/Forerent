@@ -24,6 +24,7 @@
         {{-- ADD BUTTON --}}
         <x-ui.button-add
             text="Add Maintenance Request"
+            tooltip="Submit a new repair or maintenance ticket"
             class="mt-4 md:mt-0"
         />
     </div>

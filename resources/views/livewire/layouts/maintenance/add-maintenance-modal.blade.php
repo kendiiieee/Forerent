@@ -9,13 +9,15 @@
                         <h2 class="text-lg font-bold uppercase tracking-wide">Add Maintenance Request</h2>
                         <p class="text-xs text-blue-200 mt-0.5">Fill in the details to submit a new ticket</p>
                     </div>
-                    <button type="button"
-                        x-on:click="$dispatch('open-modal', 'discard-maintenance-confirmation')"
-                        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'Close request form without saving'" position="bottom">
+                        <button type="button"
+                            x-on:click="$dispatch('open-modal', 'discard-maintenance-confirmation')"
+                            class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </flux:tooltip>
                 </div>
 
                 {{-- Body --}}
@@ -40,7 +42,7 @@
                             <p class="text-sm opacity-80 mt-0.5">{{ $buildingName }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-[10px] opacity-60 uppercase tracking-widest font-bold">Ticket Number</p>
+                            <p class="text-[11px] opacity-60 uppercase tracking-widest font-bold">Ticket Number</p>
                             <p class="text-sm font-bold font-mono mt-0.5">{{ $ticketNumber }}</p>
                         </div>
                     </div>
@@ -129,15 +131,17 @@
                                 <template x-for="(src, i) in previews" :key="i">
                                     <div class="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-50">
                                         <img :src="src" class="w-full h-full object-cover">
-                                        <button
-                                            type="button"
-                                            @click.prevent="removePreview(i)"
-                                            class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
-                                        >
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </button>
+                                        <flux:tooltip :content="'Remove this image from the request'" position="bottom">
+                                            <button
+                                                type="button"
+                                                @click.prevent="removePreview(i)"
+                                                class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                            >
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </flux:tooltip>
                                     </div>
                                 </template>
 
@@ -147,7 +151,7 @@
                                         <svg class="w-6 h-6 text-[#2672EC] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                         </svg>
-                                        <p class="text-[10px] text-[#2672EC] font-bold mt-1">Add more</p>
+                                        <p class="text-[11px] text-[#2672EC] font-bold mt-1">Add more</p>
                                         <input type="file" wire:model="images" accept="image/*" multiple
                                             @change="handleFiles($event)"
                                             class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">

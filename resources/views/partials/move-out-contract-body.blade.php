@@ -106,12 +106,12 @@
     <div class="space-y-1 ml-2 text-xs text-gray-700">
         @foreach($reasons as $r)
             <div class="flex items-center gap-2">
-                <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[10px] {{ $reason === $r ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($reason === $r)&#10003;@endif</span>
+                <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[11px] {{ $reason === $r ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($reason === $r)&#10003;@endif</span>
                 <span>{{ $r }}</span>
             </div>
         @endforeach
         <div class="flex items-center gap-2">
-            <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[10px] {{ $isOther ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($isOther)&#10003;@endif</span>
+            <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[11px] {{ $isOther ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($isOther)&#10003;@endif</span>
             <span>Other: {{ $isOther ? $reason : '___________________________________' }}</span>
         </div>
     </div>
@@ -312,14 +312,14 @@
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-800">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
-                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
             @else
                 <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                    <span class="text-[10px] text-gray-400">Awaiting tenant signature</span>
+                    <span class="text-[11px] text-gray-400">Awaiting tenant signature</span>
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
-                <p class="text-[10px] text-gray-400 mt-1">Tenant's Signature Over Printed Name</p>
+                <p class="text-[11px] text-gray-400 mt-1">Tenant's Signature Over Printed Name</p>
             @endif
             <p class="text-xs text-gray-400 mt-2">Date: {{ $moveOutTenantSignedAt ?? '___________________' }}</p>
         </div>
@@ -332,7 +332,7 @@
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-800">{{ $t['lessor_info']['representative'] }}</p>
-                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutOwnerSignedAt }}</p>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutOwnerSignedAt }}</p>
             @else
                 @if($signatureMode === 'manager')
                     <button
@@ -340,16 +340,16 @@
                         class="w-full border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-indigo-50 hover:border-indigo-400 transition-all cursor-pointer group no-print"
                     >
                         <svg class="w-6 h-6 text-indigo-400 group-hover:text-indigo-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="text-[10px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
+                        <span class="text-[11px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
                     </button>
                 @else
                     <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
+                        <span class="text-[11px] text-gray-400">Awaiting signature</span>
                     </div>
                 @endif
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['lessor_info']['representative'] }}</p>
-                <p class="text-[10px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
+                <p class="text-[11px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
             @endif
             <p class="text-xs text-gray-400 mt-2">Date: {{ $moveOutOwnerSignedAt ?? '___________________' }}</p>
         </div>
@@ -359,7 +359,7 @@
     @if($moveOutContractAgreed)
         <div class="mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
             <span class="text-sm font-bold text-emerald-700">Move-Out Contract Fully Signed</span>
-            <p class="text-[10px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
+            <p class="text-[11px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
         </div>
     @endif
 
@@ -406,5 +406,5 @@
 
 {{-- Footer --}}
 <div class="border-t pt-3 mt-6 text-center">
-    <p class="text-[10px] text-gray-400">This document is confidential and intended solely for the parties named herein.</p>
+    <p class="text-[11px] text-gray-400">This document is confidential and intended solely for the parties named herein.</p>
 </div>

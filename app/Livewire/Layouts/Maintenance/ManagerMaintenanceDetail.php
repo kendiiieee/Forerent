@@ -9,9 +9,14 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Notification;
 use App\Models\MaintenanceNote;
 use App\Models\MaintenanceActivity;
+use App\Models\MaintenanceLog;
+use App\Models\BillingItem;
+use App\Models\Billing;
+use App\Livewire\Concerns\WithNotifications;
 
 class ManagerMaintenanceDetail extends Component
 {
+    use WithNotifications;
     public $ticket          = null;
     public $ticketIdDisplay = '';
     public $successMessage  = '';
@@ -21,6 +26,7 @@ class ManagerMaintenanceDetail extends Component
     public $showCostForm    = false;
     public $costAmount      = '';
     public $costDescription = '';
+    public $chargedTo       = 'owner';
     public $costItems       = [];
     public $requestTotal    = 0;
     public $unitTotal       = 0;
@@ -157,6 +163,7 @@ class ManagerMaintenanceDetail extends Component
         if (!$this->showCostForm) {
             $this->costAmount = '';
             $this->costDescription = '';
+            $this->chargedTo = 'owner';
         }
     }
 
@@ -172,6 +179,7 @@ class ManagerMaintenanceDetail extends Component
         $this->validate([
             'costAmount'      => 'required|numeric|min:1|max:999999.99',
             'costDescription' => 'required|string|min:3|max:255',
+            'chargedTo'       => 'required|in:owner,tenant',
         ], [
             'costAmount.required'      => 'Please enter a cost amount.',
             'costAmount.numeric'       => 'Amount must be a valid number.',
@@ -182,25 +190,73 @@ class ManagerMaintenanceDetail extends Component
             'costDescription.max'      => 'Description cannot exceed 255 characters.',
         ]);
 
+        $amount = round((float) $this->costAmount, 2);
+        $chargedLabel = $this->chargedTo === 'tenant' ? 'Tenant' : 'Owner';
+
         DB::table('maintenance_logs')->insert([
             'request_id'      => $this->ticket->request_id,
             'completion_date' => now()->toDateString(),
-            'cost'            => round((float) $this->costAmount, 2),
+            'cost'            => $amount,
             'description'     => $this->costDescription,
+            'charged_to'      => $this->chargedTo,
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
 
-        $this->logActivity('cost_added', "Cost added: PHP " . number_format(round((float) $this->costAmount, 2), 2) . " — {$this->costDescription}");
+        $this->logActivity('cost_added', "Cost added: PHP " . number_format($amount, 2) . " — {$this->costDescription} (Charged to: {$chargedLabel})");
+
+        // If charged to tenant, create a BillingItem on their current billing
+        if ($this->chargedTo === 'tenant') {
+            $this->chargeTenantBilling($amount, $this->costDescription);
+        }
 
         $this->costAmount = '';
         $this->costDescription = '';
+        $this->chargedTo = 'owner';
         $this->showCostForm = false;
-        $this->successMessage = 'Cost item added successfully.';
+        $this->notifySuccess('Cost Item Added', "Cost of PHP " . number_format($amount, 2) . " charged to {$chargedLabel}.");
 
         $this->loadCostData();
         $this->loadActivities();
         $this->dispatch('refreshDashboard');
+    }
+
+    /**
+     * Create a BillingItem to charge the tenant for a maintenance cost.
+     */
+    private function chargeTenantBilling(float $amount, string $description): void
+    {
+        if (!$this->ticket) return;
+
+        // Find the tenant's latest active billing for this lease
+        $billing = Billing::where('lease_id', $this->ticket->lease_id)
+            ->whereIn('status', ['Unpaid', 'Partial'])
+            ->orderBy('billing_date', 'desc')
+            ->first();
+
+        if (!$billing) return;
+
+        $ticketNum = $this->ticketIdDisplay;
+
+        BillingItem::create([
+            'billing_id'      => $billing->billing_id,
+            'charge_category' => 'conditional',
+            'charge_type'     => 'maintenance',
+            'description'     => "Maintenance ({$ticketNum}): {$description}",
+            'amount'          => $amount,
+        ]);
+
+        // Update billing total
+        $billing->update([
+            'amount' => $billing->amount + $amount,
+            'to_pay' => $billing->to_pay + $amount,
+        ]);
+
+        // Notify tenant
+        $this->notifyTenant(
+            'Maintenance Cost Charged',
+            "A maintenance cost of PHP " . number_format($amount, 2) . " for ticket {$ticketNum} has been added to your billing."
+        );
     }
 
     /**
@@ -217,7 +273,7 @@ class ManagerMaintenanceDetail extends Component
             ->update(['deleted_at' => now()]);
 
         $this->logActivity('cost_removed', 'A cost item was removed.');
-        $this->successMessage = 'Cost item removed.';
+        $this->notifySuccess('Cost Item Removed', 'The cost entry has been removed.');
         $this->loadCostData();
         $this->loadActivities();
         $this->dispatch('refreshDashboard');
@@ -253,6 +309,7 @@ class ManagerMaintenanceDetail extends Component
         $this->showCostForm = false;
         $this->costAmount = '';
         $this->costDescription = '';
+        $this->chargedTo = 'owner';
         $this->costItems = [];
         $this->requestTotal = 0;
         $this->unitTotal = 0;
@@ -287,7 +344,7 @@ class ManagerMaintenanceDetail extends Component
             "Your maintenance request ({$ticketNum}) is now being worked on."
         );
 
-        $this->successMessage = 'Status updated to Ongoing.';
+        $this->notifySuccess('Status Updated', 'Request is now marked as Ongoing.');
         $this->loadActivities();
 
         $this->dispatch('close-modal', 'confirm-mark-ongoing');
@@ -327,7 +384,7 @@ class ManagerMaintenanceDetail extends Component
             "Your maintenance request ({$ticketNum}) has been marked as completed. You can now submit feedback."
         );
 
-        $this->successMessage = 'Request marked as Completed.';
+        $this->notifySuccess('Request Completed', 'Maintenance request has been marked as completed.');
         $this->loadActivities();
 
         $this->dispatch('close-modal', 'confirm-mark-completed');
@@ -372,7 +429,7 @@ class ManagerMaintenanceDetail extends Component
         $this->logActivity('note_added', 'Internal note added.');
 
         $this->noteText = '';
-        $this->successMessage = 'Note added.';
+        $this->notifySuccess('Note Added', 'Your internal note has been saved.');
         $this->loadNotes();
     }
 
@@ -386,7 +443,7 @@ class ManagerMaintenanceDetail extends Component
             ->where('user_id', Auth::id())
             ->delete();
 
-        $this->successMessage = 'Note removed.';
+        $this->notifySuccess('Note Removed', 'The note has been deleted.');
         $this->loadNotes();
     }
 
@@ -418,6 +475,58 @@ class ManagerMaintenanceDetail extends Component
 
     // ─── TRACKING FIELDS ───
 
+    public function saveManageRequest()
+    {
+        if (!$this->authorizeManagerForTicket()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->validate([
+            'newUrgency'             => 'required|in:Level 1,Level 2,Level 3,Level 4',
+            'assignedTo'             => 'required|string|max:255',
+            'expectedCompletionDate' => 'required|date|after_or_equal:today',
+        ], [
+            'newUrgency.required'             => 'Please select a priority level.',
+            'assignedTo.required'             => 'Please assign a worker or vendor.',
+            'expectedCompletionDate.required' => 'Please set an expected completion date.',
+            'expectedCompletionDate.after_or_equal' => 'The expected completion date must be today or later.',
+        ]);
+
+        $oldUrgency  = $this->ticket->urgency;
+        $oldWorker   = $this->ticket->assigned_to ?? 'None';
+        $oldDate     = $this->ticket->expected_completion_date;
+
+        DB::table('maintenance_requests')
+            ->where('request_id', $this->ticket->request_id)
+            ->update([
+                'urgency'                  => $this->newUrgency,
+                'assigned_to'              => $this->assignedTo,
+                'expected_completion_date'  => $this->expectedCompletionDate,
+                'updated_at'               => now(),
+            ]);
+
+        // Log individual changes
+        if ($this->newUrgency !== $oldUrgency) {
+            $this->logActivity('urgency_changed', "Priority changed from {$oldUrgency} to {$this->newUrgency}");
+            $ticketNum = $this->ticketIdDisplay;
+            $this->notifyTenant(
+                'Priority Updated',
+                "Your maintenance request ({$ticketNum}) priority has been changed to {$this->newUrgency}."
+            );
+        }
+
+        if ($this->assignedTo !== $oldWorker) {
+            $this->logActivity('worker_assigned', "Assigned to: {$this->assignedTo} (was: {$oldWorker})");
+        }
+
+        if ($this->expectedCompletionDate !== $oldDate) {
+            $this->logActivity('eta_updated', "Expected completion date set to: {$this->expectedCompletionDate}");
+        }
+
+        $this->ticket = DB::table('maintenance_requests')->where('request_id', $this->ticket->request_id)->first();
+        $this->successMessage = 'Manage request details updated.';
+    }
+
     public function saveAssignedTo()
     {
         if (!$this->authorizeManagerForTicket()) {
@@ -433,7 +542,7 @@ class ManagerMaintenanceDetail extends Component
 
         $this->logActivity('worker_assigned', "Assigned to: {$this->assignedTo} (was: {$old})");
         $this->ticket = DB::table('maintenance_requests')->where('request_id', $this->ticket->request_id)->first();
-        $this->successMessage = 'Worker/vendor updated.';
+        $this->notifySuccess('Assignment Updated', 'Worker/vendor has been updated.');
     }
 
     public function saveExpectedDate()
@@ -450,7 +559,7 @@ class ManagerMaintenanceDetail extends Component
 
         $this->logActivity('eta_updated', "Expected completion date set to: " . ($this->expectedCompletionDate ?: 'Not set'));
         $this->ticket = DB::table('maintenance_requests')->where('request_id', $this->ticket->request_id)->first();
-        $this->successMessage = 'Expected completion date updated.';
+        $this->notifySuccess('Date Updated', 'Expected completion date has been updated.');
     }
 
     // ─── URGENCY ESCALATION ───
@@ -479,7 +588,7 @@ class ManagerMaintenanceDetail extends Component
         );
 
         $this->ticket = DB::table('maintenance_requests')->where('request_id', $this->ticket->request_id)->first();
-        $this->successMessage = "Priority updated to {$this->newUrgency}.";
+        $this->notifySuccess('Priority Updated', "Urgency changed to {$this->newUrgency}.");
     }
 
     // ─── ARCHIVE / DELETE ───
@@ -502,6 +611,7 @@ class ManagerMaintenanceDetail extends Component
         $this->notes = [];
         $this->activities = [];
 
+        $this->notifySuccess('Request Archived', 'The maintenance request has been archived.');
         $this->dispatch('close-modal', 'confirm-archive-request');
         $this->dispatch('refresh-maintenance-list');
         $this->dispatch('refreshDashboard');
@@ -548,7 +658,7 @@ class ManagerMaintenanceDetail extends Component
             "Your maintenance request ({$ticketNum}) has been moved back to {$previousStatus}."
         );
 
-        $this->successMessage = "Status reverted to {$previousStatus}.";
+        $this->notifySuccess('Status Reverted', "Request has been moved back to {$previousStatus}.");
         $this->loadActivities();
 
         $this->dispatch('close-modal', 'confirm-revert-status');

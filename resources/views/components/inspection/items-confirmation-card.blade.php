@@ -59,13 +59,13 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-sm font-medium text-gray-800 truncate">{{ $item['item_name'] }}</p>
-                                <p class="text-[10px] text-gray-500">Qty: {{ $item['quantity'] ?? '—' }} &bull; {{ $item['condition'] ?? '—' }}</p>
+                                <p class="text-[11px] text-gray-500">Qty: {{ $item['quantity'] ?? '—' }} &bull; {{ $item['condition'] ?? '—' }}</p>
                             </div>
                         </div>
                         @if(!$item['tenant_confirmed'])
                             <button
                                 wire:click="{{ $wireConfirmMethod }}({{ $index }})"
-                                class="ml-3 px-3 py-1.5 text-[10px] font-bold {{ $colors['btn'] }} rounded-lg transition-colors flex-shrink-0"
+                                class="ml-3 px-3 py-1.5 text-[11px] font-bold {{ $colors['btn'] }} rounded-lg transition-colors flex-shrink-0"
                             >
                                 Confirm
                             </button>

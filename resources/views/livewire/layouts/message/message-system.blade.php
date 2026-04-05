@@ -61,7 +61,7 @@
                                 {{ $selectedUserId === $chat->user_id ? 'border-blue-300' : 'border-slate-100' }}"
                         >
                         @if($chat->unread_count > 0)
-                            <div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[#3B5BDB] text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white px-1">
+                            <div class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[#3B5BDB] text-white text-[11px] font-bold flex items-center justify-center rounded-full border-2 border-white px-1">
                                 {{ $chat->unread_count }}
                             </div>
                         @endif
@@ -74,9 +74,9 @@
                                 {{ $selectedUserId === $chat->user_id ? 'text-[#0C0B50]' : 'text-slate-700' }}">
                                 {{ $chat->first_name }} {{ $chat->last_name }}
                             </h4>
-                            <span class="text-[9px] text-slate-400 ml-2 flex-shrink-0">{{ $chat->last_time }}</span>
+                            <span class="text-[11px] text-slate-400 ml-2 flex-shrink-0">{{ $chat->last_time }}</span>
                         </div>
-                        <p class="text-[10px] truncate
+                        <p class="text-[11px] truncate
                             {{ $chat->unread_count > 0 ? 'font-semibold text-slate-800' : 'text-slate-400' }}">
                             {{ $chat->last_message }}
                         </p>
@@ -116,7 +116,7 @@
                     <h3 class="text-[#0C0B50] font-bold text-sm truncate">
                         {{ $activeChatUser->first_name }} {{ $activeChatUser->last_name }}
                     </h3>
-                    <p class="text-[10px] text-slate-400">{{ ucfirst($activeChatUser->role) }}</p>
+                    <p class="text-[11px] text-slate-400">{{ ucfirst($activeChatUser->role) }}</p>
                 </div>
                 {{-- Info icon --}}
                 <div class="w-8 h-8 rounded-full flex items-center justify-center transition-colors
@@ -188,7 +188,7 @@
                         {{-- Date Separator --}}
                         <div class="flex items-center gap-3 py-3">
                             <div class="flex-1 h-px bg-slate-100"></div>
-                            <span class="text-[10px] text-slate-400 font-medium px-2">
+                            <span class="text-[11px] text-slate-400 font-medium px-2">
                                 {{ \Carbon\Carbon::parse($date)->isToday() ? 'Today' : (\Carbon\Carbon::parse($date)->isYesterday() ? 'Yesterday' : \Carbon\Carbon::parse($date)->format('F j, Y')) }}
                             </span>
                             <div class="flex-1 h-px bg-slate-100"></div>
@@ -208,7 +208,7 @@
                                         <svg class="w-3 h-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                         </svg>
-                                        <span class="text-[10px] font-medium text-amber-600">Auto-reply sent on your behalf</span>
+                                        <span class="text-[11px] font-medium text-amber-600">Auto-reply sent on your behalf</span>
                                     </div>
                                 </div>
                             @endif
@@ -236,7 +236,7 @@
 
                                         {{-- Auto-reply badge (tenant view) --}}
                                         @if($isAutoReply && !$isMe)
-                                            <p class="text-[10px] font-medium text-blue-200 mb-1 flex items-center gap-1">
+                                            <p class="text-[11px] font-medium text-blue-200 mb-1 flex items-center gap-1">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                                 </svg>
@@ -260,7 +260,7 @@
                                                     </div>
                                                     <div>
                                                         <p class="text-xs font-medium truncate max-w-[140px]">{{ $msg->message }}</p>
-                                                        <p class="text-[10px] opacity-60">Document</p>
+                                                        <p class="text-[11px] opacity-60">Document</p>
                                                     </div>
                                                 </a>
                                             @endif
@@ -270,7 +270,7 @@
                                             <p class="text-sm leading-relaxed whitespace-pre-line">{{ $msg->message }}</p>
                                         @endif
                                     </div>
-                                    <span class="text-[9px] text-slate-300 mt-1 px-1">
+                                    <span class="text-[11px] text-slate-300 mt-1 px-1">
                                         {{ $msg->created_at->format('g:i A') }}
                                         @if($isMe)
                                             @if($msg->is_read)
@@ -393,11 +393,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <span x-text="uploadError"></span>
-                        <button type="button" @click="uploadError = ''" class="ml-auto text-red-400 hover:text-red-600">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
+                        <flux:tooltip :content="'Dismiss this error notification'" position="bottom">
+                            <button type="button" @click="uploadError = ''" class="ml-auto text-red-400 hover:text-red-600">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </flux:tooltip>
                     </div>
 
                     {{-- Attachment Preview (rendered by Livewire after upload completes) --}}
@@ -415,17 +417,19 @@
                                 @endif
                                 <div class="flex flex-col min-w-0 flex-1">
                                     <span class="text-xs font-bold text-[#0C0B50] truncate">{{ $attachment->getClientOriginalName() }}</span>
-                                    <span class="text-[10px] text-slate-400">Ready to send</span>
+                                    <span class="text-[11px] text-slate-400">Ready to send</span>
                                 </div>
-                                <button
-                                    type="button"
-                                    wire:click="$set('attachment', null)"
-                                    class="absolute -top-2 -right-2 bg-white text-slate-400 hover:text-red-500 rounded-full p-0.5 shadow border border-slate-200 transition-colors"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
+                                <flux:tooltip :content="'Remove this file from the message'" position="bottom">
+                                    <button
+                                        type="button"
+                                        wire:click="$set('attachment', null)"
+                                        class="absolute -top-2 -right-2 bg-white text-slate-400 hover:text-red-500 rounded-full p-0.5 shadow border border-slate-200 transition-colors"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </flux:tooltip>
                             </div>
                         </div>
                     @endif
@@ -442,7 +446,7 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex justify-between items-center mb-1">
                                     <span class="text-[11px] font-semibold text-[#0C0B50]">Uploading...</span>
-                                    <span class="text-[10px] text-[#3B5BDB] font-bold" x-text="progress + '%'"></span>
+                                    <span class="text-[11px] text-[#3B5BDB] font-bold" x-text="progress + '%'"></span>
                                 </div>
                                 {{-- Progress track --}}
                                 <div class="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
@@ -481,35 +485,39 @@
                             >
 
                             {{-- Attachment Button — shows spinner while uploading --}}
-                            <button
-                                type="button"
-                                x-on:click="if (!uploading) $refs.fileInput.click()"
-                                :class="uploading ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#3B5BDB] hover:bg-blue-50'"
-                                class="p-2 text-slate-400 transition-colors rounded-full"
-                            >
-                                {{-- Paperclip icon (default) --}}
-                                <svg x-show="!uploading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                                </svg>
-                                {{-- Spinner (while uploading) --}}
-                                <svg x-show="uploading" class="w-5 h-5 animate-spin text-[#3B5BDB]" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                                </svg>
-                            </button>
+                            <flux:tooltip :content="'Attach a file to your message'" position="bottom">
+                                <button
+                                    type="button"
+                                    x-on:click="if (!uploading) $refs.fileInput.click()"
+                                    :class="uploading ? 'opacity-50 cursor-not-allowed' : 'hover:text-[#3B5BDB] hover:bg-blue-50'"
+                                    class="p-2 text-slate-400 transition-colors rounded-full"
+                                >
+                                    {{-- Paperclip icon (default) --}}
+                                    <svg x-show="!uploading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                                    </svg>
+                                    {{-- Spinner (while uploading) --}}
+                                    <svg x-show="uploading" class="w-5 h-5 animate-spin text-[#3B5BDB]" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                    </svg>
+                                </button>
+                            </flux:tooltip>
 
                             {{-- Send Button — disabled while uploading --}}
-                            <button
-                                type="button"
-                                @click="send()"
-                                :disabled="uploading"
-                                :class="uploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#1a1880] active:scale-95'"
-                                class="p-2 bg-[#0C0B50] text-white rounded-xl transition-all shadow-sm"
-                            >
-                                <svg class="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                                </svg>
-                            </button>
+                            <flux:tooltip :content="'Send your message now'" position="bottom">
+                                <button
+                                    type="button"
+                                    @click="send()"
+                                    :disabled="uploading"
+                                    :class="uploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#1a1880] active:scale-95'"
+                                    class="p-2 bg-[#0C0B50] text-white rounded-xl transition-all shadow-sm"
+                                >
+                                    <svg class="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                    </svg>
+                                </button>
+                            </flux:tooltip>
                         </div>
                     </div>
                 </div>
@@ -539,11 +547,13 @@
             {{-- Header --}}
             <div class="flex justify-between items-center px-5 pt-5 pb-4 border-b border-slate-50">
                 <h3 class="text-[#0C0B50] font-bold text-sm tracking-wide">Account Information</h3>
-                <button wire:click="toggleProfile" class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+                <flux:tooltip :content="'Close the profile panel'" position="bottom">
+                    <button wire:click="toggleProfile" class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </flux:tooltip>
             </div>
 
             {{-- Profile Summary --}}
@@ -558,7 +568,7 @@
                     <div class="absolute bottom-1 right-1 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-white"></div>
                 </div>
                 <h2 class="text-[#0C0B50] font-bold text-base">{{ $activeChatUser->first_name }} {{ $activeChatUser->last_name }}</h2>
-                <span class="mt-1 text-[10px] font-semibold bg-[#EEF3FF] text-[#3B5BDB] px-3 py-0.5 rounded-full">
+                <span class="mt-1 text-[11px] font-semibold bg-[#EEF3FF] text-[#3B5BDB] px-3 py-0.5 rounded-full">
                     {{ ucfirst($activeChatUser->role) }}
                 </span>
             </div>
@@ -572,7 +582,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[9px] text-slate-400 uppercase tracking-wide font-medium">Email</p>
+                        <p class="text-[11px] text-slate-400 uppercase tracking-wide font-medium">Email</p>
                         <p class="text-xs font-semibold text-slate-700 break-all">{{ $activeChatUser->email }}</p>
                     </div>
                 </div>
@@ -584,7 +594,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[9px] text-slate-400 uppercase tracking-wide font-medium">Contact</p>
+                        <p class="text-[11px] text-slate-400 uppercase tracking-wide font-medium">Contact</p>
                         <p class="text-xs font-semibold text-slate-700">{{ $activeChatUser->contact ?? 'N/A' }}</p>
                     </div>
                 </div>
@@ -598,7 +608,7 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-[9px] text-slate-400 uppercase tracking-wide font-medium">Unit</p>
+                            <p class="text-[11px] text-slate-400 uppercase tracking-wide font-medium">Unit</p>
                             <p class="text-xs font-semibold text-slate-700">{{ $activeChatUser->unit }}</p>
                         </div>
                     </div>
@@ -613,22 +623,22 @@
                 <div class="flex gap-1 bg-[#F4F6FB] rounded-lg p-1 mb-4">
                     <button
                         wire:click="setMediaTab('images')"
-                        class="flex-1 text-[10px] font-semibold py-1.5 rounded-md transition-all
+                        class="flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all
                             {{ $mediaTab === 'images' ? 'bg-white text-[#0C0B50] shadow-sm' : 'text-slate-400 hover:text-slate-600' }}"
                     >
                         Images
                         @if($mediaImages->count() > 0)
-                            <span class="ml-1 text-[9px] text-blue-500">({{ $mediaImages->count() }})</span>
+                            <span class="ml-1 text-[11px] text-blue-500">({{ $mediaImages->count() }})</span>
                         @endif
                     </button>
                     <button
                         wire:click="setMediaTab('documents')"
-                        class="flex-1 text-[10px] font-semibold py-1.5 rounded-md transition-all
+                        class="flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-all
                             {{ $mediaTab === 'documents' ? 'bg-white text-[#0C0B50] shadow-sm' : 'text-slate-400 hover:text-slate-600' }}"
                     >
                         Documents
                         @if($mediaDocuments->count() > 0)
-                            <span class="ml-1 text-[9px] text-blue-500">({{ $mediaDocuments->count() }})</span>
+                            <span class="ml-1 text-[11px] text-blue-500">({{ $mediaDocuments->count() }})</span>
                         @endif
                     </button>
                 </div>
@@ -672,7 +682,7 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-xs font-semibold text-slate-700 truncate">{{ $doc->message }}</p>
-                                        <p class="text-[9px] text-slate-400">{{ $doc->created_at->format('M j, Y') }}</p>
+                                        <p class="text-[11px] text-slate-400">{{ $doc->created_at->format('M j, Y') }}</p>
                                     </div>
                                     <svg class="w-3.5 h-3.5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>

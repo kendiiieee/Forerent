@@ -18,15 +18,17 @@
 
                             <div class="flex items-center gap-2">
                                 @if($viewingTab === 'current')
-                                <button
-                                    wire:click="editTenant"
-                                    class="flex items-center gap-1.5 bg-white text-[#2360E8] rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-50 transition-colors border border-white"
-                                >
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                    Edit
-                                </button>
+                                <flux:tooltip :content="'Update this tenant\'s profile and lease information'" position="bottom">
+                                    <button
+                                        wire:click="editTenant"
+                                        class="flex items-center gap-1.5 bg-white text-[#2360E8] rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-50 transition-colors border border-white"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
+                                </flux:tooltip>
                                 @endif
                             </div>
                     </div>
@@ -87,11 +89,11 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Phone</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Phone</p>
                             <p class="text-sm font-bold text-gray-800">{{ $currentTenant['contact_info']['contact_number'] }}</p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Email</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Email</p>
                             <p class="text-sm font-bold text-gray-800 truncate">{{ $currentTenant['contact_info']['email'] }}</p>
                         </div>
                     </div>
@@ -110,25 +112,25 @@
 
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Bed Number</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Bed Number</p>
                             <p class="text-sm font-bold text-gray-800">{{ $currentTenant['rent_details']['bed_number'] }}</p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Dorm Type</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Dorm Type</p>
                             <p class="text-sm font-bold text-gray-800">{{ $currentTenant['rent_details']['dorm_type'] }}</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div class="bg-[#EEF2FF] rounded-xl p-3.5">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Move-In Date</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Move-In Date</p>
                             <p class="text-sm font-bold text-[#070589] flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5 text-[#2360E8]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
                                 {{ \Carbon\Carbon::parse($currentTenant['rent_details']['lease_start_date'])->format('M d, Y') }}
                             </p>
                         </div>
                         <div class="bg-[#EEF2FF] rounded-xl p-3.5">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">End Date</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">End Date</p>
                             <p class="text-sm font-bold text-[#070589] flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5 text-[#2360E8]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
                                 {{ \Carbon\Carbon::parse($currentTenant['rent_details']['lease_end_date'])->format('M d, Y') }}
@@ -138,15 +140,15 @@
 
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50 text-center">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Term</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Term</p>
                             <p class="text-lg font-bold text-[#070589]">{{ $currentTenant['rent_details']['lease_term'] }}<span class="text-xs font-medium text-gray-400 ml-0.5">mos</span></p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50 text-center">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Shift</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Shift</p>
                             <p class="text-sm font-bold text-gray-800">{{ $currentTenant['rent_details']['shift'] }}</p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50 text-center">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Auto Renew</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Auto Renew</p>
                             @if($currentTenant['rent_details']['auto_renew'])
                                 <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 rounded-full px-2.5 py-0.5">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Yes
@@ -173,7 +175,7 @@
 
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Monthly Rate</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Monthly Rate</p>
                             <p class="text-sm font-bold text-[#070589]">&#8369; {{ number_format($currentTenant['move_in_details']['monthly_rate'], 2) }}</p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
@@ -181,17 +183,17 @@
                                 $dueDay = $currentTenant['move_in_details']['monthly_due_date'];
                                 $dueSuffix = match((int) $dueDay) { 1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th' };
                             @endphp
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Due Date</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Due Date</p>
                             <p class="text-sm font-bold text-gray-800">{{ $dueDay ? $dueDay . $dueSuffix . ' of the month' : '—' }}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Security Deposit</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Security Deposit</p>
                             <p class="text-sm font-bold text-[#070589]">&#8369; {{ number_format($currentTenant['move_in_details']['security_deposit'], 2) }}</p>
                         </div>
                         <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Payment Status</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Payment Status</p>
                             @php
                                 $status = $currentTenant['move_in_details']['payment_status'];
                                 $statusStyles = match($status) {
@@ -369,24 +371,24 @@
                                                             <td class="p-2.5 text-gray-700 font-medium">
                                                                 {{ $item['item_name'] }}
                                                                 @error("inspectionChecklist.{$index}.condition")
-                                                                    <p class="text-[9px] text-red-500 font-normal mt-0.5">Required</p>
+                                                                    <p class="text-[11px] text-red-500 font-normal mt-0.5">Required</p>
                                                                 @enderror
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.defer="inspectionChecklist.{{ $index }}.condition" value="good"
+                                                                    <input type="radio" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="good"
                                                                            class="w-4 h-4 text-emerald-500 border-gray-300 focus:ring-emerald-400">
                                                                 </label>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.defer="inspectionChecklist.{{ $index }}.condition" value="damaged"
+                                                                    <input type="radio" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="damaged"
                                                                            class="w-4 h-4 text-amber-500 border-gray-300 focus:ring-amber-400">
                                                                 </label>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.defer="inspectionChecklist.{{ $index }}.condition" value="missing"
+                                                                    <input type="radio" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="missing"
                                                                            class="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-400">
                                                                 </label>
                                                             </td>
@@ -415,7 +417,7 @@
                                                         <th class="text-left p-2.5 font-semibold text-gray-600 w-2/5">Item</th>
                                                         <th class="text-center p-2.5 font-semibold text-gray-600 w-16">Qty</th>
                                                         <th class="text-left p-2.5 font-semibold text-gray-600">Condition</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-24">Confirmed</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-28">Tenant Confirmed</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -424,28 +426,35 @@
                                                             <td class="p-2.5 text-gray-700 font-medium">{{ $item['item_name'] }}</td>
                                                             <td class="p-2.5 text-center">
                                                                 <input type="number" min="1" step="1"
-                                                                       wire:model.defer="itemsReceived.{{ $index }}.quantity"
+                                                                       wire:model.live.debounce.300ms="itemsReceived.{{ $index }}.quantity"
                                                                        placeholder="1"
                                                                        onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
                                                                        oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
                                                                        class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReceived.{$index}.quantity") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
                                                                 @error("itemsReceived.{$index}.quantity")
-                                                                    <p class="text-[9px] text-red-500 mt-0.5">{{ $message }}</p>
+                                                                    <p class="text-[11px] text-red-500 mt-0.5">{{ $message }}</p>
                                                                 @enderror
                                                             </td>
                                                             <td class="p-2.5">
-                                                                <input type="text" wire:model.defer="itemsReceived.{{ $index }}.condition"
-                                                                       placeholder="e.g. Good, New..."
-                                                                       class="w-full text-xs border rounded-lg px-2.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReceived.{$index}.condition") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
+                                                                <select wire:model.live="itemsReceived.{{ $index }}.condition"
+                                                                        class="w-full text-xs border rounded-lg px-2.5 py-1.5 focus:ring-1 transition-colors {{ $errors->has("itemsReceived.{$index}.condition") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
+                                                                    <option value="">Select condition...</option>
+                                                                    <option value="Good">Good</option>
+                                                                    <option value="New">New</option>
+                                                                    <option value="Fair">Fair</option>
+                                                                    <option value="Damaged">Damaged</option>
+                                                                    <option value="Not Provided">Not Provided</option>
+                                                                </select>
                                                                 @error("itemsReceived.{$index}.condition")
-                                                                    <p class="text-[9px] text-red-500 mt-0.5">{{ $message }}</p>
+                                                                    <p class="text-[11px] text-red-500 mt-0.5">{{ $message }}</p>
                                                                 @enderror
                                                             </td>
                                                             <td class="p-2.5 text-center">
-                                                                <label class="cursor-pointer">
-                                                                    <input type="checkbox" wire:model.defer="itemsReceived.{{ $index }}.tenant_confirmed"
-                                                                           class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-400">
-                                                                </label>
+                                                                @if($item['tenant_confirmed'])
+                                                                    <span class="text-blue-500 font-bold" title="Confirmed by tenant">&#10003;</span>
+                                                                @else
+                                                                    <span class="text-gray-300" title="Pending tenant confirmation">—</span>
+                                                                @endif
                                                             </td>
                                                         </tr>
                                                     @endforeach
@@ -603,7 +612,7 @@
                                                             <td class="p-2.5 text-gray-700 font-medium">
                                                                 {{ $item['item_name'] }}
                                                                 @error("moveOutChecklist.{$index}.condition")
-                                                                    <p class="text-[9px] text-red-500 font-normal mt-0.5">Required</p>
+                                                                    <p class="text-[11px] text-red-500 font-normal mt-0.5">Required</p>
                                                                 @enderror
                                                             </td>
                                                             <td class="p-2.5 text-center">
@@ -664,7 +673,7 @@
                                                                        oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
                                                                        class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.quantity") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
                                                                 @error("itemsReturned.{$index}.quantity")
-                                                                    <p class="text-[9px] text-red-500 mt-0.5">{{ $message }}</p>
+                                                                    <p class="text-[11px] text-red-500 mt-0.5">{{ $message }}</p>
                                                                 @enderror
                                                             </td>
                                                             <td class="p-2.5">
@@ -672,7 +681,7 @@
                                                                        placeholder="e.g. Good, Damaged..."
                                                                        class="w-full text-xs border rounded-lg px-2.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.condition") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
                                                                 @error("itemsReturned.{$index}.condition")
-                                                                    <p class="text-[9px] text-red-500 mt-0.5">{{ $message }}</p>
+                                                                    <p class="text-[11px] text-red-500 mt-0.5">{{ $message }}</p>
                                                                 @enderror
                                                             </td>
                                                             <td class="p-2.5 text-center">
@@ -732,7 +741,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-bold text-[#070589]">Move-In Contract</p>
-                                    <p class="text-[10px] text-gray-400">View or download the move-in lease agreement</p>
+                                    <p class="text-[11px] text-gray-400">View or download the move-in lease agreement</p>
                                 </div>
                             </div>
                             <svg class="w-5 h-5 text-gray-300 group-hover:text-[#2360E8] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -757,7 +766,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-bold text-[#070589]">Move-Out Contract</p>
-                                    <p class="text-[10px] text-gray-400">View or download the move-out settlement agreement</p>
+                                    <p class="text-[11px] text-gray-400">View or download the move-out settlement agreement</p>
                                 </div>
                             </div>
                             <svg class="w-5 h-5 text-gray-300 group-hover:text-[#070589] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -788,7 +797,9 @@
                 <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
                     <div class="bg-[#070589] text-white p-5 flex items-center justify-between flex-shrink-0">
                         <h2 class="text-lg font-bold">Move-In Contract</h2>
-                        <button @click="$el.closest('.fixed').style.display='none'; $wire.closeMoveInContract()" class="text-white hover:text-blue-200"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        <flux:tooltip :content="'Close the contract viewer'" position="bottom">
+                            <button @click="$el.closest('.fixed').style.display='none'; $wire.closeMoveInContract()" class="text-white hover:text-blue-200"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </flux:tooltip>
                     </div>
                     <div class="flex-1 overflow-y-auto p-8 space-y-6 text-sm text-gray-800" id="move-in-contract" style="font-family: 'Open Sans', sans-serif;">
 
@@ -838,7 +849,9 @@
                 <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
                     <div class="bg-[#070589] text-white p-5 flex items-center justify-between flex-shrink-0">
                         <h2 class="text-lg font-bold">Move-Out Clearance & Deposit Settlement</h2>
-                        <button @click="$el.closest('.fixed').style.display='none'; $wire.closeMoveOutContract()" class="text-white hover:text-blue-200"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        <flux:tooltip :content="'Close the contract viewer'" position="bottom">
+                            <button @click="$el.closest('.fixed').style.display='none'; $wire.closeMoveOutContract()" class="text-white hover:text-blue-200"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </flux:tooltip>
                     </div>
                     <div class="flex-1 overflow-y-auto p-8 space-y-6 text-sm text-gray-800" id="move-out-contract" style="font-family: 'Open Sans', sans-serif;">
 
