@@ -319,48 +319,52 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
         }
     }
 
-    // 3. Auto-expire leases past their end_date (non auto-renew)
+    // 3. Auto-initiate move-out for leases past their end_date (non auto-renew)
+    //    Instead of immediately expiring, we initiate the move-out workflow
+    //    so the full inspection + signing process can be completed.
     $expiredLeases = \App\Models\Lease::where('status', 'Active')
         ->where('auto_renew', false)
         ->whereDate('end_date', '<', $today)
+        ->whereNull('move_out_initiated_at')
         ->get();
 
     foreach ($expiredLeases as $lease) {
-        $this->line("  Expire: Lease #{$lease->lease_id}");
+        $this->line("  Initiate move-out: Lease #{$lease->lease_id}");
 
         if (!$dryRun) {
             $lease->update([
-                'status' => 'Expired',
-                'move_out' => $today,
+                'move_out_initiated_at' => $today,
             ]);
 
-            // Free the bed
-            if ($lease->bed_id) {
-                \App\Models\Bed::where('bed_id', $lease->bed_id)
-                    ->update(['status' => 'Vacant']);
-            }
-
-            // Auto-calculate deposit refund
-            $refundData = $lease->calculateDepositRefund();
-            $lease->update([
-                'deposit_refund_amount' => $refundData['refund_amount'],
-                'deposit_deductions' => $refundData['deductions'],
-            ]);
-
-            \App\Models\ContractAuditLog::log($lease->lease_id, 'lease_auto_expired', [
+            \App\Models\ContractAuditLog::log($lease->lease_id, 'lease_expired_moveout_auto_initiated', [
                 'metadata' => [
                     'end_date' => $lease->end_date->format('Y-m-d'),
-                    'deposit_refund' => $refundData['refund_amount'],
                 ],
             ]);
 
             \App\Models\Notification::create([
                 'user_id' => $lease->tenant_id,
                 'type' => 'lease_expired',
-                'title' => 'Lease Expired',
-                'message' => 'Your lease has expired. Deposit refund: PHP ' . number_format($refundData['refund_amount'], 2) . '. Please coordinate with management for move-out.',
-                'link' => '/tenant',
+                'title' => 'Lease Expired — Move-Out Required',
+                'message' => 'Your lease has expired. The move-out process has been initiated. Please coordinate with management for the move-out inspection and clearance.',
+                'link' => '/tenant?tab=inspection',
             ]);
+
+            // Notify manager
+            $managerId = \Illuminate\Support\Facades\DB::table('beds')
+                ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+                ->where('beds.bed_id', $lease->bed_id)
+                ->value('units.manager_id');
+
+            if ($managerId) {
+                \App\Models\Notification::create([
+                    'user_id' => $managerId,
+                    'type' => 'lease_expired',
+                    'title' => 'Lease Expired — Move-Out Pending',
+                    'message' => "Lease #{$lease->lease_id} has expired. Move-out process initiated. Please complete the inspection and clearance.",
+                    'link' => '/manager/tenant',
+                ]);
+            }
 
             $expired++;
         }

@@ -20,6 +20,7 @@ class Lease extends Model
         'security_deposit', 'move_in',
         'shift',
         'move_out',
+        'move_out_initiated_at',
         'monthly_due_date',
         'late_payment_penalty',
         'short_term_premium',
@@ -46,6 +47,7 @@ class Lease extends Model
         'moveout_owner_signed_at',
         'moveout_owner_signed_ip',
         'moveout_contract_agreed',
+        'moveout_contract_status',
         'moveout_signed_contract_path',
     ];
 
@@ -54,6 +56,7 @@ class Lease extends Model
         'end_date' => 'date',
         'move_in' => 'date',
         'move_out' => 'date',
+        'move_out_initiated_at' => 'datetime',
         'auto_renew' => 'boolean',
         'contract_rate' => 'decimal:2',
         'advance_amount' => 'decimal:2',
@@ -110,11 +113,15 @@ class Lease extends Model
 
     /**
      * Calculate the deposit refund at move-out.
-     * Returns ['refund_amount' => float, 'deductions' => array]
+     *
+     * @param \Carbon\Carbon|null $originalEndDate Pass the original end_date if it was
+     *        overwritten before calling this (e.g. confirmMoveOut sets end_date=today first).
+     * @return array{refund_amount: float, deductions: array, deposit: float, total_deductions: float}
      */
-    public function calculateDepositRefund(): array
+    public function calculateDepositRefund(?\Carbon\Carbon $originalEndDate = null): array
     {
         $deposit = (float) $this->security_deposit;
+        $endDate = $originalEndDate ?? $this->end_date;
         $deductions = [];
 
         // 1. Unpaid bills
@@ -133,35 +140,38 @@ class Lease extends Model
             $deductions[] = ['label' => 'Late Payment Fees', 'amount' => $lateFees];
         }
 
-        // 3. Damage costs (items with condition changed from good to damaged/missing)
+        // 3. Damage costs — use actual repair_cost entered by manager
         $moveInItems = $this->moveInInspections()->where('type', 'checklist')->get()->keyBy('item_name');
         $moveOutItems = $this->moveOutInspections()->where('type', 'checklist')->get()->keyBy('item_name');
         $damagedItems = [];
+        $damageCost = 0;
 
         foreach ($moveOutItems as $name => $outItem) {
             $inItem = $moveInItems->get($name);
             if ($inItem && $inItem->condition !== $outItem->condition && $outItem->condition !== 'good') {
                 $damagedItems[] = $name;
+                $damageCost += (float) ($outItem->repair_cost ?? 0);
             }
         }
-        // Estimate: we flag damage but can't auto-price — set 0 as placeholder
         if (!empty($damagedItems)) {
-            $deductions[] = ['label' => 'Damage (see inspection)', 'amount' => 0, 'items' => $damagedItems];
+            $deductions[] = ['label' => 'Damage Repair Costs', 'amount' => $damageCost, 'items' => $damagedItems];
         }
 
-        // 4. Unreturned items
-        $unreturnedItems = $this->moveOutInspections()
+        // 4. Unreturned items — use is_returned flag + replacement_cost
+        $unreturnedInspections = $this->moveOutInspections()
             ->where('type', 'item_returned')
-            ->where('tenant_confirmed', false)
-            ->pluck('item_name')
-            ->toArray();
+            ->where('is_returned', false)
+            ->get();
+        $unreturnedItems = $unreturnedInspections->pluck('item_name')->toArray();
+        $replacementCost = (float) $unreturnedInspections->sum('replacement_cost');
         if (!empty($unreturnedItems)) {
-            $deductions[] = ['label' => 'Unreturned Items', 'amount' => 0, 'items' => $unreturnedItems];
+            $deductions[] = ['label' => 'Unreturned Items', 'amount' => $replacementCost, 'items' => $unreturnedItems];
         }
 
-        // 5. Early termination (if moved out before end_date)
-        if ($this->move_out && $this->end_date && $this->move_out->lt($this->end_date)) {
-            $deductions[] = ['label' => 'Early Termination (deposit forfeiture)', 'amount' => $deposit];
+        // 5. Early termination (if moved out before original end_date)
+        if ($this->move_out && $endDate && $this->move_out->lt($endDate)) {
+            $earlyFee = (float) ($this->early_termination_fee ?? $deposit);
+            $deductions[] = ['label' => 'Early Termination Fee', 'amount' => $earlyFee];
         }
 
         $totalDeductions = collect($deductions)->sum('amount');

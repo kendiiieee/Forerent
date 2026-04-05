@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Layouts\Tenants;
 
+use App\Livewire\Concerns\WithContractData;
 use App\Livewire\Concerns\WithESignature;
 use App\Models\Billing;
 use App\Models\BillingItem;
@@ -22,7 +23,7 @@ use Livewire\WithFileUploads;
 
 class TenantDashboardOverview extends Component
 {
-    use WithESignature, WithFileUploads;
+    use WithESignature, WithContractData, WithFileUploads;
     // Payment & Billing
     public $currentBilling = null;
     public $amountDue = 0;
@@ -62,6 +63,7 @@ class TenantDashboardOverview extends Component
     // Move-In / Move-Out
     public $moveInDate = null;
     public $moveOutDate = null;
+    public $moveOutInitiated = false;
 
     // Clearance Checklist (dynamic)
     public $billsSettled = false;
@@ -164,7 +166,7 @@ class TenantDashboardOverview extends Component
 
     protected function loadClearanceStatus()
     {
-        if (!$this->moveOutDate) return;
+        if (!$this->moveOutDate && !$this->moveOutInitiated) return;
 
         // Bills settled: no unpaid/overdue billings exist for this lease
         $unpaidCount = Billing::where('lease_id', $this->lease->lease_id)
@@ -296,6 +298,7 @@ class TenantDashboardOverview extends Component
     {
         $this->moveInDate = $this->lease->move_in;
         $this->moveOutDate = $this->lease->move_out;
+        $this->moveOutInitiated = (bool) $this->lease->move_out_initiated_at;
     }
 
     protected function loadMaintenanceData()
@@ -329,11 +332,7 @@ class TenantDashboardOverview extends Component
 
     protected function loadContractData()
     {
-        $this->tenantSignature = $this->lease->tenant_signature;
-        $this->tenantSignedAt = $this->lease->tenant_signed_at?->format('M d, Y h:i A');
-        $this->ownerSignature = $this->lease->owner_signature;
-        $this->ownerSignedAt = $this->lease->owner_signed_at?->format('M d, Y h:i A');
-        $this->contractAgreed = (bool) $this->lease->contract_agreed;
+        $this->loadSignatureState($this->lease);
         $this->signedContractPath = $this->lease->signed_contract_path;
 
         $user = Auth::user();
@@ -341,7 +340,6 @@ class TenantDashboardOverview extends Component
         $unit = $bed?->unit;
         $property = $unit?->property;
         $owner = $property?->owner;
-        $billing = $this->lease->billings->first();
 
         $this->contractData = [
             'lessor' => $owner ? ($owner->first_name . ' ' . $owner->last_name) : '—',
@@ -357,66 +355,7 @@ class TenantDashboardOverview extends Component
         ];
 
         // Full data structure matching what the contract modal template expects
-        $this->tenantContractData = [
-            'lessor_info' => [
-                'business_name'  => $property?->building_name,
-                'company_name'   => $owner?->company_school ?? 'ForeRent',
-                'address'        => $property?->address,
-                'contact'        => $owner?->contact,
-                'email'          => $owner?->email,
-                'representative' => $owner ? ($owner->first_name . ' ' . $owner->last_name) : '—',
-            ],
-            'personal_info' => [
-                'first_name'       => $user->first_name,
-                'last_name'        => $user->last_name,
-                'gender'           => $user->gender,
-                'address'          => $property?->address,
-                'property'         => $property?->building_name,
-                'unit'             => $unit?->unit_number,
-                'permanent_address' => $user->permanent_address,
-                'government_id_type'   => $user->government_id_type,
-                'government_id_number' => $user->government_id_number,
-                'government_id_image'  => $user->government_id_image,
-                'company_school'       => $user->company_school,
-                'position_course'      => $user->position_course,
-                'emergency_contact_name'         => $user->emergency_contact_name,
-                'emergency_contact_relationship' => $user->emergency_contact_relationship,
-                'emergency_contact_number'       => $user->emergency_contact_number,
-            ],
-            'contact_info' => [
-                'contact_number' => $user->contact,
-                'email'          => $user->email,
-            ],
-            'rent_details' => [
-                'bed_number'       => $bed?->bed_number,
-                'dorm_type'        => $unit?->occupants,
-                'floor'            => $unit?->floor_number,
-                'room_type'        => $unit?->room_type,
-                'lease_start_date' => $this->lease->start_date?->format('Y-m-d'),
-                'lease_end_date'   => $this->lease->end_date?->format('Y-m-d'),
-                'lease_term'       => $this->lease->term,
-                'shift'            => $this->lease->shift,
-                'auto_renew'       => $this->lease->auto_renew,
-            ],
-            'move_in_details' => [
-                'move_in_date'          => $this->lease->move_in?->format('Y-m-d'),
-                'monthly_rate'          => $this->lease->contract_rate,
-                'security_deposit'      => $this->lease->security_deposit,
-                'payment_status'        => $billing?->status ?? 'No billing',
-                'monthly_due_date'      => $this->lease->monthly_due_date,
-                'late_payment_penalty'  => $this->lease->late_payment_penalty,
-                'short_term_premium'    => $this->lease->short_term_premium,
-                'reservation_fee_paid'  => $this->lease->reservation_fee_paid,
-                'early_termination_fee' => $this->lease->early_termination_fee,
-            ],
-            'move_out_details' => [
-                'move_out_date'          => $this->lease->move_out?->format('Y-m-d'),
-                'forwarding_address'     => $this->lease->forwarding_address,
-                'reason_for_vacating'    => $this->lease->reason_for_vacating,
-                'deposit_refund_method'  => $this->lease->deposit_refund_method,
-                'deposit_refund_account' => $this->lease->deposit_refund_account,
-            ],
-        ];
+        $this->tenantContractData = $this->buildContractDataArray($user, $this->lease);
     }
 
     protected function loadItemsReceived()
@@ -682,18 +621,14 @@ class TenantDashboardOverview extends Component
         $this->contractAgreed = $result['agreed'];
 
         // Notify the manager that the tenant signed the contract
-        $this->notifyManagerOfContractSign($this->lease, 'move-in');
+        $this->notifyManagerOfSign($this->lease, 'move-in');
 
         // If contract is now fully executed (tenant signed last), notify manager
         if ($result['agreed']) {
             $this->lease->refresh();
             $this->signedContractPath = $this->lease->signed_contract_path;
 
-            $managerId = DB::table('beds')
-                ->join('units', 'beds.unit_id', '=', 'units.unit_id')
-                ->where('beds.bed_id', $this->lease->bed_id)
-                ->value('units.manager_id');
-
+            $managerId = $this->findManagerIdForLease($this->lease);
             if ($managerId) {
                 $user = Auth::user();
                 Notification::create([
@@ -749,13 +684,6 @@ class TenantDashboardOverview extends Component
 
     protected function loadItemsReturned()
     {
-        // Load move-out signature state
-        $this->moveOutTenantSignature = $this->lease->moveout_tenant_signature;
-        $this->moveOutTenantSignedAt = $this->lease->moveout_tenant_signed_at?->format('M d, Y h:i A');
-        $this->moveOutOwnerSignature = $this->lease->moveout_owner_signature;
-        $this->moveOutOwnerSignedAt = $this->lease->moveout_owner_signed_at?->format('M d, Y h:i A');
-        $this->moveOutContractAgreed = (bool) $this->lease->moveout_contract_agreed;
-
         $moveOutInspections = MoveOutInspection::where('lease_id', $this->lease->lease_id)->get();
 
         // Items returned
@@ -841,30 +769,10 @@ class TenantDashboardOverview extends Component
         $this->moveOutContractAgreed = $result['agreed'];
 
         // Notify the manager that the tenant signed the move-out contract
-        $this->notifyManagerOfContractSign($this->lease, 'move-out');
+        $this->notifyManagerOfSign($this->lease, 'move-out');
 
         $this->closeMoveOutSignatureModal();
         $this->dispatch('moveout-signature-saved');
-    }
-
-    protected function notifyManagerOfContractSign(Lease $lease, string $contractType): void
-    {
-        $user = Auth::user();
-        $managerId = DB::table('beds')
-            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
-            ->where('beds.bed_id', $lease->bed_id)
-            ->value('units.manager_id');
-
-        if ($managerId) {
-            $label = $contractType === 'move-out' ? 'move-out contract' : 'contract';
-            Notification::create([
-                'user_id' => $managerId,
-                'type' => 'contract_signed',
-                'title' => 'Contract Signed by Tenant',
-                'message' => $user->first_name . ' ' . $user->last_name . ' has read and signed the ' . $label . '.',
-                'link' => '/manager/tenant',
-            ]);
-        }
     }
 
     // ===== TENANT DISPUTE WORKFLOW =====
@@ -894,10 +802,7 @@ class TenantDashboardOverview extends Component
         ]);
 
         // Notify manager
-        $managerId = DB::table('beds')
-            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
-            ->where('beds.bed_id', $this->lease->bed_id)
-            ->value('units.manager_id');
+        $managerId = $this->findManagerIdForLease($this->lease);
 
         if ($managerId) {
             $user = Auth::user();
@@ -937,10 +842,7 @@ class TenantDashboardOverview extends Component
             ],
         ]);
 
-        $managerId = DB::table('beds')
-            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
-            ->where('beds.bed_id', $this->lease->bed_id)
-            ->value('units.manager_id');
+        $managerId = $this->findManagerIdForLease($this->lease);
 
         if ($managerId) {
             $user = Auth::user();

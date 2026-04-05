@@ -95,9 +95,20 @@ trait WithESignature
                     }
                 }
             } else {
-                // Move-out contract: just set agreed
+                // Move-out contract: track status + set agreed
                 if ($bothSigned) {
-                    $locked->update([$agreedField => true]);
+                    $locked->update([
+                        $agreedField => true,
+                        'moveout_contract_status' => 'executed',
+                    ]);
+                } elseif ($role === 'tenant') {
+                    if ($locked->moveout_contract_status !== 'executed') {
+                        $locked->update(['moveout_contract_status' => 'pending_owner']);
+                    }
+                } elseif ($role === 'owner') {
+                    if ($locked->moveout_contract_status !== 'executed') {
+                        $locked->update(['moveout_contract_status' => 'pending_tenant']);
+                    }
                 }
             }
 

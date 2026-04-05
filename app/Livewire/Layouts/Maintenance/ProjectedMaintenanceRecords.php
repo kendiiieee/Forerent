@@ -1,38 +1,95 @@
 <?php
 
 namespace App\Livewire\Layouts\Maintenance;
+
 use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProjectedMaintenanceRecords extends Component
 {
-     public $activeTab = 'schedule'; // Default
+    public $activeTab = 'schedule';
 
-
-     public function getScheduleHistory()
+    /**
+     * Upcoming / ongoing maintenance requests for this manager's units.
+     */
+    public function getScheduleHistory(): array
     {
-        return [
-            ['unit' => 'Unit 201', 'task' => 'HVAC Inspection', 'scheduled_date' => 'January 15, 2025', 'urgency' => 'Level 2', 'status' => 'Scheduled'],
-            ['unit' => 'Unit 305', 'task' => 'Plumbing Check', 'scheduled_date' => 'January 22, 2025', 'urgency' => 'Level 1', 'status' => 'Scheduled'],
-            ['unit' => 'Lobby', 'task' => 'Fire Extinguisher Service', 'scheduled_date' => 'January 28, 2025', 'urgency' => 'Level 3', 'status' => 'Pending'],
-            ['unit' => 'Gym', 'task' => 'Treadmill Maintenance', 'scheduled_date' => 'February 05, 2025', 'urgency' => 'Level 1', 'status' => 'Scheduled'],
-        ];
+        $managerId = Auth::id();
+
+        return DB::table('maintenance_requests')
+            ->join('leases', 'maintenance_requests.lease_id', '=', 'leases.lease_id')
+            ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('units.manager_id', $managerId)
+            ->whereIn('maintenance_requests.status', ['Pending', 'Ongoing'])
+            ->whereNull('maintenance_requests.deleted_at')
+            ->orderBy('maintenance_requests.created_at', 'desc')
+            ->limit(10)
+            ->select(
+                DB::raw("'Unit ' || units.unit_number as unit"),
+                'maintenance_requests.category as task',
+                'maintenance_requests.expected_completion_date as scheduled_date',
+                'maintenance_requests.urgency',
+                'maintenance_requests.status'
+            )
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'unit'           => $r->unit,
+                    'task'           => $r->task,
+                    'scheduled_date' => $r->scheduled_date
+                        ? \Carbon\Carbon::parse($r->scheduled_date)->format('F d, Y')
+                        : 'Not set',
+                    'urgency'        => $r->urgency,
+                    'status'         => $r->status,
+                ];
+            })
+            ->toArray();
     }
 
-     public function getCostBreakdown()
+    /**
+     * Cost breakdown by category from real maintenance logs.
+     */
+    public function getCostBreakdown(): array
     {
-        return [
-            ['category' => 'HVAC', 'provider' => 'CoolBreeze Inc.', 'estimated_cost' => 5000, 'last_serviced' => 'July 10, 2024'],
-            ['category' => 'Plumbing', 'provider' => 'Mario\'s Pipes', 'estimated_cost' => 3500, 'last_serviced' => 'August 22, 2024'],
-            ['category' => 'Electrical', 'provider' => 'Sparky Solutions', 'estimated_cost' => 4200, 'last_serviced' => 'June 01, 2024'],
-            ['category' => 'General', 'provider' => 'Handy Helpers', 'estimated_cost' => 8000, 'last_serviced' => 'N/A'],
-        ];
+        $managerId = Auth::id();
+
+        return DB::table('maintenance_logs')
+            ->join('maintenance_requests', 'maintenance_logs.request_id', '=', 'maintenance_requests.request_id')
+            ->join('leases', 'maintenance_requests.lease_id', '=', 'leases.lease_id')
+            ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('units.manager_id', $managerId)
+            ->whereNull('maintenance_logs.deleted_at')
+            ->whereNull('maintenance_requests.deleted_at')
+            ->groupBy('maintenance_requests.category')
+            ->select(
+                'maintenance_requests.category',
+                DB::raw('SUM(maintenance_logs.cost) as total_cost'),
+                DB::raw('COUNT(DISTINCT maintenance_requests.request_id) as request_count'),
+                DB::raw('MAX(maintenance_logs.created_at) as last_serviced')
+            )
+            ->orderByDesc('total_cost')
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'category'       => $r->category,
+                    'provider'       => $r->request_count . ' ' . \Illuminate\Support\Str::plural('request', $r->request_count),
+                    'estimated_cost' => round($r->total_cost, 2),
+                    'last_serviced'  => $r->last_serviced
+                        ? \Carbon\Carbon::parse($r->last_serviced)->format('F d, Y')
+                        : 'N/A',
+                ];
+            })
+            ->toArray();
     }
 
-     public function render()
+    public function render()
     {
         return view('livewire.layouts.maintenance.projected-maintenance-records', [
             'scheduleHistory' => $this->getScheduleHistory(),
-            'costBreakdown' => $this->getCostBreakdown()
+            'costBreakdown'   => $this->getCostBreakdown(),
         ]);
     }
 }

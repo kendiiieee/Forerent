@@ -16,6 +16,7 @@
 @endphp
 
 <div
+    wire:ignore.self
     x-data="{
         open: false,
         animating: false,
@@ -47,7 +48,7 @@
             });
         }
     }"
-    class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm transition-all overflow-hidden"
+    class="w-full bg-white rounded-2xl border border-gray-100 shadow-sm transition-all"
     :class="open ? '{{ $c['border_open'] }} shadow-md' : '{{ $c['border_hover'] }} hover:shadow-md'"
 >
     {{-- Trigger Header --}}
@@ -84,7 +85,8 @@
     </button>
 
     {{-- Expandable Content --}}
-    <div x-ref="{{ $contentRef }}" class="transition-[height] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]" style="height: 0px; overflow: hidden;">
+    <div wire:ignore.self x-ref="{{ $contentRef }}" class="transition-[height] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]" style="height: 0px; overflow: hidden;"
+         x-bind:style="open && !animating ? 'height: auto; overflow: visible;' : (!open && !animating ? 'height: 0px; overflow: hidden;' : undefined)">
         <div class="px-4 pb-5 space-y-5">
             <div class="border-t border-gray-100"></div>
             {{ $slot }}

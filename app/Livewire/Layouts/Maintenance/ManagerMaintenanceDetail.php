@@ -27,6 +27,7 @@ class ManagerMaintenanceDetail extends Component
     public $costAmount      = '';
     public $costDescription = '';
     public $chargedTo       = 'owner';
+    public $editingCostId   = null;
     public $costItems       = [];
     public $requestTotal    = 0;
     public $unitTotal       = 0;
@@ -164,6 +165,19 @@ class ManagerMaintenanceDetail extends Component
             $this->costAmount = '';
             $this->costDescription = '';
             $this->chargedTo = 'owner';
+            $this->editingCostId = null;
+        }
+    }
+
+    public function editCostItem($logId)
+    {
+        $item = collect($this->costItems)->firstWhere('log_id', $logId);
+        if ($item) {
+            $this->editingCostId = $logId;
+            $this->costDescription = $item['description'] ?? '';
+            $this->costAmount = $item['cost'];
+            $this->chargedTo = $item['charged_to'] ?? 'owner';
+            $this->showCostForm = true;
         }
     }
 
@@ -193,28 +207,49 @@ class ManagerMaintenanceDetail extends Component
         $amount = round((float) $this->costAmount, 2);
         $chargedLabel = $this->chargedTo === 'tenant' ? 'Tenant' : 'Owner';
 
-        DB::table('maintenance_logs')->insert([
-            'request_id'      => $this->ticket->request_id,
-            'completion_date' => now()->toDateString(),
-            'cost'            => $amount,
-            'description'     => $this->costDescription,
-            'charged_to'      => $this->chargedTo,
-            'created_at'      => now(),
-            'updated_at'      => now(),
-        ]);
+        if ($this->editingCostId) {
+            DB::table('maintenance_logs')
+                ->where('log_id', $this->editingCostId)
+                ->update([
+                    'cost'            => $amount,
+                    'description'     => $this->costDescription,
+                    'charged_to'      => $this->chargedTo,
+                    'updated_at'      => now(),
+                ]);
 
-        $this->logActivity('cost_added', "Cost added: PHP " . number_format($amount, 2) . " — {$this->costDescription} (Charged to: {$chargedLabel})");
+            $this->logActivity('cost_added', "Cost updated: PHP " . number_format($amount, 2) . " — {$this->costDescription} (Charged to: {$chargedLabel})");
+            $this->notifySuccess('Cost Item Updated', "Cost entry has been updated.");
+        } else {
+            DB::table('maintenance_logs')->insert([
+                'request_id'      => $this->ticket->request_id,
+                'completion_date' => now()->toDateString(),
+                'cost'            => $amount,
+                'description'     => $this->costDescription,
+                'charged_to'      => $this->chargedTo,
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
 
-        // If charged to tenant, create a BillingItem on their current billing
-        if ($this->chargedTo === 'tenant') {
-            $this->chargeTenantBilling($amount, $this->costDescription);
+            $this->logActivity('cost_added', "Cost added: PHP " . number_format($amount, 2) . " — {$this->costDescription} (Charged to: {$chargedLabel})");
+
+            $ticketNum = $this->ticketIdDisplay;
+            $this->notifyTenant(
+                'Maintenance Cost Added',
+                "A cost of PHP " . number_format($amount, 2) . " has been logged for your request ({$ticketNum})."
+            );
+
+            if ($this->chargedTo === 'tenant') {
+                $this->chargeTenantBilling($amount, $this->costDescription);
+            }
+
+            $this->notifySuccess('Cost Item Added', "Cost of PHP " . number_format($amount, 2) . " charged to {$chargedLabel}.");
         }
 
         $this->costAmount = '';
         $this->costDescription = '';
         $this->chargedTo = 'owner';
+        $this->editingCostId = null;
         $this->showCostForm = false;
-        $this->notifySuccess('Cost Item Added', "Cost of PHP " . number_format($amount, 2) . " charged to {$chargedLabel}.");
 
         $this->loadCostData();
         $this->loadActivities();

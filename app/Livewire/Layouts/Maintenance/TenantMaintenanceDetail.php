@@ -16,6 +16,11 @@ class TenantMaintenanceDetail extends Component
     public $ticketIdDisplay    = '';
     public bool $feedbackSubmitted = false;
 
+    // Edit mode
+    public bool $editing        = false;
+    public string $editCategory    = '';
+    public string $editDescription = '';
+
     public function mount(?int $initialRequestId = null): void
     {
         if ($initialRequestId) {
@@ -112,6 +117,61 @@ class TenantMaintenanceDetail extends Component
 
         $this->feedbackSubmitted = true;
         $this->notifySuccess('Feedback Submitted', 'Thank you for your feedback on this maintenance request.');
+    }
+
+    /**
+     * Enter edit mode for a pending request.
+     */
+    public function startEditing(): void
+    {
+        if (!$this->ticket || $this->ticket->status !== 'Pending') return;
+        $this->editCategory    = $this->ticket->category ?? 'Plumbing';
+        $this->editDescription = $this->ticket->problem ?? '';
+        $this->editing = true;
+    }
+
+    public function cancelEditing(): void
+    {
+        $this->editing = false;
+        $this->resetValidation();
+    }
+
+    /**
+     * Save edits to a pending request.
+     */
+    public function saveEdit(): void
+    {
+        if (!$this->ticket || $this->ticket->status !== 'Pending') return;
+
+        $ownsTicket = DB::table('leases')
+            ->where('lease_id', $this->ticket->lease_id)
+            ->where('tenant_id', Auth::id())
+            ->exists();
+
+        if (!$ownsTicket) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->validate([
+            'editCategory'    => 'required|in:Plumbing,Electrical,Structural,Appliance,Pest Control',
+            'editDescription' => 'required|string|min:10|max:2000',
+        ]);
+
+        // Re-evaluate urgency based on new content
+        $newUrgency = \App\Services\UrgencyEvaluator::evaluate($this->editCategory, $this->editDescription);
+
+        DB::table('maintenance_requests')
+            ->where('request_id', $this->ticket->request_id)
+            ->update([
+                'category'   => $this->editCategory,
+                'problem'    => $this->editDescription,
+                'urgency'    => $newUrgency,
+                'updated_at' => now(),
+            ]);
+
+        $this->editing = false;
+        $this->fetchTicket($this->ticket->request_id);
+        $this->dispatch('refresh-maintenance-list');
     }
 
     /**

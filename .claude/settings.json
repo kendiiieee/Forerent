@@ -87,7 +87,11 @@
       "Bash(php -l app/Livewire/Concerns/WithESignature.php)",
       "Bash(php -l resources/views/pdf/move-out-contract.blade.php)",
       "Read(//e/laragon/bin/**)",
-      "Read(//d/laragon/bin/**)"
+      "Read(//d/laragon/bin/**)",
+      "Bash(find /e/reigne/Citispace-Forerent/app/Http/Controllers -type f -name \"*.php\" -exec grep -l \"contract\\\\|lease\" -i {} \\\\;)",
+      "Bash(grep -n 'dashTab\\\\|Tab\\\\|$dashCounts\\\\|inspection\\\\|overview' /e/reigne/Citispace-Forerent/resources/views/livewire/layouts/tenants/tenant-dashboard-overview.blade.php)",
+      "Bash(find /e/reigne/Citispace-Forerent/routes -name \"*.php\" -exec grep -l \"moveout\\\\|move.out\\\\|MoveOut\" {} \\\\;)",
+      "Bash(grep -n \"class ContractAuditLog\" /e/reigne/Citispace-Forerent/app/Models/*.php)"
     ],
     "additionalDirectories": [
       "\\tmp"

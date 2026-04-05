@@ -16,7 +16,7 @@ class UserFactory extends Factory
         $firstName = $faker->firstName();
         $lastName  = $faker->lastName();
 
-        $email = strtolower($firstName . '.' . $lastName) . '@example.com';
+        $email = strtolower($firstName . '.' . $lastName) . '.' . $faker->unique()->numerify('###') . '@example.com';
 
         $gender = fake()->randomElement(['Male', 'Female']);
         $idTypes = ['Passport', "Driver's License", 'UMID', 'National ID', 'Postal ID'];

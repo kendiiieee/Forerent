@@ -359,12 +359,13 @@
                             class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200">
                         Move-In
                     </button>
-                    <button @click="{{ $moveOutDate ? "activeTab = 'moveout'" : '' }}"
-                            :class="activeTab === 'moveout' ? 'bg-white text-gray-900 shadow-sm' : '{{ $moveOutDate ? 'text-gray-400 hover:text-gray-600' : 'text-gray-300 cursor-not-allowed' }}'"
+                    @php $moveOutAvailable = $moveOutDate || $moveOutInitiated; @endphp
+                    <button @click="{{ $moveOutAvailable ? "activeTab = 'moveout'" : '' }}"
+                            :class="activeTab === 'moveout' ? 'bg-white text-gray-900 shadow-sm' : '{{ $moveOutAvailable ? 'text-gray-400 hover:text-gray-600' : 'text-gray-300 cursor-not-allowed' }}'"
                             class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200"
-                            {{ !$moveOutDate ? 'disabled' : '' }}>
+                            {{ !$moveOutAvailable ? 'disabled' : '' }}>
                         Move-Out
-                        @if(!$moveOutDate)
+                        @if(!$moveOutAvailable)
                             <span class="ml-1 text-[13px] opacity-50">(N/A)</span>
                         @endif
                     </button>
@@ -604,7 +605,7 @@
         </div>
 
         {{-- Clearance Checklist Card --}}
-        @if($moveOutDate)
+        @if($moveOutDate || $moveOutInitiated)
         <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
             <div class="px-5 py-4">
                 <div class="flex items-center gap-2.5">
@@ -679,10 +680,18 @@
                 'moveOutTenantSignedAt' => $moveOutTenantSignedAt,
                 'moveOutOwnerSignedAt' => $moveOutOwnerSignedAt,
                 'moveOutContractAgreed' => $moveOutContractAgreed,
+                'outstandingBalances' => $t['outstanding_balances'] ?? [],
+                'depositRefund' => $t['deposit_refund'] ?? [],
                 'signatureMode' => 'tenant',
             ])
 
             <x-slot:footer>
+                @if($moveOutContractAgreed)
+                    <button wire:click="downloadMoveOutSignedContract" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                        Download Signed PDF
+                    </button>
+                @endif
                 @if(!$moveOutTenantSignature && $moveOutOwnerSignature)
                     <button wire:click="openMoveOutSignatureModal" class="bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>

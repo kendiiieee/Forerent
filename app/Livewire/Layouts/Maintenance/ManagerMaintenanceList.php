@@ -25,7 +25,8 @@ class ManagerMaintenanceList extends Component
     // Search
     public $search = '';
 
-    protected $listeners = ['refreshDashboard' => '$refresh'];
+    #[On('refreshDashboard')]
+    public function refreshDashboard() {}  // triggers re-render
 
     public function updatedSearch()
     {

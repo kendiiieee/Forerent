@@ -26,6 +26,10 @@
     $moveOutOwnerSignedAt = $moveOutOwnerSignedAt ?? null;
     $moveOutContractAgreed = $moveOutContractAgreed ?? false;
     $signatureMode = $signatureMode ?? 'tenant';
+    $outstandingBalances = $outstandingBalances ?? [];
+    $depositRefund = $depositRefund ?? [];
+    $checklistItemNames = \App\Livewire\Concerns\InspectionConfig::CHECKLIST_ITEMS;
+    $returnItemNames = \App\Livewire\Concerns\InspectionConfig::RETURNED_ITEMS;
 @endphp
 
 {{-- Page Header --}}
@@ -133,42 +137,31 @@
             <th class="p-2 text-right w-28">Est. Repair Cost (PHP)</th>
         </tr></thead>
         <tbody>
-            @php
-                $checklistItems = [
-                    'Bed Frame & Mattress / Foam',
-                    'Cabinet / Wardrobe (doors & locks)',
-                    'Air Conditioning Unit & Remote',
-                    'Bathroom Fixtures (shower, toilet, faucet, heater)',
-                    'Electrical Outlets & Light Switches',
-                    'Windows, Curtains / Blinds',
-                    'Walls (stains, cracks, holes)',
-                    'Floor Condition',
-                    'Door Lock & Keys',
-                ];
-            @endphp
-            @foreach($checklistItems as $index => $itemName)
+            @php $totalRepairCost = 0; @endphp
+            @foreach($checklistItemNames as $index => $itemName)
                 @php
                     $moveInItem = collect($inspectionChecklist)->firstWhere('item_name', $itemName);
                     $moveOutItem = collect($moveOutChecklist)->firstWhere('item_name', $itemName);
                     $moveInCond = $moveInItem['condition'] ?? '';
                     $moveOutCond = $moveOutItem['condition'] ?? '';
                     $damageFound = $moveInCond && $moveOutCond && $moveInCond !== $moveOutCond && $moveOutCond !== 'good';
+                    $repairCost = (float) ($moveOutItem['repair_cost'] ?? 0);
+                    if ($damageFound) $totalRepairCost += $repairCost;
                 @endphp
                 <tr class="border-b {{ $damageFound ? 'bg-red-50' : '' }}">
                     <td class="p-2 font-medium">{{ $itemName }}</td>
                     <td class="p-2 text-center border-l capitalize">{{ $moveInCond ?: '' }}</td>
                     <td class="p-2 text-center border-l capitalize {{ $damageFound ? 'text-red-600 font-bold' : '' }}">{{ $moveOutCond ?: '' }}</td>
                     <td class="p-2 text-center border-l {{ $damageFound ? 'text-red-600 font-bold' : '' }}">{{ $damageFound ? 'Yes' : ($moveOutCond ? 'No' : '') }}</td>
-                    <td class="p-2 text-right border-l">{{ $damageFound ? '( ₱ ________ )' : '' }}</td>
+                    <td class="p-2 text-right border-l">{{ $damageFound && $repairCost > 0 ? '&#8369; ' . number_format($repairCost, 2) : ($damageFound ? 'TBD' : '') }}</td>
                 </tr>
             @endforeach
-            <tr class="border-b">
-                <td class="p-2 font-medium text-gray-400">Other: ___________________</td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 text-right border-l"></td>
+            @if($totalRepairCost > 0)
+            <tr class="bg-gray-50">
+                <td class="p-2 font-bold" colspan="4">Total Damage Repair Cost</td>
+                <td class="p-2 text-right border-l font-bold">&#8369; {{ number_format($totalRepairCost, 2) }}</td>
             </tr>
+            @endif
         </tbody>
     </table>
     <p class="text-xs text-gray-600 mt-3 italic leading-relaxed">Move-out photographs shall be compared against move-in photographs on file. Both parties acknowledge the accuracy of the inspection findings recorded above.</p>
@@ -188,28 +181,28 @@
             <th class="p-2 text-right w-32">Replacement Cost (PHP)</th>
         </tr></thead>
         <tbody>
-            @php
-                $returnItems = ['Unit Key(s)', 'Building Access Card / Fob', 'Air Conditioning Remote', 'Cabinet Key'];
-            @endphp
-            @foreach($returnItems as $itemName)
+            @php $totalReplacementCost = 0; @endphp
+            @foreach($returnItemNames as $itemName)
                 @php
                     $returned = collect($itemsReturned)->firstWhere('item_name', $itemName);
-                    $isReturned = $returned && $returned['tenant_confirmed'];
+                    $isReturned = $returned && ($returned['is_returned'] ?? false);
                     $condition = $returned['condition'] ?? '';
+                    $replacementCost = (float) ($returned['replacement_cost'] ?? 0);
+                    if (!$isReturned && $returned) $totalReplacementCost += $replacementCost;
                 @endphp
                 <tr class="border-b">
                     <td class="p-2 font-medium">{{ $itemName }}</td>
                     <td class="p-2 text-center border-l">{{ $isReturned ? '✓ Yes' : ($returned ? '✗ No' : '') }}</td>
                     <td class="p-2 border-l">{{ $condition }}</td>
-                    <td class="p-2 text-right border-l">{{ (!$isReturned && $returned) ? '( ₱ ________ )' : '' }}</td>
+                    <td class="p-2 text-right border-l">{{ (!$isReturned && $returned && $replacementCost > 0) ? '&#8369; ' . number_format($replacementCost, 2) : ((!$isReturned && $returned) ? 'TBD' : '') }}</td>
                 </tr>
             @endforeach
-            <tr class="border-b">
-                <td class="p-2 font-medium text-gray-400">Other: ____________</td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 border-l"></td>
-                <td class="p-2 text-right border-l"></td>
+            @if($totalReplacementCost > 0)
+            <tr class="bg-gray-50">
+                <td class="p-2 font-bold" colspan="3">Total Replacement Cost</td>
+                <td class="p-2 text-right border-l font-bold">&#8369; {{ number_format($totalReplacementCost, 2) }}</td>
             </tr>
+            @endif
         </tbody>
     </table>
 </div>
@@ -227,13 +220,21 @@
             <th class="p-2 text-right w-36">Amount (PHP)</th>
         </tr></thead>
         <tbody>
-            <tr class="border-b"><td class="p-2">Unpaid Monthly Rent</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Unpaid Electricity Share</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Unpaid Water Share</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Late Payment Fees</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Violation Fines</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2 text-gray-400">Other: _______________</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="bg-gray-50"><td class="p-2 font-bold" colspan="2">TOTAL OUTSTANDING BALANCE</td><td class="p-2 text-right font-bold"></td></tr>
+            @php $totalOutstanding = 0; @endphp
+            @forelse($outstandingBalances as $balance)
+                @php $totalOutstanding += (float) $balance['amount']; @endphp
+                <tr class="border-b">
+                    <td class="p-2">{{ $balance['charge'] }}</td>
+                    <td class="p-2">{{ $balance['period'] ?? '' }}</td>
+                    <td class="p-2 text-right">&#8369; {{ number_format($balance['amount'], 2) }}</td>
+                </tr>
+            @empty
+                <tr class="border-b"><td class="p-2 text-gray-400 text-center" colspan="3">No outstanding balances</td></tr>
+            @endforelse
+            <tr class="bg-gray-50">
+                <td class="p-2 font-bold" colspan="2">TOTAL OUTSTANDING BALANCE</td>
+                <td class="p-2 text-right font-bold">&#8369; {{ number_format($totalOutstanding, 2) }}</td>
+            </tr>
         </tbody>
     </table>
 </div>
@@ -245,6 +246,11 @@
     <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 6 — Security Deposit Refund Calculation</h3>
     <p class="text-xs text-gray-700 mb-3">In accordance with RA 9653, the security deposit refund is calculated as follows:</p>
 
+    @php
+        $deductions = $depositRefund['deductions'] ?? [];
+        $refundAmount = $depositRefund['amount'] ?? null;
+        $totalDeductions = collect($deductions)->sum('amount');
+    @endphp
     <table class="w-full border border-gray-300 text-sm">
         <thead><tr class="bg-[#3B5998] text-white">
             <th class="p-2 text-left">Item</th>
@@ -252,14 +258,34 @@
         </tr></thead>
         <tbody>
             <tr class="border-b"><td class="p-2 font-semibold">Original Security Deposit Held</td><td class="p-2 text-right font-semibold">&#8369; {{ number_format($deposit, 2) }}</td></tr>
-            <tr class="border-b"><td class="p-2">(+) Interest Earned on Deposit (per RA 9653)</td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">(-) Unpaid Utility Balances</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Damage Repair Costs (per Section 3)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Lost / Unreturned Keys or Cards (per Section 4)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Early Termination Penalty (if applicable)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Cleaning Fee (if applicable)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Outstanding Rent or Other Charges (per Section 5)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="bg-blue-50"><td class="p-2 font-bold text-[#3B5998]">NET DEPOSIT REFUND</td><td class="p-2 text-right font-bold text-[#3B5998]">PHP ___________</td></tr>
+            @forelse($deductions as $deduction)
+                <tr class="border-b">
+                    <td class="p-2">(-) {{ $deduction['label'] }}</td>
+                    <td class="p-2 text-right {{ (float) $deduction['amount'] > 0 ? 'text-red-600 font-medium' : 'text-gray-400' }}">
+                        @if((float) $deduction['amount'] > 0)
+                            (&#8369; {{ number_format($deduction['amount'], 2) }})
+                        @else
+                            TBD
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr class="border-b"><td class="p-2 text-gray-400" colspan="2">No deductions recorded yet</td></tr>
+            @endforelse
+            <tr class="border-b bg-gray-50">
+                <td class="p-2 font-semibold">Total Deductions</td>
+                <td class="p-2 text-right font-semibold text-red-600">(&#8369; {{ number_format($totalDeductions, 2) }})</td>
+            </tr>
+            <tr class="bg-blue-50">
+                <td class="p-2 font-bold text-[#3B5998]">NET DEPOSIT REFUND</td>
+                <td class="p-2 text-right font-bold text-[#3B5998]">
+                    @if($refundAmount !== null)
+                        &#8369; {{ number_format($refundAmount, 2) }}
+                    @else
+                        &#8369; {{ number_format(max(0, $deposit - $totalDeductions), 2) }}
+                    @endif
+                </td>
+            </tr>
         </tbody>
     </table>
 
