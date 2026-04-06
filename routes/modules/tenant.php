@@ -31,5 +31,6 @@ Route::prefix('tenant')->middleware(['auth', 'role:tenant'])->group(function () 
     Route::get('/maintenance', function () {
         return view('users.tenant.maintenance');
     })->name('tenant.maintenance');
+
 });
 

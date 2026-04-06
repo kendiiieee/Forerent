@@ -82,7 +82,9 @@ trait WithContractData
                 'payment_status'        => $billing?->status ?? 'No billing',
                 'monthly_due_date'      => $lease?->monthly_due_date,
                 'late_payment_penalty'  => $lease?->late_payment_penalty,
-                'short_term_premium'    => $lease?->short_term_premium,
+                'short_term_premium'    => $lease?->short_term_premium > 0
+                    ? $lease->short_term_premium
+                    : (($lease?->term && (int) $lease->term < 6) ? 500 : 0),
                 'reservation_fee_paid'  => $lease?->reservation_fee_paid,
                 'early_termination_fee' => $lease?->early_termination_fee,
             ],
@@ -285,25 +287,37 @@ trait WithContractData
         foreach (InspectionConfig::CHECKLIST_ITEMS as $item) {
             $saved = $savedChecklist->firstWhere('item_name', $item);
             $checklist[] = [
-                'item_name'   => $item,
-                'condition'   => $saved?->condition ?? '',
-                'remarks'     => $saved?->remarks ?? '',
-                'repair_cost' => $saved?->repair_cost ?? '',
+                'item_name'          => $item,
+                'condition'          => $saved?->condition ?? '',
+                'remarks'            => $saved?->remarks ?? '',
+                'repair_cost'        => $saved?->repair_cost ?? '',
+                'id'                 => $saved?->id,
+                'dispute_status'     => $saved?->dispute_status ?? 'none',
+                'dispute_remarks'    => $saved?->dispute_remarks,
+                'resolution_remarks' => $saved?->resolution_remarks,
             ];
         }
         $this->$checklistProp = $checklist;
 
         $items = [];
+        $isMoveOut = $itemType === 'item_returned';
         foreach ($itemsList as $item) {
             $saved = $savedItems->firstWhere('item_name', $item);
-            $items[] = [
-                'item_name'         => $item,
-                'quantity'          => $saved?->quantity ?? '',
-                'condition'         => $saved?->remarks ?? '',
-                'tenant_confirmed'  => $saved?->tenant_confirmed ?? false,
-                'is_returned'       => $saved?->is_returned ?? false,
-                'replacement_cost'  => $saved?->replacement_cost ?? '',
+            $entry = [
+                'item_name'          => $item,
+                'quantity'           => $saved?->quantity ?? '',
+                'condition'          => $saved?->remarks ?? '',
+                'tenant_confirmed'   => $saved?->tenant_confirmed ?? false,
+                'id'                 => $saved?->id,
+                'dispute_status'     => $saved?->dispute_status ?? 'none',
+                'dispute_remarks'    => $saved?->dispute_remarks,
+                'resolution_remarks' => $saved?->resolution_remarks,
             ];
+            if ($isMoveOut) {
+                $entry['is_returned'] = $saved?->is_returned ?? false;
+                $entry['replacement_cost'] = $saved?->replacement_cost ?? '';
+            }
+            $items[] = $entry;
         }
         $this->$itemsProp = $items;
     }

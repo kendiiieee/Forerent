@@ -115,42 +115,159 @@
                     </div>
 
                     {{-- Content Body --}}
-                    <div class="p-4">
-                        <div class="flex items-center gap-2 mb-4">
-                            <svg class="w-5 h-5 text-[#2360E8]" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M11.47 3.841a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.061l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 101.061 1.06l8.69-8.689z"/>
-                                <path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"/>
-                            </svg>
-                            <h3 class="font-bold text-[#2360E8]">Unit Specifications</h3>
-                        </div>
+                    <div class="p-4 space-y-4" style="background: linear-gradient(180deg, #EEF2FF 0%, #F8FAFC 100%);">
 
-                        <div class="mb-6">
-                            <div class="bg-[#263093] text-white text-xs font-medium p-3 grid grid-cols-7 gap-2 rounded-t-lg">
-                                <span>Room Capacity</span>
-                                <span>Unit Capacity</span>
-                                <span>Room Type</span>
-                                <span>Bed Type</span>
-                                <span>Utility Subsidy</span>
-                                <span>Occupied Unit</span>
-                                <span>Base Rate</span>
-                            </div>
-                            <div class="bg-gray-50 text-gray-800 text-sm p-3 grid grid-cols-7 gap-2 border border-t-0 border-gray-200 rounded-b-lg">
-                                <span>{{ $specifications['room_capacity'] ?? 'N/A' }}</span>
-                                <span>{{ $specifications['unit_capacity'] ?? 'N/A' }}</span>
-                                <span>{{ $specifications['room_type'] ?? 'N/A' }}</span>
-                                <span>{{ $specifications['bed_type'] ?? 'N/A' }}</span>
-                                <span>{{ $specifications['utility_subsidy'] ?? 'N/A' }}</span>
-                                <div>
-                                    <span class="font-medium">{{ $specifications['occupied_unit'] ?? 'N/A' }}</span>
-                                    @if(!empty($specifications['occupied_unit_sub']))
-                                        <span class="block text-xs text-gray-500">{{ $specifications['occupied_unit_sub'] }}</span>
-                                    @endif
+                        {{-- Unit Specifications Card --}}
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                            <div class="flex items-center gap-2.5 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                    <svg class="w-4.5 h-4.5 text-[#2360E8]" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M11.47 3.841a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.061l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 101.061 1.06l8.69-8.689z"/>
+                                        <path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.43z"/>
+                                    </svg>
                                 </div>
-                                <span class="font-bold text-base">{{ $specifications['base_rate'] ?? 'N/A' }}</span>
+                                <h3 class="font-bold text-gray-900 uppercase text-sm tracking-wide">Unit Specifications</h3>
+                            </div>
+
+                            <div>
+                                <div class="bg-[#263093] text-white text-xs font-medium p-3 grid grid-cols-7 gap-2 rounded-t-lg">
+                                    <span>Room Capacity</span>
+                                    <span>Unit Capacity</span>
+                                    <span>Room Type</span>
+                                    <span>Bed Type</span>
+                                    <span>Utility Subsidy</span>
+                                    <span>Occupied Unit</span>
+                                    <span>Base Rate</span>
+                                </div>
+                                <div class="bg-gray-50 text-gray-800 text-sm p-3 grid grid-cols-7 gap-2 border border-t-0 border-gray-200 rounded-b-lg">
+                                    <span>{{ $specifications['room_capacity'] ?? 'N/A' }}</span>
+                                    <span>{{ $specifications['unit_capacity'] ?? 'N/A' }}</span>
+                                    <span>{{ $specifications['room_type'] ?? 'N/A' }}</span>
+                                    <span>{{ $specifications['bed_type'] ?? 'N/A' }}</span>
+                                    <span>{{ $specifications['utility_subsidy'] ?? 'N/A' }}</span>
+                                    <div>
+                                        <span class="font-medium">{{ $specifications['occupied_unit'] ?? 'N/A' }}</span>
+                                        @if(!empty($specifications['occupied_unit_sub']))
+                                            <span class="block text-xs text-gray-500">{{ $specifications['occupied_unit_sub'] }}</span>
+                                        @endif
+                                    </div>
+                                    <span class="font-bold text-base">{{ $specifications['base_rate'] ?? 'N/A' }}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <livewire:layouts.units.amenities-grid :amenities="$this->getUnitAmenities($unit)" :wire:key="'amenities-' . $unit->unit_id" />
+                        {{-- Selected Amenities Card --}}
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                            <div class="flex items-center gap-2.5 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                    <svg class="w-4.5 h-4.5 text-[#2360E8]" fill="currentColor" viewBox="0 0 48 48">
+                                        <path d="M8 14a4 4 0 014-4h24a4 4 0 014 4v6a4 4 0 00-4 4v4H12v-4a4 4 0 00-4-4v-6zm-4 10a2 2 0 012-2 2 2 0 012 2v8h2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3H2v-8a2 2 0 012-2zm36 0a2 2 0 012 2v8h-2v3a2 2 0 01-2 2h-2a2 2 0 01-2-2v-3h-2v-8a2 2 0 012-2 2 2 0 012-2h2a2 2 0 012 2zm-28 6v2h24v-2H12z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="font-bold text-gray-900 uppercase text-sm tracking-wide">Selected Amenities</h3>
+                            </div>
+
+                            <livewire:layouts.units.amenities-grid :amenities="$this->getUnitAmenities($unit)" :wire:key="'amenities-' . $unit->unit_id" />
+                        </div>
+
+                        {{-- Tenants & Contracts Card (Landlord Only) --}}
+                        @if(auth()->user()->role === 'landlord' && $openUnitId === $unit->unit_id && count($unitTenants) > 0)
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                                <div class="flex items-center gap-2.5 mb-4">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                        <svg class="w-4.5 h-4.5 text-[#2360E8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </div>
+                                    <h3 class="font-bold text-gray-900 uppercase text-sm tracking-wide">Tenants & Contracts</h3>
+                                </div>
+
+                                <div class="space-y-3">
+                                    @foreach($unitTenants as $tenant)
+                                        <div class="border border-gray-200 rounded-xl p-4 hover:border-blue-200 transition-colors bg-gray-50/50">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-3">
+                                                    {{-- Avatar --}}
+                                                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                        {{ strtoupper(substr($tenant['tenant_name'], 0, 1)) }}
+                                                    </div>
+                                                    <div>
+                                                        <p class="font-semibold text-gray-900 text-sm">{{ $tenant['tenant_name'] }}</p>
+                                                        <p class="text-xs text-gray-500">Bed #{{ $tenant['bed_number'] }} &middot; {{ $tenant['start_date'] }} — {{ $tenant['end_date'] }}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-center gap-2">
+                                                    {{-- Lease Status Badge --}}
+                                                    <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                                        {{ $tenant['lease_status'] === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">
+                                                        {{ $tenant['lease_status'] }}
+                                                    </span>
+
+                                                    {{-- Contract Status Badge --}}
+                                                    @php
+                                                        $cStatus = $tenant['contract_status'];
+                                                        $cBadge = match($cStatus) {
+                                                            'executed' => 'bg-emerald-100 text-emerald-700',
+                                                            'pending_signatures', 'pending_tenant', 'pending_owner' => 'bg-amber-100 text-amber-700',
+                                                            default => 'bg-gray-100 text-gray-500',
+                                                        };
+                                                        $cLabel = match($cStatus) {
+                                                            'executed' => 'Executed',
+                                                            'pending_signatures' => 'Pending Signatures',
+                                                            'pending_tenant' => 'Pending Tenant',
+                                                            'pending_owner' => 'Pending Owner',
+                                                            'draft' => 'Draft',
+                                                            default => ucfirst(str_replace('_', ' ', $cStatus)),
+                                                        };
+                                                    @endphp
+                                                    <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $cBadge }}">
+                                                        {{ $cLabel }}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {{-- Contract Action Buttons --}}
+                                            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200">
+                                                <button
+                                                    wire:click="viewContract({{ $tenant['lease_id'] }}, 'move-in')"
+                                                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                                                        {{ $tenant['move_in_signed'] ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}"
+                                                >
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                    </svg>
+                                                    Move-In Contract
+                                                    @if($tenant['move_in_signed'])
+                                                        <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                    @endif
+                                                </button>
+
+                                                @if($tenant['has_move_out'])
+                                                    <button
+                                                        wire:click="viewContract({{ $tenant['lease_id'] }}, 'move-out')"
+                                                        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                                                            {{ $tenant['move_out_signed'] ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}"
+                                                    >
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                                        </svg>
+                                                        Move-Out Contract
+                                                        @if($tenant['move_out_signed'])
+                                                            <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                            </svg>
+                                                        @endif
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

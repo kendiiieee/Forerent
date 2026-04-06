@@ -217,6 +217,105 @@
                     </div>
                 </div>
 
+                {{-- Violation Records --}}
+                @if($viewingTab === 'current')
+                <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-[#EEF2FF] flex items-center justify-center">
+                                <svg class="w-4 h-4 text-[#2360E8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                </svg>
+                            </div>
+                            <h5 class="font-bold text-sm text-[#070589] uppercase tracking-wide">Violation Records</h5>
+                            @if($violationCounts['total'] > 0)
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:#eef2ff;color:#070589">{{ $violationCounts['total'] }}</span>
+                            @endif
+                        </div>
+                        <button
+                            type="button"
+                            x-on:click="$dispatch('open-add-violation-modal', { leaseId: {{ $currentLeaseId ?? 'null' }} })"
+                            class="flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition" style="background:#070589" onmouseover="this.style.background='#000060'" onmouseout="this.style.background='#070589'"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Record
+                        </button>
+                    </div>
+
+                    @if(count($violations) > 0)
+                        {{-- Summary Badges --}}
+                        <div class="flex gap-2 mb-3">
+                            @if($violationCounts['issued'] > 0)
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-50 text-red-600 border border-red-100">{{ $violationCounts['issued'] }} Issued</span>
+                            @endif
+                            @if($violationCounts['acknowledged'] > 0)
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-100">{{ $violationCounts['acknowledged'] }} Acknowledged</span>
+                            @endif
+                            @if($violationCounts['resolved'] > 0)
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-green-50 text-green-700 border border-green-100">{{ $violationCounts['resolved'] }} Resolved</span>
+                            @endif
+                        </div>
+
+                        {{-- Violation List --}}
+                        <div class="space-y-2">
+                            @foreach($violations as $vio)
+                                @php
+                                    $vStatusStyles = match($vio['status']) {
+                                        'Resolved'     => 'bg-green-100 text-green-700',
+                                        'Issued'       => 'bg-red-100 text-red-700',
+                                        'Acknowledged' => 'bg-yellow-100 text-yellow-800',
+                                        default        => 'bg-gray-100 text-gray-700'
+                                    };
+                                    $vSeverityStyles = match($vio['severity']) {
+                                        'serious' => 'bg-red-50 text-red-600',
+                                        'major'   => 'bg-orange-50 text-orange-600',
+                                        'minor'   => 'bg-blue-50 text-blue-600',
+                                        default   => 'bg-gray-50 text-gray-600'
+                                    };
+                                    $vOffenseLabel = match($vio['offense_number']) {
+                                        1 => '1st', 2 => '2nd', 3 => '3rd', default => $vio['offense_number'] . 'th'
+                                    };
+                                    $vPenaltyLabel = match($vio['penalty_type']) {
+                                        'written_warning' => 'Warning',
+                                        'fine' => 'Fine — PHP ' . number_format($vio['fine_amount'] ?? 0, 2),
+                                        'lease_termination' => 'Termination',
+                                        default => ucfirst($vio['penalty_type']),
+                                    };
+                                @endphp
+                                <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs font-bold text-[#2360E8]">{{ $vio['violation_number'] }}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vStatusStyles }}">{{ $vio['status'] }}</span>
+                                        </div>
+                                        <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($vio['violation_date'])->format('M d, Y') }}</span>
+                                    </div>
+                                    <p class="text-xs font-semibold text-[#070642] mb-1">{{ $vio['category'] }}</p>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold {{ $vSeverityStyles }}">{{ ucfirst($vio['severity']) }}</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-gray-100 text-gray-600">{{ $vOffenseLabel }} Offense</span>
+                                        <span class="text-[10px] text-gray-500">{{ $vPenaltyLabel }}</span>
+                                    </div>
+                                    @if(!empty($vio['description']))
+                                        <p class="text-[11px] text-gray-500 mt-1.5 line-clamp-2">{{ $vio['description'] }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-6">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2" style="background:#eef2ff">
+                                <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xs font-semibold text-gray-500">No violations on record</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">Tenant is in good standing</p>
+                        </div>
+                    @endif
+                </div>
+                @endif
+
                 {{-- Action Buttons --}}
                 @if($viewingTab === 'current')
                     <div class="grid grid-cols-2 gap-3 pt-2">
@@ -252,36 +351,63 @@
                 {{-- Move-Out Progress Stepper --}}
                 @if($moveOutInitiated)
                     @php
-                        $steps = [
-                            ['label' => 'Initiated', 'done' => true],
-                            ['label' => 'Inspection', 'done' => $moveOutInspectionSaved],
-                            ['label' => 'Items Returned', 'done' => collect($itemsReturned)->isNotEmpty()],
-                            ['label' => 'Contract Signed', 'done' => $moveOutContractAgreed],
-                            ['label' => 'Finalized', 'done' => (bool) ($currentTenant['move_out_details']['move_out_date'] ?? false)],
+                        $moveOutSteps = [
+                            ['num' => 1, 'title' => 'Initiated', 'done' => true],
+                            ['num' => 2, 'title' => 'Inspection', 'done' => $moveOutInspectionSaved],
+                            ['num' => 3, 'title' => 'Items Returned', 'done' => $moveOutInspectionSaved],
+                            ['num' => 4, 'title' => 'Contract Signed', 'done' => $moveOutContractAgreed],
+                            ['num' => 5, 'title' => 'Finalized', 'done' => (bool) ($currentTenant['move_out_details']['move_out_date'] ?? false)],
                         ];
+                        $currentMoveOutStep = count($moveOutSteps);
+                        foreach ($moveOutSteps as $s) {
+                            if (!$s['done']) { $currentMoveOutStep = $s['num']; break; }
+                        }
                     @endphp
-                    <div class="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-                        <div class="flex items-center gap-2 mb-3">
+                    <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                        <div class="flex items-center gap-2 mb-4">
                             <div class="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
                                 <svg class="w-3.5 h-3.5 text-[#070589]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
                             <h5 class="text-xs font-bold text-[#070589] uppercase tracking-wide">Move-Out Progress</h5>
                         </div>
                         <div class="flex items-center justify-between">
-                            @foreach($steps as $i => $step)
-                                <div class="flex flex-col items-center flex-1">
-                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold {{ $step['done'] ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500' }}">
-                                        @if($step['done'])
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                        @else
-                                            {{ $i + 1 }}
-                                        @endif
+                            @foreach($moveOutSteps as $i => $step)
+                                <div class="flex items-center {{ $i < count($moveOutSteps) - 1 ? 'flex-1' : '' }}">
+                                    <div class="flex flex-col items-center">
+                                        <div
+                                            class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-200
+                                            {{ $currentMoveOutStep === $step['num']
+                                                ? 'bg-[#070589] text-white border-[#070589] shadow-lg shadow-blue-500/20'
+                                                : ($step['done']
+                                                    ? 'bg-[#070589]/10 text-[#070589] border-[#070589]/30'
+                                                    : 'bg-transparent text-gray-300 border-gray-200') }}"
+                                        >
+                                            @if($step['done'] && $currentMoveOutStep !== $step['num'])
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            @else
+                                                {{ $step['num'] }}
+                                            @endif
+                                        </div>
+                                        <span
+                                            class="text-[11px] font-semibold mt-1.5 tracking-wide transition-all duration-200
+                                            {{ $currentMoveOutStep === $step['num']
+                                                ? 'text-[#070589]'
+                                                : ($step['done']
+                                                    ? 'text-[#070589]/60'
+                                                    : 'text-gray-300') }}"
+                                        >{{ $step['title'] }}</span>
                                     </div>
-                                    <span class="text-[10px] mt-1 font-semibold {{ $step['done'] ? 'text-emerald-600' : 'text-gray-400' }}">{{ $step['label'] }}</span>
+                                    @if($i < count($moveOutSteps) - 1)
+                                        <div class="flex-1 mx-2 mt-[-14px]">
+                                            <div class="h-0.5 rounded-full bg-gray-200 relative overflow-hidden">
+                                                <div
+                                                    class="absolute inset-y-0 left-0 bg-[#070589]/40 rounded-full transition-all duration-300 ease-out"
+                                                    style="width: {{ $step['done'] ? '100%' : '0%' }}"
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
-                                @if($i < count($steps) - 1)
-                                    <div class="flex-1 h-0.5 mx-1 {{ $step['done'] ? 'bg-emerald-400' : 'bg-gray-200' }}"></div>
-                                @endif
                             @endforeach
                         </div>
                     </div>
@@ -405,7 +531,7 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach($inspectionChecklist as $index => $item)
-                                                        <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("inspectionChecklist.{$index}.condition") ? 'bg-red-50/50' : '' }}">
+                                                        <tr wire:key="movein-checklist-{{ $index }}" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("inspectionChecklist.{$index}.condition") ? 'bg-red-50/50' : '' }}">
                                                             <td class="p-2.5 text-gray-700 font-medium">
                                                                 {{ $item['item_name'] }}
                                                                 @error("inspectionChecklist.{$index}.condition")
@@ -414,19 +540,19 @@
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="good"
+                                                                    <input type="radio" name="inspectionChecklist_{{ $index }}_condition" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="good"
                                                                            class="w-4 h-4 text-emerald-500 border-gray-300 focus:ring-emerald-400">
                                                                 </label>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="damaged"
+                                                                    <input type="radio" name="inspectionChecklist_{{ $index }}_condition" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="damaged"
                                                                            class="w-4 h-4 text-amber-500 border-gray-300 focus:ring-amber-400">
                                                                 </label>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="missing"
+                                                                    <input type="radio" name="inspectionChecklist_{{ $index }}_condition" wire:model.live="inspectionChecklist.{{ $index }}.condition" value="missing"
                                                                            class="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-400">
                                                                 </label>
                                                             </td>
@@ -460,7 +586,7 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach($itemsReceived as $index => $item)
-                                                        <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("itemsReceived.{$index}.quantity") || $errors->has("itemsReceived.{$index}.condition") ? 'bg-red-50/50' : '' }}">
+                                                        <tr wire:key="movein-item-{{ $index }}" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("itemsReceived.{$index}.quantity") || $errors->has("itemsReceived.{$index}.condition") ? 'bg-red-50/50' : '' }}">
                                                             <td class="p-2.5 text-gray-700 font-medium">
                                                                 {{ $item['item_name'] }}
                                                                 @if($errors->has("itemsReceived.{$index}.condition") || $errors->has("itemsReceived.{$index}.quantity"))
@@ -587,11 +713,12 @@
                                             <table class="w-full text-xs">
                                                 <thead>
                                                     <tr class="bg-gray-50 border-b border-gray-200">
-                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-2/5">Item</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-16">Good</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-20">Damaged</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-18">Missing</th>
+                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-1/4">Item</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Good</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Damaged</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Missing</th>
                                                         <th class="text-left p-2.5 font-semibold text-gray-600">Remarks</th>
+                                                        <th class="text-right p-2.5 font-semibold text-gray-600 w-24">Repair Cost</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -602,6 +729,7 @@
                                                             <td class="p-2.5 text-center">@if($item['condition'] === 'damaged')<span class="text-amber-500 font-bold">&#10003;</span>@endif</td>
                                                             <td class="p-2.5 text-center">@if($item['condition'] === 'missing')<span class="text-red-500 font-bold">&#10003;</span>@endif</td>
                                                             <td class="p-2.5 text-gray-500">{{ $item['remarks'] ?: '—' }}</td>
+                                                            <td class="p-2.5 text-right text-gray-700">{{ !empty($item['repair_cost']) ? '₱ ' . number_format($item['repair_cost'], 2) : '—' }}</td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -619,10 +747,11 @@
                                             <table class="w-full text-xs">
                                                 <thead>
                                                     <tr class="bg-gray-50 border-b border-gray-200">
-                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-2/5">Item</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-16">Qty</th>
+                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-1/4">Item</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Qty</th>
                                                         <th class="text-left p-2.5 font-semibold text-gray-600">Condition</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-24">Confirmed</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-16">Returned</th>
+                                                        <th class="text-right p-2.5 font-semibold text-gray-600 w-24">Replacement</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -632,12 +761,13 @@
                                                             <td class="p-2.5 text-center text-gray-700">{{ $item['quantity'] ?: '—' }}</td>
                                                             <td class="p-2.5 text-gray-500">{{ $item['condition'] ?: '—' }}</td>
                                                             <td class="p-2.5 text-center">
-                                                                @if($item['tenant_confirmed'])
-                                                                    <span class="text-blue-500 font-bold">&#10003;</span>
+                                                                @if($item['is_returned'] ?? false)
+                                                                    <span class="text-emerald-500 font-bold">&#10003;</span>
                                                                 @else
-                                                                    <span class="text-gray-300">—</span>
+                                                                    <span class="text-red-400 font-bold">&#10007;</span>
                                                                 @endif
                                                             </td>
+                                                            <td class="p-2.5 text-right text-gray-700">{{ !empty($item['replacement_cost']) ? '₱ ' . number_format($item['replacement_cost'], 2) : '—' }}</td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -645,8 +775,66 @@
                                         </div>
                                     </div>
 
+                                    {{-- Disputed Items (manager resolution) --}}
+                                    @php
+                                        $disputedItems = collect($moveOutChecklist)->merge(collect($itemsReturned))
+                                            ->filter(fn($i) => ($i['dispute_status'] ?? 'none') === 'disputed');
+                                        $resolvedItems = collect($moveOutChecklist)->merge(collect($itemsReturned))
+                                            ->filter(fn($i) => str_starts_with($i['dispute_status'] ?? '', 'resolved'));
+                                    @endphp
+
+                                    @if($disputedItems->isNotEmpty() || $resolvedItems->isNotEmpty())
+                                    <div>
+                                        <h4 class="text-xs font-bold text-[#070589] uppercase mb-3 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+                                            Disputes
+                                        </h4>
+
+                                        @foreach($disputedItems as $item)
+                                            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-2" x-data="{ resolution: '' }">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div>
+                                                        <span class="text-xs font-bold text-amber-700">{{ $item['item_name'] }}</span>
+                                                        <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">DISPUTED</span>
+                                                    </div>
+                                                </div>
+                                                <p class="text-xs text-gray-600 mb-2">Tenant's concern: <em>"{{ $item['dispute_remarks'] }}"</em></p>
+                                                <div class="flex gap-2 items-end">
+                                                    <input type="text" x-model="resolution" placeholder="Resolution remarks..."
+                                                           class="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:border-[#070589] focus:ring-1 focus:ring-[#070589]">
+                                                    <button @click="if(resolution) $wire.resolveDispute({{ $item['id'] }}, resolution, 'move_out', 'accepted')"
+                                                            class="px-3 py-1.5 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg">Accept</button>
+                                                    <button @click="if(resolution) $wire.resolveDispute({{ $item['id'] }}, resolution, 'move_out', 'rejected')"
+                                                            class="px-3 py-1.5 text-[11px] font-bold text-white bg-red-400 hover:bg-red-500 rounded-lg">Reject</button>
+                                                </div>
+                                            </div>
+                                        @endforeach
+
+                                        @foreach($resolvedItems as $item)
+                                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-2">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="text-xs font-bold text-gray-700">{{ $item['item_name'] }}</span>
+                                                    @if($item['dispute_status'] === 'resolved_accepted')
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">ACCEPTED</span>
+                                                    @elseif($item['dispute_status'] === 'resolved_rejected')
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">REJECTED</span>
+                                                    @else
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-600">RESOLVED</span>
+                                                    @endif
+                                                </div>
+                                                <p class="text-[11px] text-gray-500">Resolution: {{ $item['resolution_remarks'] }}</p>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @endif
+
                                     {{-- Edit Button --}}
-                                    <div class="flex justify-end pt-2">
+                                    <div class="flex items-center justify-between pt-2">
+                                        @if($moveOutContractAgreed)
+                                            <p class="text-[11px] text-amber-600 font-medium">Editing will invalidate existing signatures.</p>
+                                        @else
+                                            <div></div>
+                                        @endif
                                         <button
                                             type="button"
                                             wire:click="$set('moveOutInspectionSaved', false)"
@@ -680,7 +868,7 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach($moveOutChecklist as $index => $item)
-                                                        <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("moveOutChecklist.{$index}.condition") ? 'bg-red-50/50' : '' }}">
+                                                        <tr wire:key="moveout-checklist-{{ $index }}" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("moveOutChecklist.{$index}.condition") ? 'bg-red-50/50' : '' }}">
                                                             <td class="p-2.5 text-gray-700 font-medium">
                                                                 {{ $item['item_name'] }}
                                                                 @error("moveOutChecklist.{$index}.condition")
@@ -689,19 +877,19 @@
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.defer="moveOutChecklist.{{ $index }}.condition" value="good"
+                                                                    <input type="radio" name="moveOutChecklist_{{ $index }}_condition" wire:model.live="moveOutChecklist.{{ $index }}.condition" value="good"
                                                                            class="w-4 h-4 text-emerald-500 border-gray-300 focus:ring-emerald-400">
                                                                 </label>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.defer="moveOutChecklist.{{ $index }}.condition" value="damaged"
+                                                                    <input type="radio" name="moveOutChecklist_{{ $index }}_condition" wire:model.live="moveOutChecklist.{{ $index }}.condition" value="damaged"
                                                                            class="w-4 h-4 text-amber-500 border-gray-300 focus:ring-amber-400">
                                                                 </label>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
-                                                                    <input type="radio" wire:model.defer="moveOutChecklist.{{ $index }}.condition" value="missing"
+                                                                    <input type="radio" name="moveOutChecklist_{{ $index }}_condition" wire:model.live="moveOutChecklist.{{ $index }}.condition" value="missing"
                                                                            class="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-400">
                                                                 </label>
                                                             </td>
@@ -742,26 +930,68 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach($itemsReturned as $index => $item)
-                                                        <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("itemsReturned.{$index}.quantity") || $errors->has("itemsReturned.{$index}.condition") ? 'bg-red-50/50' : '' }}">
-                                                            <td class="p-2.5 text-gray-700 font-medium">{{ $item['item_name'] }}</td>
+                                                        <tr wire:key="moveout-item-{{ $index }}" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("itemsReturned.{$index}.quantity") || $errors->has("itemsReturned.{$index}.condition") ? 'bg-red-50/50' : '' }}">
+                                                            <td class="p-2.5 text-gray-700 font-medium">
+                                                                {{ $item['item_name'] }}
+                                                                @if($errors->has("itemsReturned.{$index}.condition") || $errors->has("itemsReturned.{$index}.quantity"))
+                                                                    <p class="text-[11px] text-red-500 font-normal mt-0.5">Required</p>
+                                                                @endif
+                                                            </td>
                                                             <td class="p-2.5 text-center">
                                                                 <input type="number" min="1" step="1"
-                                                                       wire:model.defer="itemsReturned.{{ $index }}.quantity"
+                                                                       wire:model.live.debounce.300ms="itemsReturned.{{ $index }}.quantity"
                                                                        placeholder="1"
                                                                        onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
                                                                        oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
                                                                        class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.quantity") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
-                                                                @error("itemsReturned.{$index}.quantity")
-                                                                    <p class="text-[11px] text-red-500 mt-0.5">{{ $message }}</p>
-                                                                @enderror
                                                             </td>
                                                             <td class="p-2.5">
-                                                                <input type="text" wire:model.defer="itemsReturned.{{ $index }}.condition"
-                                                                       placeholder="e.g. Good, Damaged..."
-                                                                       class="w-full text-xs border rounded-lg px-2.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.condition") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
-                                                                @error("itemsReturned.{$index}.condition")
-                                                                    <p class="text-[11px] text-red-500 mt-0.5">{{ $message }}</p>
-                                                                @enderror
+                                                                <div x-data="{
+                                                                    open: false,
+                                                                    dropUp: false,
+                                                                    toggleDropdown() {
+                                                                        if (this.open) { this.open = false; return; }
+                                                                        const btn = this.$refs.moTrigger{{ $index }};
+                                                                        const rect = btn.getBoundingClientRect();
+                                                                        const scrollParent = btn.closest('.overflow-y-auto') || document.documentElement;
+                                                                        const containerBottom = scrollParent === document.documentElement
+                                                                            ? window.innerHeight
+                                                                            : scrollParent.getBoundingClientRect().bottom;
+                                                                        this.dropUp = (containerBottom - rect.bottom) < 220;
+                                                                        this.open = true;
+                                                                    }
+                                                                }" @click.away="open = false" @keydown.escape.stop="open = false" class="relative">
+                                                                    <button
+                                                                        x-ref="moTrigger{{ $index }}"
+                                                                        @click="toggleDropdown()"
+                                                                        type="button"
+                                                                        class="w-full flex items-center justify-between gap-1.5 bg-white border rounded-lg px-2.5 py-1.5 text-xs transition-all hover:bg-gray-50 focus:ring-1 outline-none {{ $errors->has("itemsReturned.{$index}.condition") ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-400' }}"
+                                                                    >
+                                                                        <span class="truncate {{ empty($item['condition']) ? 'text-gray-400' : 'text-gray-700' }}">
+                                                                            {{ $item['condition'] ?: 'Select condition...' }}
+                                                                        </span>
+                                                                        <svg :class="{ 'rotate-180': open }" class="w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                                        </svg>
+                                                                    </button>
+                                                                    <div
+                                                                        x-show="open"
+                                                                        x-transition
+                                                                        style="display: none;"
+                                                                        class="absolute left-0 z-30 w-full bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
+                                                                        :class="dropUp ? 'bottom-full mb-1' : 'top-full mt-1'"
+                                                                    >
+                                                                        @foreach(['Good', 'New', 'Fair', 'Damaged', 'Not Returned'] as $condition)
+                                                                            <x-dropdown-item
+                                                                                wire:click="setMoveOutItemCondition({{ $index }}, '{{ $condition }}')"
+                                                                                :active="($item['condition'] ?? '') === $condition"
+                                                                                @click="open = false"
+                                                                            >
+                                                                                {{ $condition }}
+                                                                            </x-dropdown-item>
+                                                                        @endforeach
+                                                                    </div>
+                                                                </div>
                                                             </td>
                                                             <td class="p-2.5 text-center">
                                                                 <label class="cursor-pointer">
@@ -1072,66 +1302,50 @@
     </div>
 
     {{-- Initiate Move-Out Form Modal --}}
-    @if($showMoveOutForm)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
-            <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
-                <div class="bg-[#070589] text-white p-5">
-                    <h2 class="text-lg font-bold">Initiate Move-Out</h2>
-                    <p class="text-xs text-blue-200 mt-1">Start the move-out process for this tenant</p>
+    <x-ui.modal-confirm
+        name="initiate-move-out"
+        title="Initiate Move-Out"
+        description="Start the move-out process for this tenant"
+        confirmText="Start Move-Out Process"
+        cancelText="Cancel"
+        confirmAction="initiateMoveOut"
+    >
+        <div class="space-y-4 text-left">
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Reason for Vacating</label>
+                <select wire:model="reasonForVacating" class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589]">
+                    <option value="">Select a reason...</option>
+                    <option value="End of lease term (contract expired)">End of lease term (contract expired)</option>
+                    <option value="Voluntary early termination by Lessee">Voluntary early termination by Lessee</option>
+                    <option value="Mutual agreement between both parties">Mutual agreement between both parties</option>
+                    <option value="Lease violation or termination by Lessor">Lease violation or termination by Lessor</option>
+                    <option value="Transfer to a different unit / building (internal transfer)">Transfer to a different unit / building</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Forwarding Address</label>
+                <input type="text" wire:model="forwardingAddress" placeholder="Address for deposit refund / correspondence"
+                       class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Refund Method</label>
+                    <select wire:model="depositRefundMethod" class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589]">
+                        <option value="">Select...</option>
+                        <option value="GCash">GCash</option>
+                        <option value="Maya">Maya</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Cash">Cash</option>
+                    </select>
                 </div>
-                <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Reason for Vacating</label>
-                        <select wire:model="reasonForVacating" class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589]">
-                            <option value="">Select a reason...</option>
-                            <option value="End of lease term (contract expired)">End of lease term (contract expired)</option>
-                            <option value="Voluntary early termination by Lessee">Voluntary early termination by Lessee</option>
-                            <option value="Mutual agreement between both parties">Mutual agreement between both parties</option>
-                            <option value="Lease violation or termination by Lessor">Lease violation or termination by Lessor</option>
-                            <option value="Transfer to a different unit / building (internal transfer)">Transfer to a different unit / building</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Forwarding Address</label>
-                        <input type="text" wire:model="forwardingAddress" placeholder="Address for deposit refund / correspondence"
-                               class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Refund Method</label>
-                            <select wire:model="depositRefundMethod" class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589]">
-                                <option value="">Select...</option>
-                                <option value="GCash">GCash</option>
-                                <option value="Maya">Maya</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Cash">Cash</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Account Name / Number</label>
-                            <input type="text" wire:model="depositRefundAccount" placeholder="e.g. 0917-xxx-xxxx"
-                                   class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300">
-                        </div>
-                    </div>
-                </div>
-                <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
-                    <button wire:click="closeMoveOutForm" class="px-5 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
-                        Cancel
-                    </button>
-                    <button
-                        wire:click="initiateMoveOut"
-                        wire:loading.attr="disabled"
-                        class="px-5 py-2 text-sm font-bold text-white bg-[#070589] hover:bg-[#000060] rounded-xl transition-colors flex items-center gap-1.5"
-                    >
-                        <span wire:loading wire:target="initiateMoveOut">
-                            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                        </span>
-                        Start Move-Out Process
-                    </button>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Account Name / Number</label>
+                    <input type="text" wire:model="depositRefundAccount" placeholder="e.g. 0917-xxx-xxxx"
+                           class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300">
                 </div>
             </div>
         </div>
-    @endif
+    </x-ui.modal-confirm>
 
     <style>
         .custom-scrollbar::-webkit-scrollbar {
@@ -1172,7 +1386,7 @@
 
         const doc = iframe.contentDocument || iframe.contentWindow.document;
         doc.open();
-        doc.write(getPrintHTML(clone.innerHTML));
+        doc.write(getPrintHTML(clone.innerHTML, elementId));
         doc.close();
 
         // Fix header to be edge-to-edge in print
@@ -1208,12 +1422,16 @@
         }
     }
 
-    function getPrintHTML(innerHTML) {
+    function getPrintHTML(innerHTML, contractType) {
+        const tenantName = @json(($currentTenant['personal_info']['first_name'] ?? '') . ' ' . ($currentTenant['personal_info']['last_name'] ?? 'Tenant'));
+        const unitNumber = @json($currentTenant['personal_info']['unit'] ?? 'N-A');
+        const purpose = contractType === 'move-out-contract' ? 'Move-Out-Contract' : 'Move-In-Contract';
+        const docTitle = `${purpose}_${tenantName.replace(/\s+/g, '-')}_Unit-${unitNumber}`;
         return `
             <!DOCTYPE html>
             <html>
             <head>
-                <title>ForeRent</title>
+                <title>${docTitle}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
                 <style>
                     @page { margin: 1in 0; }

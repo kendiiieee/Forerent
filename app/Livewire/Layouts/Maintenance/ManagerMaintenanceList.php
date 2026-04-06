@@ -7,11 +7,9 @@ use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Property;
-use App\Livewire\Concerns\WithNotifications;
 
 class ManagerMaintenanceList extends Component
 {
-    use WithNotifications;
     // Tabs are all/pending/ongoing/completed
     public $activeTab = 'all';
     public $activeRequestId = null;

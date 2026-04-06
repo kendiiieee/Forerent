@@ -208,6 +208,11 @@ class ManagerMaintenanceDetail extends Component
         $chargedLabel = $this->chargedTo === 'tenant' ? 'Tenant' : 'Owner';
 
         if ($this->editingCostId) {
+            // Get the old cost data before updating
+            $oldCost = DB::table('maintenance_logs')->where('log_id', $this->editingCostId)->first();
+            $oldAmount = $oldCost->cost ?? 0;
+            $oldChargedTo = $oldCost->charged_to ?? 'owner';
+
             DB::table('maintenance_logs')
                 ->where('log_id', $this->editingCostId)
                 ->update([
@@ -217,7 +222,20 @@ class ManagerMaintenanceDetail extends Component
                     'updated_at'      => now(),
                 ]);
 
-            $this->logActivity('cost_added', "Cost updated: PHP " . number_format($amount, 2) . " — {$this->costDescription} (Charged to: {$chargedLabel})");
+            // Sync billing if charge-to changed or amount changed
+            $ticketNum = $this->ticketIdDisplay;
+            if ($oldChargedTo === 'tenant' && $this->chargedTo === 'owner') {
+                // Was charged to tenant, now charged to owner — remove billing item
+                $this->removeTenantBillingItem($oldAmount, $oldCost->description ?? '');
+            } elseif ($oldChargedTo === 'owner' && $this->chargedTo === 'tenant') {
+                // Was owner, now tenant — create billing item
+                $this->chargeTenantBilling($amount, $this->costDescription);
+            } elseif ($oldChargedTo === 'tenant' && $this->chargedTo === 'tenant' && $oldAmount != $amount) {
+                // Still tenant but amount changed — update billing
+                $this->updateTenantBillingItem($oldAmount, $amount, $this->costDescription);
+            }
+
+            $this->logActivity('cost_updated', "Cost updated: PHP " . number_format($amount, 2) . " — {$this->costDescription} (Charged to: {$chargedLabel})");
             $this->notifySuccess('Cost Item Updated', "Cost entry has been updated.");
         } else {
             DB::table('maintenance_logs')->insert([
@@ -295,6 +313,70 @@ class ManagerMaintenanceDetail extends Component
     }
 
     /**
+     * Remove a billing item when cost is changed from tenant to owner.
+     */
+    private function removeTenantBillingItem(float $oldAmount, string $description): void
+    {
+        if (!$this->ticket) return;
+
+        $billing = Billing::where('lease_id', $this->ticket->lease_id)
+            ->whereIn('status', ['Unpaid', 'Partial'])
+            ->orderBy('billing_date', 'desc')
+            ->first();
+
+        if (!$billing) return;
+
+        $ticketNum = $this->ticketIdDisplay;
+        $item = BillingItem::where('billing_id', $billing->billing_id)
+            ->where('charge_type', 'maintenance')
+            ->where('amount', $oldAmount)
+            ->where('description', 'like', "%{$ticketNum}%")
+            ->first();
+
+        if ($item) {
+            $billing->update([
+                'amount' => max(0, $billing->amount - $item->amount),
+                'to_pay' => max(0, $billing->to_pay - $item->amount),
+            ]);
+            $item->delete();
+        }
+    }
+
+    /**
+     * Update a billing item when a tenant-charged cost amount changes.
+     */
+    private function updateTenantBillingItem(float $oldAmount, float $newAmount, string $description): void
+    {
+        if (!$this->ticket) return;
+
+        $billing = Billing::where('lease_id', $this->ticket->lease_id)
+            ->whereIn('status', ['Unpaid', 'Partial'])
+            ->orderBy('billing_date', 'desc')
+            ->first();
+
+        if (!$billing) return;
+
+        $ticketNum = $this->ticketIdDisplay;
+        $item = BillingItem::where('billing_id', $billing->billing_id)
+            ->where('charge_type', 'maintenance')
+            ->where('amount', $oldAmount)
+            ->where('description', 'like', "%{$ticketNum}%")
+            ->first();
+
+        if ($item) {
+            $diff = $newAmount - $oldAmount;
+            $item->update([
+                'amount'      => $newAmount,
+                'description' => "Maintenance ({$ticketNum}): {$description}",
+            ]);
+            $billing->update([
+                'amount' => max(0, $billing->amount + $diff),
+                'to_pay' => max(0, $billing->to_pay + $diff),
+            ]);
+        }
+    }
+
+    /**
      * Remove a cost item.
      */
     public function removeCostItem($logId)
@@ -360,6 +442,23 @@ class ManagerMaintenanceDetail extends Component
             abort(403, 'Unauthorized action.');
         }
 
+        // Require Manage Request fields to be filled before marking as Ongoing
+        $missingFields = [];
+        if (empty($this->ticket->assigned_to) && empty($this->assignedTo)) {
+            $missingFields[] = 'Assigned Worker/Vendor';
+        }
+        if (empty($this->ticket->expected_completion_date) && empty($this->expectedCompletionDate)) {
+            $missingFields[] = 'Expected Completion Date';
+        }
+
+        if (!empty($missingFields)) {
+            $this->dispatch('close-modal', 'confirm-mark-ongoing');
+            $this->successMessage = '';
+            $this->addError('manageRequest', 'Please fill out the following before marking as Ongoing: ' . implode(', ', $missingFields));
+            $this->dispatch('scroll-to-manage-request');
+            return;
+        }
+
         DB::table('maintenance_requests')
             ->where('request_id', $this->ticket->request_id)
             ->update([
@@ -394,6 +493,14 @@ class ManagerMaintenanceDetail extends Component
     {
         if (!$this->authorizeManagerForTicket()) {
             abort(403, 'Unauthorized action.');
+        }
+
+        // Require at least one cost item before marking as completed
+        if (empty($this->costItems)) {
+            $this->dispatch('close-modal', 'confirm-mark-completed');
+            $this->addError('costRequired', 'Please add at least one cost entry before marking as completed.');
+            $this->dispatch('scroll-to-cost-section');
+            return;
         }
 
         DB::table('maintenance_requests')
@@ -552,14 +659,27 @@ class ManagerMaintenanceDetail extends Component
 
         if ($this->assignedTo !== $oldWorker) {
             $this->logActivity('worker_assigned', "Assigned to: {$this->assignedTo} (was: {$oldWorker})");
+            $ticketNum = $this->ticketIdDisplay;
+            $this->notifyTenant(
+                'Worker Assigned',
+                "A worker/vendor ({$this->assignedTo}) has been assigned to your request ({$ticketNum})."
+            );
         }
 
         if ($this->expectedCompletionDate !== $oldDate) {
             $this->logActivity('eta_updated', "Expected completion date set to: {$this->expectedCompletionDate}");
+            $ticketNum = $this->ticketIdDisplay;
+            $formattedDate = \Carbon\Carbon::parse($this->expectedCompletionDate)->format('M d, Y');
+            $this->notifyTenant(
+                'Completion Date Updated',
+                "Your maintenance request ({$ticketNum}) is expected to be completed by {$formattedDate}."
+            );
         }
 
         $this->ticket = DB::table('maintenance_requests')->where('request_id', $this->ticket->request_id)->first();
-        $this->successMessage = 'Manage request details updated.';
+        $this->loadActivities();
+        $this->dispatch('manage-request-saved');
+        $this->notifySuccess('Details Updated', 'Manage request details have been saved.');
     }
 
     public function saveAssignedTo()

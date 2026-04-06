@@ -45,6 +45,7 @@
     {{-- Modals --}}
     <livewire:layouts.properties.add-property-modal modal-id="property-dashboard" />
     <livewire:layouts.units.add-unit-modal modal-id="property-dashboard" />
+    <livewire:layouts.units.landlord-contract-viewer />
 
     @push('scripts')
     <script>

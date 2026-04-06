@@ -75,6 +75,10 @@ class TenantDashboardOverview extends Component
     public $ongoingMaintenanceCount = 0;
     public $recentRequests = [];
 
+    // Violations
+    public $violations = [];
+    public $violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
+
     // Contract & E-Signature
     public $showSignatureModal = false;
     public $tenantSignature = null;
@@ -156,6 +160,7 @@ class TenantDashboardOverview extends Component
             $this->loadLeaseData();
             $this->loadMoveData();
             $this->loadMaintenanceData();
+            $this->loadViolationData();
             $this->loadContractData();
             $this->loadItemsReceived();
             $this->loadItemsReturned();
@@ -322,6 +327,73 @@ class TenantDashboardOverview extends Component
             ->orderBy('created_at', 'desc')
             ->take(3)
             ->get();
+    }
+
+    protected function loadViolationData()
+    {
+        $leaseIds = Auth::user()->leases()->pluck('lease_id');
+
+        $this->violations = DB::table('violations')
+            ->whereIn('lease_id', $leaseIds)
+            ->whereNull('deleted_at')
+            ->orderBy('offense_number', 'asc')
+            ->get()
+            ->map(fn($v) => (array) $v)
+            ->toArray();
+
+        $statusCounts = collect($this->violations)->groupBy('status')->map->count();
+        $this->violationCounts = [
+            'total' => count($this->violations),
+            'issued' => $statusCounts->get('Issued', 0),
+            'acknowledged' => $statusCounts->get('Acknowledged', 0),
+            'resolved' => $statusCounts->get('Resolved', 0),
+        ];
+    }
+
+    public function acknowledgeViolation(int $violationId): void
+    {
+        $tenantLeaseIds = DB::table('leases')
+            ->where('tenant_id', Auth::id())
+            ->pluck('lease_id');
+
+        $violation = DB::table('violations')
+            ->where('violation_id', $violationId)
+            ->whereIn('lease_id', $tenantLeaseIds)
+            ->where('status', 'Issued')
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (!$violation) return;
+
+        DB::table('violations')
+            ->where('violation_id', $violationId)
+            ->update([
+                'status' => 'Acknowledged',
+                'tenant_acknowledged_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        // Notify manager
+        $unit = DB::table('leases')
+            ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
+            ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+            ->where('leases.lease_id', $violation->lease_id)
+            ->select('units.manager_id')
+            ->first();
+
+        if ($unit && $unit->manager_id) {
+            $user = Auth::user();
+            Notification::create([
+                'user_id' => $unit->manager_id,
+                'type' => 'violation_acknowledged',
+                'title' => 'Violation Acknowledged',
+                'message' => "{$user->first_name} {$user->last_name} has acknowledged violation {$violation->violation_number}.",
+                'link' => route('manager.tenant'),
+            ]);
+        }
+
+        $this->loadViolationData();
+        $this->dispatch('notify', type: 'success', title: 'Violation Acknowledged', description: 'You have acknowledged this violation notice.');
     }
 
     public function refreshContractData()
@@ -654,13 +726,16 @@ class TenantDashboardOverview extends Component
 
         $this->itemsReceived[$index]['tenant_confirmed'] = true;
 
-        // Update in database
         MoveInInspection::where('lease_id', $this->lease->lease_id)
             ->where('type', 'item_received')
             ->where('item_name', $this->itemsReceived[$index]['item_name'])
             ->update(['tenant_confirmed' => true]);
 
-        // Check if all confirmed
+        ContractAuditLog::log($this->lease->lease_id, 'item_confirmed', [
+            'field_changed' => $this->itemsReceived[$index]['item_name'],
+            'metadata' => ['type' => 'move_in_item'],
+        ]);
+
         $this->itemsConfirmedByTenant = collect($this->itemsReceived)
             ->every(fn($item) => $item['tenant_confirmed']);
     }
@@ -675,6 +750,23 @@ class TenantDashboardOverview extends Component
             $item['tenant_confirmed'] = true;
         }
         $this->itemsConfirmedByTenant = true;
+
+        ContractAuditLog::log($this->lease->lease_id, 'all_items_confirmed', [
+            'metadata' => ['type' => 'move_in_items', 'count' => count($this->itemsReceived)],
+        ]);
+
+        // Notify manager
+        $managerId = $this->findManagerIdForLease($this->lease);
+        if ($managerId) {
+            $user = Auth::user();
+            Notification::create([
+                'user_id' => $managerId,
+                'type' => 'items_confirmed',
+                'title' => 'Items Received Confirmed',
+                'message' => $user->first_name . ' ' . $user->last_name . ' has confirmed all move-in items received.',
+                'link' => '/manager/tenant',
+            ]);
+        }
     }
 
     // ===== MOVE-OUT ITEMS RETURNED =====
@@ -734,6 +826,11 @@ class TenantDashboardOverview extends Component
             ->where('item_name', $this->itemsReturned[$index]['item_name'])
             ->update(['tenant_confirmed' => true]);
 
+        ContractAuditLog::log($this->lease->lease_id, 'item_confirmed', [
+            'field_changed' => $this->itemsReturned[$index]['item_name'],
+            'metadata' => ['type' => 'move_out_item'],
+        ]);
+
         $this->itemsReturnedConfirmedByTenant = collect($this->itemsReturned)
             ->every(fn($item) => $item['tenant_confirmed']);
     }
@@ -748,6 +845,23 @@ class TenantDashboardOverview extends Component
             $item['tenant_confirmed'] = true;
         }
         $this->itemsReturnedConfirmedByTenant = true;
+
+        ContractAuditLog::log($this->lease->lease_id, 'all_items_confirmed', [
+            'metadata' => ['type' => 'move_out_items', 'count' => count($this->itemsReturned)],
+        ]);
+
+        // Notify manager that tenant confirmed all returned items
+        $managerId = $this->findManagerIdForLease($this->lease);
+        if ($managerId) {
+            $user = Auth::user();
+            Notification::create([
+                'user_id' => $managerId,
+                'type' => 'items_confirmed',
+                'title' => 'Returned Items Confirmed',
+                'message' => $user->first_name . ' ' . $user->last_name . ' has confirmed all move-out items returned.',
+                'link' => '/manager/tenant',
+            ]);
+        }
     }
 
     public function toggleMoveOutContract(): void
@@ -776,6 +890,10 @@ class TenantDashboardOverview extends Component
 
         // Notify the manager that the tenant signed the move-out contract
         $this->notifyManagerOfSign($this->lease, 'move-out');
+
+        // Reload contract data so outstanding balances / deposit refund are fresh
+        $this->lease->refresh();
+        $this->loadContractData();
 
         $this->closeMoveOutSignatureModal();
         $this->dispatch('moveout-signature-saved');
@@ -873,7 +991,7 @@ class TenantDashboardOverview extends Component
 
         return Storage::disk('public')->download(
             $this->lease->signed_contract_path,
-            'Move-In-Contract-' . Auth::user()->last_name . '.pdf'
+            'Move-In-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf'
         );
     }
 
@@ -883,7 +1001,7 @@ class TenantDashboardOverview extends Component
 
         return Storage::disk('public')->download(
             $this->lease->moveout_signed_contract_path,
-            'Move-Out-Contract-' . Auth::user()->last_name . '.pdf'
+            'Move-Out-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf'
         );
     }
 

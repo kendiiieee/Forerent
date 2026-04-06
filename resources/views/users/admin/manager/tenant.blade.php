@@ -5,6 +5,8 @@
 
 @section('content')
 
+    @include('livewire.layouts.dashboard.admingreeting')
+
     {{-- Tenant Navigation (tabs, search, sort, list, detail) --}}
     <div class="mt-6">
         <livewire:layouts.tenants.tenant-navigation />

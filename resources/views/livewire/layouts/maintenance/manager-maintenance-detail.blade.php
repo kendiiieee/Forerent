@@ -237,8 +237,27 @@
                 @php
                     $allFieldsFilled = $ticket->assigned_to && $ticket->expected_completion_date && $ticket->urgency;
                     $isEditable = in_array($ticket->status, ['Pending', 'Ongoing']);
+                    $hasTrackingData = $ticket->assigned_to || $ticket->expected_completion_date;
                 @endphp
-                <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow" x-data="{ editing: {{ $allFieldsFilled ? 'false' : 'true' }} }">
+
+                {{-- Hide entirely for completed tickets with no tracking data --}}
+                @if($isEditable || $hasTrackingData)
+                <div id="manage-request-section"
+                    class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow"
+                    x-data="{ editing: {{ $allFieldsFilled ? 'false' : 'true' }} }"
+                    x-on:scroll-to-manage-request.window="$nextTick(() => { $el.scrollIntoView({ behavior: 'smooth', block: 'center' }); editing = true; })"
+                    x-on:manage-request-saved.window="editing = false"
+                >
+                    {{-- Validation error --}}
+                    @error('manageRequest')
+                        <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
+                            {{ $message }}
+                        </div>
+                    @enderror
+
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2.5">
                             <div class="w-8 h-8 rounded-xl bg-[#EEF2FF] flex items-center justify-center">
@@ -320,11 +339,25 @@
                         </div>
                     @endif
                 </div>
+                @endif
 
                 {{-- ══════════════════════════════════════════════════════════ --}}
                 {{-- ── MAINTENANCE COSTS ── --}}
                 {{-- ══════════════════════════════════════════════════════════ --}}
-                <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div id="cost-section"
+                    class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow"
+                    x-on:scroll-to-cost-section.window="$nextTick(() => $el.scrollIntoView({ behavior: 'smooth', block: 'center' }))"
+                >
+                    {{-- Cost validation error --}}
+                    @error('costRequired')
+                        <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
+                            {{ $message }}
+                        </div>
+                    @enderror
+
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2.5">
                             <div class="w-8 h-8 rounded-xl bg-[#EEF2FF] flex items-center justify-center">

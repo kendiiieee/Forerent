@@ -13,6 +13,7 @@
 @endphp
 
 <div
+    wire:key="sort-tab-{{ $activeTab }}"
     x-data="{
         activeIndex: {{ $activeIndex }},
         left: 0,

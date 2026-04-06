@@ -111,6 +111,11 @@ class Lease extends Model
         return $this->hasMany(ContractAuditLog::class, 'lease_id', 'lease_id');
     }
 
+    public function violations()
+    {
+        return $this->hasMany(Violation::class, 'lease_id', 'lease_id');
+    }
+
     /**
      * Calculate the deposit refund at move-out.
      *

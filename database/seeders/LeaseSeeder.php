@@ -32,7 +32,7 @@ class LeaseSeeder extends Seeder
         $tenantCycle = 0;
         $assignedTenantIds = collect();
 
-        foreach ($bedsToOccupy as $bed) {
+        foreach ($bedPool as $bed) {
             $tenant = $this->pickTenantForBed($bed->unit->occupants, $tenants, $maleTenants, $femaleTenants, $tenantCycle, $assignedTenantIds);
             if (!$tenant) {
                 continue;
@@ -42,18 +42,42 @@ class LeaseSeeder extends Seeder
 
             $unitPrice = (float) $bed->unit->price;
 
-            // Build a chain of leases starting from a random date in 2021 up to today
             $this->createLeaseChain($tenant->user_id, $bed, $unitPrice);
 
             $bed->update(['status' => 'Occupied']);
         }
     }
 
-    private function pickTenantForBed(string $occupantsType, $allTenants, $maleTenants, $femaleTenants, int &$tenantCycle, $assignedTenantIds)
+    private function pickTenantForBed(string $occupantsType, $allTenants, $maleTenants, $femaleTenants, int &$tenantCycle, $assignedTenantIds): ?User
+    {
+        // Pick from the gender-appropriate pool
+        $pool = match ($occupantsType) {
+            'Male'   => $maleTenants,
+            'Female' => $femaleTenants,
+            default  => $allTenants,
+        };
+
+        $available = $pool->filter(fn($t) => !$assignedTenantIds->contains($t->user_id));
+
+        if ($available->isEmpty()) {
+            // Fallback to any tenant
+            $available = $allTenants->filter(fn($t) => !$assignedTenantIds->contains($t->user_id));
+        }
+
+        if ($available->isEmpty()) {
+            return null;
+        }
+
+        $tenant = $available->values()->get($tenantCycle % $available->count());
+        $tenantCycle++;
+
+        return $tenant;
+    }
+
+    private function createLeaseChain(int $tenantId, Bed $bed, float $unitPrice): void
     {
         $today = Carbon::today();
 
-        // Random start date between Jan 2021 and today
         $startDate = Carbon::create(2021, 1, 1)
             ->addDays($this->faker->numberBetween(0, Carbon::create(2021, 1, 1)->diffInDays($today)))
             ->startOfMonth();
@@ -68,7 +92,6 @@ class LeaseSeeder extends Seeder
             $isExpired = $endDate->lt($today);
             $status    = $isExpired ? 'Expired' : 'Active';
 
-            // Calculate short-term premium: $500 if term < 6 months, otherwise 0
             $shortTermPremium = $term < 6 ? 500 : 0;
 
             Lease::factory()->create([
@@ -84,47 +107,18 @@ class LeaseSeeder extends Seeder
                 'security_deposit'      => $unitPrice,
                 'auto_renew'            => $isExpired,
                 'short_term_premium'    => $shortTermPremium,
-                // Add other required fields with defaults if they're required in your database
-                'shift'                 => 'Morning', // or appropriate default
-                'monthly_due_date'      => 1, // or appropriate default (day of month)
-                'late_payment_penalty'  => 100,
+                'shift'                 => 'Morning',
+                'monthly_due_date'      => 1,
+                'late_payment_penalty'  => 1,
                 'reservation_fee_paid'  => 0,
                 'early_termination_fee' => 0,
             ]);
 
-            // If expired, renew — next lease starts exactly when the last one ended
             if ($isExpired) {
                 $startDate = $endDate->copy();
             } else {
-                // Active lease created, chain is complete
                 break;
             }
         }
-    }
-    /**
-     * Finds the index of the first bed in the pool that matches the tenant's gender occupancy.
-     * Falls back to any bed if no gender match is found.
-     */
-    private function findCompatibleBedIndex($bedPool, string $gender): ?int
-    {
-        // Try to find a gender-matching bed first
-        foreach ($bedPool as $index => $bed) {
-            $occupants = $bed->unit->occupants;
-            if ($occupants === $gender || $occupants === 'Any') {
-                return $index;
-            }
-        }
-
-        // Filter out already-assigned tenants
-        $available = $pool->filter(fn($t) => !$assignedTenantIds->contains($t->user_id));
-
-        if ($available->isEmpty()) {
-            return null;
-        }
-
-        $tenant = $available->first();
-        $tenantCycle++;
-
-        return $tenant;
     }
 }

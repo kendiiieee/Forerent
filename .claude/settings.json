@@ -93,7 +93,23 @@
       "Bash(find /e/reigne/Citispace-Forerent/routes -name \"*.php\" -exec grep -l \"moveout\\\\|move.out\\\\|MoveOut\" {} \\\\;)",
       "Bash(grep -n \"class ContractAuditLog\" /e/reigne/Citispace-Forerent/app/Models/*.php)",
       "Read(//e//**)",
-      "Read(//d//**)"
+      "Read(//d//**)",
+      "Bash(ln -s \"e:/reigne/Citispace-Forerent/storage/app/public\" \"e:/reigne/Citispace-Forerent/public/storage\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8000/storage/profile-photos/Bcvua58Vev74x4ENN76oIiN7S5VwGeZNNxJ4izcn.jpg\")",
+      "Bash(PGPASSWORD=root psql -h postgres -U root -d forerent -c \"SELECT user_id, first_name, last_name, profile_img FROM users WHERE role='manager';\")",
+      "Bash(PGPASSWORD=root psql -h localhost -U root -d forerent -c \"SELECT user_id, first_name, last_name, profile_img FROM users WHERE role='manager';\")",
+      "Bash(find /e/reigne/Citispace-Forerent/resources/views/livewire/layouts/financials -name \"*.blade.php\" -exec basename {} \\\\;)",
+      "Bash(php -l app/Livewire/Layouts/Units/UnitAccordion.php)",
+      "Bash(php -l app/Livewire/Layouts/Units/LandlordContractViewer.php)",
+      "Bash(ls \"C:/Users/yasuo/AppData/Local/Programs/php\"*/php.exe)",
+      "Bash(ls \"C:/php\"*/php.exe)",
+      "Bash(ls \"C:/wamp64/bin/php\"*/php.exe)",
+      "Bash(find \"e:\\\\reigne\\\\Citispace-Forerent/resources/views\" -type f -name \"*.blade.php\" -exec grep -l \"inspection\\\\|moveOut\\\\|itemsReceived\" {} \\\\;)",
+      "Bash(grep -i \"penalty_schedule\\\\|violation\" \"e:/reigne/Citispace-Forerent/database/migrations\"/*.php)",
+      "Bash(find \"e:/reigne/Citispace-Forerent\" -name \"*.php\" -type f -exec grep -l \"violation_fee\\\\|lease.*terminat\" {} \\\\;)",
+      "Bash(find \"e:/reigne/Citispace-Forerent\" -name \"*.php\" -type f -exec grep -l \"class.*Violation\\\\|class.*Infraction\\\\|class.*Incident\\\\|class.*Discipl\" {} \\\\;)",
+      "Bash(ls \"e:\\\\reigne\\\\Citispace-Forerent\"/docker*)",
+      "Bash(grep -n 'protected $fillable\\\\|public function\\\\|protected $casts' /e/reigne/Citispace-Forerent/app/Models/Lease.php)"
     ],
     "additionalDirectories": [
       "\\tmp"

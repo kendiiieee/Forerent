@@ -76,7 +76,7 @@ class UtilityBillSeeder extends Seeder
 
                 // Add electricity share to each tenant's billing
                 $this->addUtilityToTenantBillings(
-                    $activeLeases, $billingPeriod, 'electricity',
+                    $activeLeases, $currentMonth, 'electricity',
                     $electricityTotal, $electricityPerTenant, $activeTenantCount
                 );
 
@@ -97,7 +97,7 @@ class UtilityBillSeeder extends Seeder
 
                     // Add water share to each tenant's billing
                     $this->addUtilityToTenantBillings(
-                        $activeLeases, $billingPeriod, 'water',
+                        $activeLeases, $currentMonth, 'water',
                         $waterTotal, $waterPerTenant, $activeTenantCount
                     );
                 }

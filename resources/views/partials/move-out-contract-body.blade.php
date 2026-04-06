@@ -293,7 +293,11 @@
     <table class="w-full border border-gray-300 text-sm"><tbody>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 w-1/3 border-r bg-gray-50">Refund Method (GCash / Bank / Cash):</td><td class="p-2">{{ $t['move_out_details']['deposit_refund_method'] ?? '___________________________' }}</td></tr>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Account Name or Number:</td><td class="p-2">{{ $t['move_out_details']['deposit_refund_account'] ?? '___________________________' }}</td></tr>
-        <tr><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Expected Refund Date (within 30 days of clearance):</td><td class="p-2">___________________________</td></tr>
+        @php
+            $moveOutDate = $t['move_out_details']['move_out_date'] ?? null;
+            $expectedRefund = $moveOutDate ? \Carbon\Carbon::parse($moveOutDate)->addDays(30)->format('F d, Y') : null;
+        @endphp
+        <tr><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Expected Refund Date (within 30 days of clearance):</td><td class="p-2">{{ $expectedRefund ?? 'To be determined upon move-out completion' }}</td></tr>
     </tbody></table>
 </div>
 

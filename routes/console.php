@@ -326,6 +326,7 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
         ->where('auto_renew', false)
         ->whereDate('end_date', '<', $today)
         ->whereNull('move_out_initiated_at')
+        ->whereNull('move_out')
         ->get();
 
     foreach ($expiredLeases as $lease) {
@@ -593,6 +594,217 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
 
     return 0;
 })->purpose('Test: Simulate Tricia\'s full move-in flow');
+
+/*
+|--------------------------------------------------------------------------
+| test:tricia-move-out
+|--------------------------------------------------------------------------
+| Simulates the full move-out flow for Tricia Tenant.
+| Requires Tricia to have an active, fully-signed lease (run test:tricia-move-in first).
+| Walks through: initiate → inspection → items returned → sign → finalize.
+| Run: php artisan test:tricia-move-out
+*/
+Artisan::command('test:tricia-move-out', function () {
+    $this->newLine();
+    $this->info('========================================');
+    $this->info('  TRICIA\'S MOVE-OUT FLOW TEST');
+    $this->info('========================================');
+
+    // STEP 1: Find Tricia + active lease
+    $this->newLine();
+    $this->comment('--- STEP 1: Find Tenant & Active Lease ---');
+
+    $tricia = \App\Models\User::where('email', 'tenant@example.com')->first();
+    if (!$tricia) {
+        $this->error('  Tricia not found! Run test:tricia-move-in first.');
+        return 1;
+    }
+    $this->line("  [FOUND] {$tricia->first_name} {$tricia->last_name} (user_id: {$tricia->user_id})");
+
+    $lease = \App\Models\Lease::where('tenant_id', $tricia->user_id)
+        ->where('status', 'Active')
+        ->with(['bed.unit.property', 'moveInInspections', 'billings'])
+        ->latest()
+        ->first();
+
+    if (!$lease) {
+        $this->error('  No active lease found! Run test:tricia-move-in first.');
+        return 1;
+    }
+    $this->line("  [FOUND] Lease #{$lease->lease_id} | Bed #{$lease->bed_id} | Contract: {$lease->contract_status}");
+
+    // Settle all unpaid billings so the prerequisite passes
+    $unpaid = $lease->billings()->whereIn('status', ['Unpaid', 'Overdue'])->get();
+    foreach ($unpaid as $billing) {
+        $billing->update(['status' => 'Paid']);
+    }
+    if ($unpaid->count() > 0) {
+        $this->line("  [SETTLED] {$unpaid->count()} billing(s) marked as Paid");
+    }
+
+    // STEP 2: Initiate move-out
+    $this->newLine();
+    $this->comment('--- STEP 2: Initiate Move-Out ---');
+
+    $lease->update([
+        'move_out_initiated_at' => now(),
+        'forwarding_address' => '456 New Address, Makati City',
+        'reason_for_vacating' => 'End of lease term (contract expired)',
+        'deposit_refund_method' => 'GCash',
+        'deposit_refund_account' => '0917-123-4567',
+    ]);
+
+    \App\Models\ContractAuditLog::log($lease->lease_id, 'move_out_initiated', [
+        'metadata' => ['reason' => 'End of lease term (contract expired)', 'source' => 'test_command'],
+    ]);
+
+    $this->line('  [OK] move_out_initiated_at = ' . now()->format('Y-m-d H:i'));
+    $this->line('  [OK] Forwarding: 456 New Address, Makati City');
+    $this->line('  [OK] Refund: GCash → 0917-123-4567');
+
+    // STEP 3: Move-out room inspection
+    $this->newLine();
+    $this->comment('--- STEP 3: Move-Out Room Inspection ---');
+
+    $checklistItems = \App\Livewire\Concerns\InspectionConfig::CHECKLIST_ITEMS;
+    $conditions = ['good', 'good', 'good', 'good', 'good', 'good', 'damaged', 'good', 'good'];
+    $repairCosts = [null, null, null, null, null, null, 500.00, null, null]; // Walls damaged = ₱500
+
+    foreach ($checklistItems as $i => $item) {
+        \App\Models\MoveOutInspection::updateOrCreate(
+            ['lease_id' => $lease->lease_id, 'type' => 'checklist', 'item_name' => $item],
+            [
+                'condition' => $conditions[$i],
+                'remarks' => $conditions[$i] === 'damaged' ? 'Scuff marks and small holes' : null,
+                'repair_cost' => $repairCosts[$i],
+            ]
+        );
+    }
+    $this->line('  [OK] ' . count($checklistItems) . ' checklist items recorded');
+    $this->line('  [!] "Walls (stains, cracks, holes)" marked DAMAGED — repair cost: PHP 500');
+
+    // STEP 4: Items returned
+    $this->newLine();
+    $this->comment('--- STEP 4: Items Returned ---');
+
+    $returnItems = \App\Livewire\Concerns\InspectionConfig::RETURNED_ITEMS;
+    $returnStatus = [true, true, true, false]; // Cabinet Key NOT returned
+    $replacementCosts = [null, null, null, 150.00]; // Cabinet Key = ₱150
+
+    foreach ($returnItems as $i => $item) {
+        \App\Models\MoveOutInspection::updateOrCreate(
+            ['lease_id' => $lease->lease_id, 'type' => 'item_returned', 'item_name' => $item],
+            [
+                'quantity' => 1,
+                'remarks' => $returnStatus[$i] ? 'Good condition' : 'Not returned',
+                'is_returned' => $returnStatus[$i],
+                'tenant_confirmed' => $returnStatus[$i],
+                'replacement_cost' => $replacementCosts[$i],
+            ]
+        );
+    }
+    $this->line('  [OK] ' . count($returnItems) . ' items processed');
+    $this->line('  [!] "Cabinet Key" NOT returned — replacement cost: PHP 150');
+
+    // STEP 5: Sign move-out contract (both parties)
+    $this->newLine();
+    $this->comment('--- STEP 5: Move-Out Contract Signing ---');
+
+    $lease->update([
+        'moveout_owner_signature' => 'signatures/test_moveout_owner.png',
+        'moveout_owner_signed_at' => now(),
+        'moveout_owner_signed_ip' => '127.0.0.1',
+        'moveout_contract_status' => 'pending_tenant',
+    ]);
+    $this->line('  [OK] Owner signed → pending_tenant');
+
+    $lease->update([
+        'moveout_tenant_signature' => 'signatures/test_moveout_tenant.png',
+        'moveout_tenant_signed_at' => now(),
+        'moveout_tenant_signed_ip' => '127.0.0.1',
+        'moveout_contract_agreed' => true,
+        'moveout_contract_status' => 'executed',
+    ]);
+    $this->line('  [OK] Tenant signed → executed (both signed)');
+
+    // STEP 6: Calculate deposit refund (preview — not finalized yet)
+    $this->newLine();
+    $this->comment('--- STEP 6: Deposit Refund Preview ---');
+
+    $refundData = $lease->calculateDepositRefund($lease->end_date);
+    $this->line("  Deposit:         PHP " . number_format($refundData['deposit'], 2));
+    foreach ($refundData['deductions'] as $d) {
+        $this->line("  (-) {$d['label']}: PHP " . number_format($d['amount'], 2));
+    }
+    $this->line("  Total Deductions: PHP " . number_format($refundData['total_deductions'], 2));
+    $this->info("  NET REFUND:       PHP " . number_format($refundData['refund_amount'], 2));
+
+    // STEP 7: Finalize move-out
+    $this->newLine();
+    $this->comment('--- STEP 7: Finalize Move-Out ---');
+
+    $originalEndDate = $lease->end_date;
+    $today = Carbon::today();
+
+    $lease->update([
+        'status' => 'Expired',
+        'move_out' => $today,
+        'end_date' => $today,
+    ]);
+
+    $refundData = $lease->calculateDepositRefund($originalEndDate);
+    $lease->update([
+        'deposit_refund_amount' => $refundData['refund_amount'],
+        'deposit_deductions' => $refundData['deductions'],
+    ]);
+
+    \App\Models\Bed::where('bed_id', $lease->bed_id)->update(['status' => 'Vacant']);
+
+    \App\Models\ContractAuditLog::log($lease->lease_id, 'move_out_completed', [
+        'metadata' => [
+            'deposit_refund' => $refundData['refund_amount'],
+            'total_deductions' => $refundData['total_deductions'],
+            'original_end_date' => $originalEndDate?->format('Y-m-d'),
+            'source' => 'test_command',
+        ],
+    ]);
+
+    $this->line('  [OK] Lease → Expired');
+    $this->line('  [OK] Bed → Vacant');
+    $this->line('  [OK] Deposit refund calculated & saved');
+
+    // SUMMARY
+    $lease->refresh();
+
+    $this->newLine();
+    $this->info('========================================');
+    $this->info('  MOVE-OUT COMPLETE');
+    $this->info('========================================');
+    $this->line("  Tenant:     {$tricia->first_name} {$tricia->last_name}");
+    $this->line("  Lease:      #{$lease->lease_id} → {$lease->status}");
+    $this->line("  Bed:        #{$lease->bed_id} → " . \App\Models\Bed::find($lease->bed_id)->status);
+    $this->line("  Move-Out:   {$lease->move_out}");
+    $this->line("  Initiated:  {$lease->move_out_initiated_at}");
+    $this->line("  Reason:     {$lease->reason_for_vacating}");
+    $this->line("  Forwarding: {$lease->forwarding_address}");
+    $this->line("  Refund:     PHP " . number_format($lease->deposit_refund_amount, 2) . " via {$lease->deposit_refund_method}");
+    $this->line("  Contract:   moveout_contract_status = {$lease->moveout_contract_status}");
+    $this->line("  Signed:     Owner=" . ($lease->moveout_owner_signed_at ? 'Yes' : 'No') . " | Tenant=" . ($lease->moveout_tenant_signed_at ? 'Yes' : 'No'));
+
+    $deductions = $lease->deposit_deductions ?? [];
+    if (!empty($deductions)) {
+        $this->line("  Deductions:");
+        foreach ($deductions as $d) {
+            $this->line("    - {$d['label']}: PHP " . number_format($d['amount'], 2));
+        }
+    }
+
+    $this->newLine();
+    $this->info('  Flow complete. You can view the expired lease in the dashboard.');
+    $this->newLine();
+
+    return 0;
+})->purpose('Test: Simulate Tricia\'s full move-out flow');
 
 // Schedule: run daily at midnight
 Schedule::command('billings:apply-late-fees')->daily();

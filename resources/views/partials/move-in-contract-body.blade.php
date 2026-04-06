@@ -49,6 +49,7 @@
         'Observe quiet hours from 10:00 PM to 6:00 AM.',
         'No unauthorized room transfers, subletting, or sharing of assigned bed with another person.',
         'No tampering with air conditioning units, electrical systems, or building infrastructure.',
+        'No unauthorized repairs, modifications, or do-it-yourself (DIY) maintenance. All maintenance concerns must be reported to the dormitory administration for proper handling.',
         'Report all maintenance issues to the dormitory administration promptly.',
         'Keep personal area and all shared spaces clean and orderly.',
         'Follow proper garbage disposal and recycling procedures.',

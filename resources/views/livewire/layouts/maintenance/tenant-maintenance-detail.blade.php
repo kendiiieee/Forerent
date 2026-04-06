@@ -439,6 +439,43 @@
                             @error('editDescription') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                         </div>
 
+                        {{-- Photos --}}
+                        <div>
+                            <label class="text-[10px] uppercase font-bold tracking-wide text-gray-400 mb-1.5 block">
+                                Photos <span class="font-normal">(up to 3 total)</span>
+                            </label>
+
+                            @php $totalPhotos = count($existingPhotos) + count($newPhotos); @endphp
+
+                            {{-- Existing photos --}}
+                            @if(!empty($existingPhotos))
+                                <div class="grid grid-cols-3 gap-2 mb-2">
+                                    @foreach($existingPhotos as $i => $path)
+                                        <div class="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-50">
+                                            <img src="{{ asset('storage/' . $path) }}" class="w-full h-full object-cover">
+                                            <button type="button" wire:click="removeExistingPhoto({{ $i }})"
+                                                class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            {{-- New photo upload --}}
+                            @if($totalPhotos < 3)
+                                <div class="relative border-2 border-dashed border-[#2672EC]/40 rounded-xl p-4 bg-[#F0F5FF] text-center hover:bg-[#E6EEFF] transition-colors cursor-pointer">
+                                    <input type="file" wire:model="newPhotos" accept="image/*" multiple
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <p class="text-xs text-[#2672EC] font-semibold pointer-events-none">
+                                        Click to add photos ({{ 3 - $totalPhotos }} remaining)
+                                    </p>
+                                </div>
+                            @endif
+
+                            @error('newPhotos.*') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
                         <div class="flex justify-end gap-2">
                             <button wire:click="cancelEditing" class="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                                 Cancel
@@ -493,7 +530,53 @@
                     </div>
                 @endif
 
-                {{-- Updates Timeline --}}
+                {{-- Maintenance Costs (read-only for tenant) --}}
+                @if(!empty($costItems))
+                    <div>
+                        <h3 class="text-sm font-bold text-[#070642] mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 rounded-full" style="background-color: #10b981;"></span>
+                            Maintenance Costs
+                        </h3>
+
+                        {{-- Total --}}
+                        <div class="relative overflow-hidden rounded-2xl p-4 text-white shadow-sm mb-3" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <div class="absolute top-0 right-0 w-16 h-16 rounded-full" style="background: rgba(255,255,255,0.1); transform: translate(16px, -16px);"></div>
+                            <p class="text-[10px] uppercase font-bold tracking-wider mb-1" style="color: #d1fae5;">Total Cost</p>
+                            <p class="text-2xl font-extrabold tracking-tight">
+                                @php
+                                    $formatted = number_format($costTotal, 2);
+                                    $parts = explode('.', $formatted);
+                                @endphp
+                                <span class="text-base font-bold mr-0.5" style="color: #a7f3d0;">PHP</span>{{ $parts[0] }}<span class="text-base" style="color: #a7f3d0;">.{{ $parts[1] }}</span>
+                            </p>
+                            <p class="text-[10px] mt-1.5" style="color: #a7f3d0;">
+                                {{ count($costItems) }} {{ count($costItems) === 1 ? 'item' : 'items' }} logged
+                            </p>
+                        </div>
+
+                        {{-- Cost items list --}}
+                        <div class="space-y-2">
+                            @foreach($costItems as $ci)
+                                <div class="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm text-gray-700 font-medium">{{ $ci['description'] ?? 'Maintenance cost' }}</p>
+                                        <p class="text-[10px] text-gray-400 mt-0.5">
+                                            {{ \Carbon\Carbon::parse($ci['created_at'])->format('M d, Y') }}
+                                            @if(!empty($ci['charged_to']) && $ci['charged_to'] === 'tenant')
+                                                <span class="ml-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[9px] font-bold">Charged to you</span>
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <p class="text-sm font-bold text-[#070642] flex-shrink-0 ml-3 font-mono">
+                                        PHP {{ number_format($ci['cost'], 2) }}
+                                    </p>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Updates Timeline (real activity log) --}}
                 <div>
                     <h3 class="text-sm font-bold text-[#070642] mb-4 flex items-center gap-2">
                         <span class="w-1 h-4 bg-[#2B66F5] rounded-full"></span>
@@ -501,34 +584,32 @@
                     </h3>
                     <div class="pl-2">
 
-                        @if(in_array($ticket->status, ['Completed', 'Resolved']))
-                            <div class="flex gap-4 relative pb-6">
-                                <div class="absolute left-[9px] top-6 bottom-0 w-[2px] bg-gray-200"></div>
-                                <div class="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 border-2 border-white shadow z-10 mt-0.5"></div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-[#070642] text-sm">Issue resolved</p>
-                                    <p class="text-xs text-gray-400 mb-2">{{ \Carbon\Carbon::parse($ticket->updated_at)->format('M d, h:i A') }}</p>
-                                    <div class="bg-white border border-green-100 shadow-sm p-3 rounded-xl text-sm text-gray-600">
-                                        Your maintenance request has been resolved.
+                        @if(!empty($activities))
+                            @foreach($activities as $act)
+                                @php
+                                    $dotColor = match($act['action']) {
+                                        'status_changed' => in_array($ticket->status, ['Completed', 'Resolved']) && $loop->first ? 'bg-green-500' : 'bg-[#2B66F5]',
+                                        'cost_added', 'cost_removed' => 'bg-emerald-500',
+                                        'urgency_changed' => 'bg-red-400',
+                                        'worker_assigned' => 'bg-indigo-500',
+                                        'eta_updated' => 'bg-purple-500',
+                                        default => 'bg-gray-400'
+                                    };
+                                @endphp
+                                <div class="flex gap-4 relative pb-6">
+                                    @if(!$loop->last)
+                                        <div class="absolute left-[9px] top-6 bottom-0 w-[2px] bg-gray-200"></div>
+                                    @endif
+                                    <div class="flex-shrink-0 w-5 h-5 rounded-full {{ $dotColor }} border-2 border-white shadow z-10 mt-0.5"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm text-gray-700">{{ $act['details'] }}</p>
+                                        <p class="text-xs text-gray-400 mt-0.5">{{ \Carbon\Carbon::parse($act['created_at'])->format('M d, h:i A') }}</p>
                                     </div>
                                 </div>
-                            </div>
+                            @endforeach
                         @endif
 
-                        @if(in_array($ticket->status, ['Ongoing', 'In Progress', 'Completed', 'Resolved']))
-                            <div class="flex gap-4 relative pb-6">
-                                <div class="absolute left-[9px] top-6 bottom-0 w-[2px] bg-gray-200"></div>
-                                <div class="flex-shrink-0 w-5 h-5 rounded-full bg-[#2B66F5] border-2 border-white shadow z-10 mt-0.5"></div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-[#070642] text-sm">Technician assigned</p>
-                                    <p class="text-xs text-gray-400 mb-2">{{ \Carbon\Carbon::parse($ticket->updated_at)->format('M d, h:i A') }}</p>
-                                    <div class="bg-white border border-gray-100 shadow-sm p-3 rounded-xl text-sm text-gray-600">
-                                        A technician has been dispatched to check the issue.
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
+                        {{-- Always show "Request received" at the bottom --}}
                         <div class="flex gap-4 relative">
                             <div class="flex-shrink-0 w-5 h-5 rounded-full bg-gray-300 border-2 border-white shadow z-10 mt-0.5"></div>
                             <div class="flex-1 min-w-0">

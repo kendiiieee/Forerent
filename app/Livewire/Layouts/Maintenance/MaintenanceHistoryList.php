@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Maintenance;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -11,7 +12,8 @@ class MaintenanceHistoryList extends Component
     public $filter = 'all';
     public $activeHistoryId = null;
 
-    protected $listeners = ['refreshDashboard' => '$refresh'];
+    #[On('refreshDashboard')]
+    public function refreshDashboard() {}
 
     public function render()
     {
@@ -23,6 +25,7 @@ class MaintenanceHistoryList extends Component
             ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
             ->join('units', 'beds.unit_id', '=', 'units.unit_id')
             ->join('users', 'leases.tenant_id', '=', 'users.user_id')
+            ->whereNull('maintenance_requests.deleted_at')
             ->select(
                 'maintenance_requests.request_id',
                 'maintenance_requests.status',

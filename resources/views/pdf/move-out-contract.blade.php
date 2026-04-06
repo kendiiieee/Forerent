@@ -305,7 +305,11 @@
     $moveInChecklist = $moveInChecklist ?? [];
     $moveOutChecklist = $moveOutChecklist ?? [];
     $itemsReturned = $itemsReturned ?? [];
+    $outstandingBalances = $outstandingBalances ?? [];
+    $depositRefund = $depositRefund ?? [];
     $deposit = $tenant['move_in_details']['security_deposit'] ?? 0;
+    $checklistItemNames = \App\Livewire\Concerns\InspectionConfig::CHECKLIST_ITEMS;
+    $returnItemNames = \App\Livewire\Concerns\InspectionConfig::RETURNED_ITEMS;
 @endphp
 
 {{-- ═══════════════════════════════════════ PAGE 1 ═══════════════════════════════════════ --}}
@@ -413,37 +417,32 @@
             <th>Move-In</th>
             <th>Move-Out</th>
             <th>Damage?</th>
+            <th style="text-align:right;">Repair Cost</th>
         </tr>
         </thead>
         <tbody>
-        @php
-            $checklistItems = [
-                'Bed Frame & Mattress / Foam',
-                'Cabinet / Wardrobe (doors & locks)',
-                'Air Conditioning Unit & Remote',
-                'Bathroom Fixtures (shower, toilet, faucet, heater)',
-                'Electrical Outlets & Light Switches',
-                'Windows, Curtains / Blinds',
-                'Walls (stains, cracks, holes)',
-                'Floor Condition',
-                'Door Lock & Keys',
-            ];
-        @endphp
-        @foreach($checklistItems as $itemName)
+        @php $totalRepairCost = 0; @endphp
+        @foreach($checklistItemNames as $itemName)
             @php
                 $moveInItem = collect($moveInChecklist)->firstWhere('item_name', $itemName);
                 $moveOutItem = collect($moveOutChecklist)->firstWhere('item_name', $itemName);
                 $moveInCond = $moveInItem['condition'] ?? '';
                 $moveOutCond = $moveOutItem['condition'] ?? '';
                 $damageFound = $moveInCond && $moveOutCond && $moveInCond !== $moveOutCond && $moveOutCond !== 'good';
+                $repairCost = (float) ($moveOutItem['repair_cost'] ?? 0);
+                if ($damageFound) $totalRepairCost += $repairCost;
             @endphp
             <tr class="{{ $damageFound ? 'damage-row' : '' }}">
                 <td style="font-weight:500;">{{ $itemName }}</td>
                 <td class="check-cell" style="text-transform:capitalize;">{{ $moveInCond }}</td>
                 <td class="check-cell" style="text-transform:capitalize; {{ $damageFound ? 'color:#c0392b; font-weight:bold;' : '' }}">{{ $moveOutCond }}</td>
                 <td class="check-cell" style="{{ $damageFound ? 'color:#c0392b; font-weight:bold;' : '' }}">{{ $damageFound ? 'Yes' : ($moveOutCond ? 'No' : '') }}</td>
+                <td style="text-align:right;">{{ $damageFound && $repairCost > 0 ? '₱ ' . number_format($repairCost, 2) : '' }}</td>
             </tr>
         @endforeach
+        @if($totalRepairCost > 0)
+        <tr><td colspan="4" style="font-weight:bold; text-align:right;">Total Repair Cost</td><td style="text-align:right; font-weight:bold;">₱ {{ number_format($totalRepairCost, 2) }}</td></tr>
+        @endif
         </tbody>
     </table>
 
@@ -474,25 +473,30 @@
             <th style="text-align:center;">Qty</th>
             <th style="text-align:center;">Returned?</th>
             <th>Condition</th>
+            <th style="text-align:right;">Replacement Cost</th>
         </tr>
         </thead>
         <tbody>
-        @php
-            $returnItems = ['Unit Key(s)', 'Building Access Card / Fob', 'Air Conditioning Remote', 'Cabinet Key'];
-        @endphp
-        @foreach($returnItems as $itemName)
+        @php $totalReplacementCost = 0; @endphp
+        @foreach($returnItemNames as $itemName)
             @php
                 $returned = collect($itemsReturned)->firstWhere('item_name', $itemName);
-                $isReturned = $returned && ($returned['tenant_confirmed'] ?? false);
+                $isReturned = $returned && ($returned['is_returned'] ?? false);
                 $condition = $returned['condition'] ?? '';
+                $replacementCost = (float) ($returned['replacement_cost'] ?? 0);
+                if (!$isReturned && $returned) $totalReplacementCost += $replacementCost;
             @endphp
             <tr>
                 <td style="font-weight:500;">{{ $itemName }}</td>
                 <td style="text-align:center;">{{ $returned['quantity'] ?? '' }}</td>
                 <td style="text-align:center;">{{ $isReturned ? 'Yes' : ($returned ? 'No' : '') }}</td>
                 <td>{{ $condition }}</td>
+                <td style="text-align:right;">{{ (!$isReturned && $returned && $replacementCost > 0) ? '₱ ' . number_format($replacementCost, 2) : '' }}</td>
             </tr>
         @endforeach
+        @if($totalReplacementCost > 0)
+        <tr><td colspan="4" style="font-weight:bold; text-align:right;">Total Replacement Cost</td><td style="text-align:right; font-weight:bold;">₱ {{ number_format($totalReplacementCost, 2) }}</td></tr>
+        @endif
         </tbody>
     </table>
 
@@ -503,6 +507,11 @@
         In accordance with RA 9653, the security deposit refund is calculated as follows:
     </div>
 
+    @php
+        $deductions = $depositRefund['deductions'] ?? [];
+        $refundAmount = $depositRefund['refund_amount'] ?? null;
+        $totalDeductions = collect($deductions)->sum('amount');
+    @endphp
     <table class="payment-table" style="margin-top:8px;">
         <thead>
         <tr>
@@ -515,15 +524,17 @@
             <td><strong>Original Security Deposit Held</strong></td>
             <td class="right"><strong>&#8369; {{ number_format($deposit, 2) }}</strong></td>
         </tr>
-        <tr><td>(+) Interest Earned on Deposit (per RA 9653)</td><td class="right"></td></tr>
-        <tr><td>(-) Unpaid Utility Balances</td><td class="right"></td></tr>
-        <tr><td>(-) Damage Repair Costs (per Section 3)</td><td class="right"></td></tr>
-        <tr><td>(-) Lost / Unreturned Keys or Cards (per Section 4)</td><td class="right"></td></tr>
-        <tr><td>(-) Early Termination Penalty (if applicable)</td><td class="right"></td></tr>
-        <tr><td>(-) Outstanding Rent or Other Charges</td><td class="right"></td></tr>
+        @forelse($deductions as $deduction)
+        <tr>
+            <td>(-) {{ $deduction['label'] }}</td>
+            <td class="right">{{ (float) $deduction['amount'] > 0 ? '(₱ ' . number_format($deduction['amount'], 2) . ')' : 'TBD' }}</td>
+        </tr>
+        @empty
+        <tr><td colspan="2" style="color:#999;">No deductions</td></tr>
+        @endforelse
         <tr class="total-row">
             <td><strong>NET DEPOSIT REFUND</strong></td>
-            <td class="right"><strong>PHP ___________</strong></td>
+            <td class="right"><strong>&#8369; {{ $refundAmount !== null ? number_format($refundAmount, 2) : number_format(max(0, $deposit - $totalDeductions), 2) }}</strong></td>
         </tr>
         </tbody>
     </table>

@@ -69,8 +69,11 @@ class TenantDetail extends Component
 
     // Move-out workflow
     public $moveOutInitiated = false;
-    public $showMoveOutForm = false;
     public $moveOutPrerequisites = [];
+
+    // Violations
+    public $violations = [];
+    public $violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
 
     public function mount(?int $initialTenantId = null): void
     {
@@ -95,7 +98,7 @@ class TenantDetail extends Component
             return;
         }
 
-        if ($tab === 'current') {
+        if ($tab === 'current' || $tab === 'moving_out') {
             $lease = Lease::where('tenant_id', $tenantId)
                 ->where('status', 'Active')
                 ->latest()
@@ -128,6 +131,7 @@ class TenantDetail extends Component
 
         $this->loadInspectionData($lease);
         $this->loadMoveOutInspectionData($lease);
+        $this->loadViolations($lease);
         $this->moveOutInitiated = (bool) $lease?->move_out_initiated_at;
         $this->forwardingAddress = $lease?->forwarding_address ?? '';
         $this->reasonForVacating = $lease?->reason_for_vacating ?? '';
@@ -263,12 +267,46 @@ class TenantDetail extends Component
 
     public function updatedMoveOutChecklist($value, $key): void
     {
-        $this->handleChecklistUpdate($key, 'moveOutChecklist');
+        $parts = explode('.', $key);
+        if (count($parts) === 2 && $parts[1] === 'condition') {
+            $currentIndex = (int) $parts[0];
+
+            $this->resetErrorBag("moveOutChecklist.{$currentIndex}.condition");
+
+            for ($i = 0; $i < $currentIndex; $i++) {
+                if (empty($this->moveOutChecklist[$i]['condition'])) {
+                    $this->addError(
+                        "moveOutChecklist.{$i}.condition",
+                        "Please select a condition for \"{$this->moveOutChecklist[$i]['item_name']}\"."
+                    );
+                }
+            }
+        }
     }
 
     public function updatedItemsReturned($value, $key): void
     {
         $this->handleItemsUpdate($value, $key, 'itemsReturned', $this->itemsReturned);
+        $this->validateSkippedMoveOutChecklist();
+    }
+
+    public function setMoveOutItemCondition(int $index, string $condition): void
+    {
+        $this->itemsReturned[$index]['condition'] = $condition;
+        $this->handleItemsUpdate($condition, "{$index}.condition", 'itemsReturned', $this->itemsReturned);
+        $this->validateSkippedMoveOutChecklist();
+    }
+
+    private function validateSkippedMoveOutChecklist(): void
+    {
+        foreach ($this->moveOutChecklist as $i => $item) {
+            if (empty($item['condition'])) {
+                $this->addError(
+                    "moveOutChecklist.{$i}.condition",
+                    "Please select a condition for \"{$item['item_name']}\"."
+                );
+            }
+        }
     }
 
     public function saveMoveOutInspection(): void
@@ -362,6 +400,40 @@ class TenantDetail extends Component
         $this->dispatch('moveout-inspection-cancelled');
     }
 
+    private function loadViolations($lease): void
+    {
+        if (!$lease) {
+            $this->violations = [];
+            $this->violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
+            return;
+        }
+
+        $this->violations = DB::table('violations')
+            ->where('lease_id', $lease->lease_id)
+            ->whereNull('deleted_at')
+            ->orderBy('offense_number', 'asc')
+            ->get()
+            ->map(fn($v) => (array) $v)
+            ->toArray();
+
+        $statusCounts = collect($this->violations)->groupBy('status')->map->count();
+        $this->violationCounts = [
+            'total' => count($this->violations),
+            'issued' => $statusCounts->get('Issued', 0),
+            'acknowledged' => $statusCounts->get('Acknowledged', 0),
+            'resolved' => $statusCounts->get('Resolved', 0),
+        ];
+    }
+
+    #[On('refresh-violation-list')]
+    public function refreshViolations(): void
+    {
+        if ($this->currentLeaseId) {
+            $lease = Lease::find($this->currentLeaseId);
+            $this->loadViolations($lease);
+        }
+    }
+
     private function resetTenantData(): void
     {
         $this->currentTenantId = null;
@@ -379,8 +451,9 @@ class TenantDetail extends Component
         $this->moveOutOwnerSignedAt = null;
         $this->moveOutContractAgreed = false;
         $this->moveOutInitiated = false;
-        $this->showMoveOutForm = false;
         $this->moveOutPrerequisites = [];
+        $this->violations = [];
+        $this->violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
     }
 
     public function editTenant(): void
@@ -409,12 +482,7 @@ class TenantDetail extends Component
         }
 
         // Otherwise open the initiation form
-        $this->showMoveOutForm = true;
-    }
-
-    public function closeMoveOutForm(): void
-    {
-        $this->showMoveOutForm = false;
+        $this->dispatch('open-modal', 'initiate-move-out');
     }
 
     public function initiateMoveOut(): void
@@ -447,7 +515,7 @@ class TenantDetail extends Component
             'link' => '/tenant?tab=inspection',
         ]);
 
-        $this->showMoveOutForm = false;
+        $this->dispatch('close-modal', 'initiate-move-out');
         $this->moveOutInitiated = true;
 
         // Reload tenant data to unlock the move-out UI
@@ -823,7 +891,7 @@ class TenantDetail extends Component
 
         return Storage::disk('public')->download(
             $lease->signed_contract_path,
-            'Move-In-Contract-' . ($this->currentTenant['personal_info']['last_name'] ?? 'Tenant') . '.pdf'
+            'Move-In-Contract_' . ($this->currentTenant['personal_info']['first_name'] ?? '') . '-' . ($this->currentTenant['personal_info']['last_name'] ?? 'Tenant') . '_Unit-' . ($this->currentTenant['personal_info']['unit'] ?? 'N-A') . '.pdf'
         );
     }
 
@@ -903,13 +971,13 @@ class TenantDetail extends Component
             ->map(fn($i) => ['item_name' => $i->item_name, 'condition' => $i->condition, 'remarks' => $i->remarks])
             ->toArray();
 
-        // Build move-out checklist
+        // Build move-out checklist (include repair_cost)
         $moveOutChecklist = $lease->moveOutInspections
             ->where('type', 'checklist')
-            ->map(fn($i) => ['item_name' => $i->item_name, 'condition' => $i->condition, 'remarks' => $i->remarks])
+            ->map(fn($i) => ['item_name' => $i->item_name, 'condition' => $i->condition, 'remarks' => $i->remarks, 'repair_cost' => $i->repair_cost])
             ->toArray();
 
-        // Build items returned
+        // Build items returned (include is_returned + replacement_cost)
         $itemsReturned = $lease->moveOutInspections
             ->where('type', 'item_returned')
             ->map(fn($i) => [
@@ -917,14 +985,22 @@ class TenantDetail extends Component
                 'quantity' => $i->quantity,
                 'condition' => $i->remarks,
                 'tenant_confirmed' => (bool) $i->tenant_confirmed,
+                'is_returned' => (bool) $i->is_returned,
+                'replacement_cost' => $i->replacement_cost,
             ])
             ->toArray();
+
+        // Build financial data for the PDF
+        $outstandingBalances = $this->buildOutstandingBalances($lease);
+        $depositRefund = $lease->calculateDepositRefund();
 
         $data = [
             'tenant' => $this->currentTenant,
             'moveInChecklist' => $moveInChecklist,
             'moveOutChecklist' => $moveOutChecklist,
             'itemsReturned' => $itemsReturned,
+            'outstandingBalances' => $outstandingBalances,
+            'depositRefund' => $depositRefund,
             'tenantSignatureBase64' => 'data:image/png;base64,' . base64_encode(file_get_contents($tenantSigPath)),
             'ownerSignatureBase64'  => 'data:image/png;base64,' . base64_encode(file_get_contents($ownerSigPath)),
             'tenantSignedAt' => $lease->moveout_tenant_signed_at->format('M d, Y'),
@@ -955,7 +1031,7 @@ class TenantDetail extends Component
 
         return Storage::disk('public')->download(
             $lease->moveout_signed_contract_path,
-            'Move-Out-Contract-' . ($this->currentTenant['personal_info']['last_name'] ?? 'Tenant') . '.pdf'
+            'Move-Out-Contract_' . ($this->currentTenant['personal_info']['first_name'] ?? '') . '-' . ($this->currentTenant['personal_info']['last_name'] ?? 'Tenant') . '_Unit-' . ($this->currentTenant['personal_info']['unit'] ?? 'N-A') . '.pdf'
         );
     }
 

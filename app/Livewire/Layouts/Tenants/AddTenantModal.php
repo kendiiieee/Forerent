@@ -401,16 +401,6 @@ class AddTenantModal extends Component
             ->get(['property_id', 'building_name']);
     }
 
-    public function updatedGender($value): void
-    {
-        $this->selectedBuilding = '';
-        $this->selectedUnit     = '';
-        $this->selectedBed      = '';
-        $this->units            = [];
-        $this->beds             = [];
-        $this->loadBuildings();
-    }
-
     public function updatedSelectedBuilding($propertyId)
     {
         $this->selectedUnit = '';

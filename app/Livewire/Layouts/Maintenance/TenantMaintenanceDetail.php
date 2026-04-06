@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Maintenance;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -11,15 +12,24 @@ use App\Livewire\Concerns\WithNotifications;
 
 class TenantMaintenanceDetail extends Component
 {
-    use WithNotifications;
+    use WithNotifications, WithFileUploads;
     public $ticket             = null;
     public $ticketIdDisplay    = '';
     public bool $feedbackSubmitted = false;
 
     // Edit mode
-    public bool $editing        = false;
+    public bool $editing           = false;
     public string $editCategory    = '';
     public string $editDescription = '';
+    public array $existingPhotos   = [];   // current saved photo paths
+    public $newPhotos              = [];   // new uploads (Livewire temp files)
+
+    // Cost visibility (read-only)
+    public array $costItems     = [];
+    public float $costTotal     = 0;
+
+    // Activity timeline
+    public array $activities    = [];
 
     public function mount(?int $initialRequestId = null): void
     {
@@ -127,13 +137,34 @@ class TenantMaintenanceDetail extends Component
         if (!$this->ticket || $this->ticket->status !== 'Pending') return;
         $this->editCategory    = $this->ticket->category ?? 'Plumbing';
         $this->editDescription = $this->ticket->problem ?? '';
+        $this->newPhotos       = [];
+
+        // Parse existing photos
+        $this->existingPhotos = [];
+        if (!empty($this->ticket->image_path)) {
+            $decoded = json_decode($this->ticket->image_path, true);
+            $this->existingPhotos = is_array($decoded) ? $decoded : [$this->ticket->image_path];
+        }
+
         $this->editing = true;
     }
 
     public function cancelEditing(): void
     {
         $this->editing = false;
+        $this->newPhotos = [];
+        $this->existingPhotos = [];
         $this->resetValidation();
+    }
+
+    public function removeExistingPhoto(int $index): void
+    {
+        array_splice($this->existingPhotos, $index, 1);
+    }
+
+    public function removeNewPhoto(int $index): void
+    {
+        array_splice($this->newPhotos, $index, 1);
     }
 
     /**
@@ -152,10 +183,20 @@ class TenantMaintenanceDetail extends Component
             abort(403, 'Unauthorized action.');
         }
 
+        $totalPhotos = count($this->existingPhotos) + count($this->newPhotos);
+
         $this->validate([
             'editCategory'    => 'required|in:Plumbing,Electrical,Structural,Appliance,Pest Control',
             'editDescription' => 'required|string|min:10|max:2000',
+            'newPhotos'       => 'nullable|array|max:' . (3 - count($this->existingPhotos)),
+            'newPhotos.*'     => 'image|max:5120',
         ]);
+
+        // Build final photo array: existing + new uploads
+        $allPhotos = $this->existingPhotos;
+        foreach (array_slice($this->newPhotos, 0, 3 - count($allPhotos)) as $photo) {
+            $allPhotos[] = $photo->store('maintenance_photos', 'public');
+        }
 
         // Re-evaluate urgency based on new content
         $newUrgency = \App\Services\UrgencyEvaluator::evaluate($this->editCategory, $this->editDescription);
@@ -166,10 +207,13 @@ class TenantMaintenanceDetail extends Component
                 'category'   => $this->editCategory,
                 'problem'    => $this->editDescription,
                 'urgency'    => $newUrgency,
+                'image_path' => !empty($allPhotos) ? json_encode($allPhotos) : null,
                 'updated_at' => now(),
             ]);
 
         $this->editing = false;
+        $this->newPhotos = [];
+        $this->existingPhotos = [];
         $this->fetchTicket($this->ticket->request_id);
         $this->dispatch('refresh-maintenance-list');
     }
@@ -279,7 +323,48 @@ class TenantMaintenanceDetail extends Component
                 ->where('request_id', $this->ticket->request_id)
                 ->where('tenant_id', Auth::id())
                 ->exists();
+
+            // Load costs for this ticket (read-only visibility)
+            $this->loadCosts();
+            $this->loadActivities();
         }
+    }
+
+    private function loadActivities(): void
+    {
+        if (!$this->ticket) {
+            $this->activities = [];
+            return;
+        }
+
+        // Load public-facing activities (exclude internal notes)
+        $this->activities = DB::table('maintenance_activities')
+            ->where('request_id', $this->ticket->request_id)
+            ->where('action', '!=', 'note_added')
+            ->orderBy('created_at', 'desc')
+            ->select('action', 'details', 'created_at')
+            ->get()
+            ->map(fn($a) => (array) $a)
+            ->toArray();
+    }
+
+    private function loadCosts(): void
+    {
+        if (!$this->ticket) {
+            $this->costItems = [];
+            $this->costTotal = 0;
+            return;
+        }
+
+        $this->costItems = DB::table('maintenance_logs')
+            ->where('request_id', $this->ticket->request_id)
+            ->whereNull('deleted_at')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($item) => (array) $item)
+            ->toArray();
+
+        $this->costTotal = collect($this->costItems)->sum('cost');
     }
 
     public function render()
