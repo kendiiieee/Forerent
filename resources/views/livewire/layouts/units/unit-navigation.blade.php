@@ -63,13 +63,15 @@
     <div class="flex justify-center items-center gap-2 mt-6 md:mt-8 flex-shrink-0">
 
         @if ($currentPage > 1)
-        <button
-            wire:click="previousPage"
-            class="p-2 w-8 h-8 md:w-10 md:h-10 border-2 border-[#0039C6] bg-[#0039C6] text-white rounded-lg hover:bg-[#002A8F] transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-            </svg>
-        </button>
+        <flux:tooltip :content="'View previous set of units'" position="bottom">
+            <button
+                wire:click="previousPage"
+                class="p-2 w-8 h-8 md:w-10 md:h-10 border-2 border-[#0039C6] bg-[#0039C6] text-white rounded-lg hover:bg-[#002A8F] transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </flux:tooltip>
         @endif
 
         <div class="flex gap-2">
@@ -84,13 +86,15 @@
         </div>
 
         @if ($currentPage < $totalPages)
-            <button
-            wire:click="nextPage"
-            class="p-2 w-8 h-8 md:w-10 md:h-10 border-2 border-[#0039C6] bg-[#0039C6] text-white rounded-lg hover:bg-[#002A8F] transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-            </svg>
-            </button>
+            <flux:tooltip :content="'View next set of units'" position="bottom">
+                <button
+                    wire:click="nextPage"
+                    class="p-2 w-8 h-8 md:w-10 md:h-10 border-2 border-[#0039C6] bg-[#0039C6] text-white rounded-lg hover:bg-[#002A8F] transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </flux:tooltip>
             @endif
     </div>
     @endif

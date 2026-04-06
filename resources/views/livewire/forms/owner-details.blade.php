@@ -76,14 +76,14 @@
                 </label>
                 {{-- Error message --}}
                 <div x-show="error" x-cloak class="mt-2 w-24">
-                    <p class="text-[10px] text-red-500 font-medium text-center">Upload failed!</p>
+                    <p class="text-[11px] text-red-500 font-medium text-center">Upload failed!</p>
                 </div>
                 {{-- Progress bar below avatar --}}
                 <div x-show="uploading" x-cloak class="mt-2 w-24">
                     <div class="h-1 bg-gray-200 rounded-full overflow-hidden">
                         <div class="h-full bg-[#2360E8] rounded-full transition-all duration-200" :style="'width: ' + progress + '%'"></div>
                     </div>
-                    <p class="text-[10px] text-[#2360E8] mt-0.5 font-medium text-center">Uploading...</p>
+                    <p class="text-[11px] text-[#2360E8] mt-0.5 font-medium text-center">Uploading...</p>
                 </div>
             </div>
             <div class="pt-2">
@@ -213,7 +213,7 @@
                     <div class="h-1.5 overflow-hidden rounded-full bg-gray-200">
                         <div class="h-full rounded-full bg-[#2360E8] transition-all duration-200" :style="'width: ' + progress + '%'"></div>
                     </div>
-                    <p class="mt-0.5 text-[10px] font-medium text-[#2360E8]">Uploading... <span x-text="progress + '%'"></span></p>
+                    <p class="mt-0.5 text-[11px] font-medium text-[#2360E8]">Uploading... <span x-text="progress + '%'"></span></p>
                 </div>
 
                 @if ($governmentIdImage || $existingGovernmentIdImage)

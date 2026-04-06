@@ -21,7 +21,7 @@ class UnitSeeder extends Seeder
 
         foreach ($properties as $property) {
 
-            for ($floor = 1; $floor <= 10; $floor++) {
+            for ($floor = 1; $floor <= 5; $floor++) {
 
                 $floorFormatted = str_pad($floor, 2, '0', STR_PAD_LEFT); // "01", "02", ...
 

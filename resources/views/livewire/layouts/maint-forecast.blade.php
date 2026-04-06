@@ -1,13 +1,15 @@
-<div class="bg-white rounded-lg shadow-md p-6">
+<div>
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800">Maintenance Cost Forecast</h2>
-        
+
         <div class="flex items-center">
-            <select wire:model.live="year" class="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700">
+            <x-dropdown label="{{ $year }}" width="w-36" tooltip="Select forecast year">
                 @for($y = date('Y'); $y <= date('Y') + 3; $y++)
-                    <option value="{{ $y }}">{{ $y }}</option>
+                    <x-dropdown-item wire:click="$set('year', {{ $y }})" :active="$year == $y">
+                        {{ $y }}
+                    </x-dropdown-item>
                 @endfor
-            </select>
+            </x-dropdown>
         </div>
     </div>
 
@@ -25,27 +27,40 @@
 
     @if($hasData && $maintenanceStats)
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-6 shadow-sm">
-                <p class="text-sm font-medium text-orange-700 mb-2">Annual Forecast</p>
-                <p class="text-3xl font-bold text-orange-600">₱{{ number_format($forecast['total_annual_cost'] ?? 0, 0) }}</p>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 shadow-sm">
+                <p class="text-sm font-medium text-blue-700 mb-2">Annual Forecast</p>
+                <p class="text-3xl font-bold text-blue-600">₱{{ number_format($forecast['total_annual_cost'] ?? 0, 0) }}</p>
             </div>
-            
-            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-6 shadow-sm">
-                <p class="text-sm font-medium text-yellow-700 mb-2">Monthly Average</p>
-                <p class="text-3xl font-bold text-yellow-600">₱{{ number_format($forecast['average_monthly_cost'] ?? 0, 0) }}</p>
+
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 shadow-sm">
+                <p class="text-sm font-medium text-blue-700 mb-2">Monthly Average</p>
+                <p class="text-3xl font-bold text-blue-600">₱{{ number_format($forecast['average_monthly_cost'] ?? 0, 0) }}</p>
             </div>
         </div>
     @endif
 
     @if($forecast && isset($forecast['success']) && $forecast['success'])
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
-            <div class="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
-                <h3 class="text-lg font-semibold text-gray-800 mb-6">Monthly Maintenance Costs - {{ $year }}</h3>
+            <div class="bg-white rounded-2xl shadow-lg p-6 lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-[#070642]">Monthly Maintenance Costs</h3>
+                    <x-dropdown label="Download" width="w-44" tooltip="Download chart as image or CSV">
+                        <x-dropdown-item @click="open = false; window.maintenanceChartInstance?.dataURI().then(uri => { const a = document.createElement('a'); a.href = uri.imgURI; a.download = 'maintenance-costs-{{ $year }}.png'; a.click(); })">
+                            Download PNG
+                        </x-dropdown-item>
+                        <x-dropdown-item @click="open = false; window.maintenanceChartInstance?.dataURI({type: 'image/svg+xml'}).then(uri => { const a = document.createElement('a'); a.href = uri.imgURI; a.download = 'maintenance-costs-{{ $year }}.svg'; a.click(); })">
+                            Download SVG
+                        </x-dropdown-item>
+                        <x-dropdown-item @click="open = false; window.downloadMaintenanceCsv()">
+                            Download CSV
+                        </x-dropdown-item>
+                    </x-dropdown>
+                </div>
                 <div id="maintenanceChart" style="height: 400px;"></div>
             </div>
 
-            <div class="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-1 flex flex-col">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Job Count Forecast</h3>
+            <div class="bg-white rounded-2xl shadow-lg p-6 lg:col-span-1 flex flex-col">
+                <h3 class="text-xl font-bold text-[#070642] mb-2">Job Count Forecast</h3>
                 <p class="text-sm text-gray-500 mb-4">Estimated maintenance jobs per month</p>
                 <div id="jobCountChart" class="flex-1" style="height: 400px;"></div>
             </div>
@@ -56,10 +71,22 @@
             document.addEventListener('livewire:navigated', () => { renderMaintenanceChart(); });
             document.addEventListener('DOMContentLoaded', () => { renderMaintenanceChart(); });
 
+            window.downloadMaintenanceCsv = function() {
+                const forecast = @json($forecast);
+                const monthlyForecasts = forecast['monthly_forecasts'] || [];
+                const csv = ['Month,Cost'];
+                monthlyForecasts.forEach(m => csv.push(m.month_name + ',' + m.forecasted_cost));
+                const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'maintenance-costs-{{ $year }}.csv';
+                a.click();
+            };
+
             function renderMaintenanceChart() {
                 const forecast = @json($forecast);
                 const monthlyForecasts = forecast['monthly_forecasts'] || [];
-                
+
                 if (!monthlyForecasts || monthlyForecasts.length === 0) return;
 
                 const categories = monthlyForecasts.map(f => f.month_name);
@@ -81,16 +108,7 @@
                         type: 'bar',
                         height: 400,
                         toolbar: {
-                            show: true,
-                            tools: {
-                                download: true,
-                                selection: true,
-                                zoom: true,
-                                zoomin: true,
-                                zoomout: true,
-                                pan: true,
-                                reset: true
-                            }
+                            show: false
                         },
                         animations: {
                             enabled: true,
@@ -104,79 +122,71 @@
                     plotOptions: {
                         bar: {
                             horizontal: false,
-                            columnWidth: '55%',
-                            borderRadius: 6,
-                            dataLabels: {
-                                position: 'top'
-                            }
+                            columnWidth: '70%',
+                            borderRadius: 8,
+                            borderRadiusApplication: 'end'
                         }
                     },
                     dataLabels: {
-                        enabled: true,
-                        formatter: function (val) {
-                            return '₱' + (val / 1000).toFixed(0) + 'K';
-                        },
-                        offsetY: -20,
-                        style: {
-                            fontSize: '12px',
-                            colors: ['#304758']
-                        }
+                        enabled: false
                     },
                     stroke: {
-                        show: true,
-                        width: 2,
-                        colors: ['transparent']
+                        show: false
                     },
                     xaxis: {
                         categories: categories,
                         labels: {
                             style: {
-                                fontSize: '12px'
-                            }
-                        }
-                    },
-                    yaxis: {
-                        title: {
-                            text: 'Cost (₱)',
-                            style: {
-                                fontSize: '13px',
-                                fontWeight: 600
+                                fontSize: '12px',
+                                colors: '#6B7280',
+                                fontFamily: 'Open Sans, sans-serif'
                             }
                         },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: {
                         labels: {
                             formatter: function (val) {
-                                return '₱' + (val / 1000).toFixed(0) + 'K';
+                                return '₱' + val.toLocaleString();
+                            },
+                            style: {
+                                fontSize: '12px',
+                                colors: '#6B7280',
+                                fontFamily: 'Open Sans, sans-serif'
                             }
                         }
                     },
                     fill: {
-                        opacity: 0.9
+                        opacity: 1
                     },
-                    colors: ['#F59E0B'],
+                    colors: ['#0C0B50'],
                     tooltip: {
                         y: {
                             formatter: function (val) {
                                 return '₱' + val.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                             }
                         },
-                        theme: 'light'
+                        theme: 'dark'
                     },
                     grid: {
-                        borderColor: '#E7E7E7',
-                        strokeDashArray: 4,
-                        show: true
+                        borderColor: '#F3F4F6',
+                        strokeDashArray: 0,
+                        show: true,
+                        xaxis: { lines: { show: false } },
+                        yaxis: { lines: { show: true } }
                     },
                     states: {
                         hover: {
                             filter: {
                                 type: 'darken',
-                                value: 0.15
+                                value: 0.1
                             }
                         },
                         active: {
                             filter: {
                                 type: 'darken',
-                                value: 0.15
+                                value: 0.1
                             }
                         }
                     }
@@ -199,7 +209,7 @@
                         ...options
                     }
                 );
-                
+
                 window.maintenanceChartInstance.render();
 
                 const jobCountOptions = {
@@ -218,13 +228,18 @@
                         bar: {
                             horizontal: true,
                             borderRadius: 6,
-                            barHeight: '65%'
+                            borderRadiusApplication: 'end',
+                            barHeight: '60%'
                         }
                     },
                     dataLabels: {
                         enabled: true,
                         formatter: function (val) {
                             return Math.round(val);
+                        },
+                        style: {
+                            fontSize: '11px',
+                            colors: ['#ffffff']
                         }
                     },
                     xaxis: {
@@ -232,37 +247,43 @@
                         labels: {
                             formatter: function (val) {
                                 return Math.round(val);
+                            },
+                            style: {
+                                fontSize: '12px',
+                                colors: '#6B7280'
                             }
                         },
-                        title: {
-                            text: 'Jobs'
-                        }
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
                     },
                     yaxis: {
                         labels: {
                             style: {
-                                fontSize: '11px'
+                                fontSize: '11px',
+                                colors: '#6B7280'
                             }
                         }
                     },
                     stroke: {
-                        width: 1,
-                        colors: ['#ffffff']
+                        show: false
                     },
                     fill: {
-                        opacity: 0.95
+                        opacity: 1
                     },
-                    colors: ['#2563EB'],
+                    colors: ['#0C0B50'],
                     tooltip: {
                         y: {
                             formatter: function (val) {
                                 return Math.round(val) + ' jobs';
                             }
-                        }
+                        },
+                        theme: 'dark'
                     },
                     grid: {
-                        borderColor: '#E5E7EB',
-                        strokeDashArray: 3
+                        borderColor: '#F3F4F6',
+                        strokeDashArray: 0,
+                        xaxis: { lines: { show: true } },
+                        yaxis: { lines: { show: false } }
                     }
                 };
 

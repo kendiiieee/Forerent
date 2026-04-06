@@ -49,6 +49,10 @@ class NotificationBell extends Component
         if ($notification) {
             $notification->update(['is_read' => true]);
             $this->loadNotifications();
+
+            if ($notification->link) {
+                return $this->redirect($notification->link);
+            }
         }
     }
 

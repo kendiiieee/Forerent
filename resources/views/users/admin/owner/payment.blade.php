@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('header-title', 'PAYMENT RECORD')
-@section('header-subtitle', 'Rental payment record')
+@section('header-title', 'PAYMENT DOCUMENTATION')
+@section('header-subtitle', 'Rental payment documentation')
 
 @section('content')
 

@@ -41,5 +41,6 @@ Route::prefix('manager')->middleware(['auth', 'role:manager'])->group(function (
     Route::get('/maintenance', function () {
         return view('users.admin.manager.maintenance'); // TO DO
     })->name('manager.maintenance');
+
 });
 

@@ -20,15 +20,17 @@
                                 @endif
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            x-on:click="$dispatch('open-modal', '{{ $isTransfer ? 'discard-transfer-confirmation' : ($isEdit ? 'discard-edit-confirmation' : 'discard-tenant-confirmation') }}')"
-                            class="text-white hover:text-blue-200 transition-colors focus:outline-none"
-                        >
-                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <flux:tooltip :content="'Close tenant form without saving'" position="bottom">
+                            <button
+                                type="button"
+                                x-on:click="$dispatch('open-modal', '{{ $isTransfer ? 'discard-transfer-confirmation' : ($isEdit ? 'discard-edit-confirmation' : 'discard-tenant-confirmation') }}')"
+                                class="text-white hover:text-blue-200 transition-colors focus:outline-none"
+                            >
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </flux:tooltip>
                     </div>
 
                     {{-- Stepper (only for add/edit mode) --}}
@@ -67,7 +69,7 @@
                                                 </template>
                                             </div>
                                             <span
-                                                class="text-[10px] font-semibold mt-1.5 tracking-wide transition-all duration-200"
+                                                class="text-[11px] font-semibold mt-1.5 tracking-wide transition-all duration-200"
                                                 :class="{
                                                     'text-white': $wire.currentStep === {{ $step['num'] }},
                                                     'text-blue-200': $wire.currentStep > {{ $step['num'] }},
@@ -134,7 +136,7 @@
                                         </div>
                                     </div>
                                     @if($gender)
-                                        <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full {{ $gender === 'Male' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' }}">
+                                        <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full {{ $gender === 'Male' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' }}">
                                             {{ $gender }}
                                         </span>
                                     @endif
@@ -152,28 +154,28 @@
                                         </div>
                                         <div>
                                             <h4 class="text-sm font-bold text-gray-800">Current Assignment</h4>
-                                            <p class="text-[10px] text-gray-400">This lease will be closed upon transfer</p>
+                                            <p class="text-[11px] text-gray-400">This lease will be closed upon transfer</p>
                                         </div>
                                     </div>
                                     <div class="space-y-3">
                                         <div class="grid grid-cols-2 gap-3">
-                                            <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Building</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentBuilding }}</p></div>
-                                            <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Unit</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentUnit }}</p></div>
-                                            <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Bed</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentBed }}</p></div>
-                                            <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Dorm Type</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentDormType }}</p></div>
+                                            <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Building</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentBuilding }}</p></div>
+                                            <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Unit</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentUnit }}</p></div>
+                                            <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Bed</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentBed }}</p></div>
+                                            <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Dorm Type</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentDormType }}</p></div>
                                         </div>
                                         <div class="border-t border-gray-100 pt-3">
                                             <div class="grid grid-cols-2 gap-3">
-                                                <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Term</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentTerm }}</p></div>
-                                                <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Shift</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentShift }}</p></div>
-                                                <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Move-In Date</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentStartDate }}</p></div>
-                                                <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">End Date</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentEndDate }}</p></div>
+                                                <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Term</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentTerm }}</p></div>
+                                                <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Shift</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentShift }}</p></div>
+                                                <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Move-In Date</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentStartDate }}</p></div>
+                                                <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">End Date</p><p class="text-sm text-gray-700 font-medium mt-0.5">{{ $currentEndDate }}</p></div>
                                             </div>
                                         </div>
                                         <div class="border-t border-gray-100 pt-3">
                                             <div class="grid grid-cols-2 gap-3">
-                                                <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Monthly Rate</p><p class="text-sm text-gray-700 font-bold mt-0.5">{{ $currentRate }}</p></div>
-                                                <div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Auto Renew</p><p class="text-sm mt-0.5">@if($currentAutoRenew)<span class="text-green-600 font-medium">Yes</span>@else<span class="text-gray-500 font-medium">No</span>@endif</p></div>
+                                                <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Monthly Rate</p><p class="text-sm text-gray-700 font-bold mt-0.5">{{ $currentRate }}</p></div>
+                                                <div><p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium">Auto Renew</p><p class="text-sm mt-0.5">@if($currentAutoRenew)<span class="text-green-600 font-medium">Yes</span>@else<span class="text-gray-500 font-medium">No</span>@endif</p></div>
                                             </div>
                                         </div>
                                     </div>
@@ -187,13 +189,13 @@
                                         </div>
                                         <div>
                                             <h4 class="text-sm font-bold text-[#070589]">New Assignment</h4>
-                                            <p class="text-[10px] text-gray-400">Select the new location and lease terms</p>
+                                            <p class="text-[11px] text-gray-400">Select the new location and lease terms</p>
                                         </div>
                                     </div>
                                     <div class="space-y-3">
                                         <div class="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Building</label>
+                                                <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Building</label>
                                                 <select wire:model.live="selectedBuilding" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
                                                     <option value="">Select Building</option>
                                                     @foreach($buildings as $b)<option value="{{ $b->property_id }}">{{ $b->building_name }}</option>@endforeach
@@ -201,7 +203,7 @@
                                                 @error('selectedBuilding') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
-                                                <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Unit</label>
+                                                <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Unit</label>
                                                 <select wire:model.live="selectedUnit" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]" {{ empty($units) ? 'disabled' : '' }}>
                                                     <option value="">Select Unit</option>
                                                     @foreach($units as $u)<option value="{{ $u->unit_id }}">{{ $u->unit_number }}</option>@endforeach
@@ -209,7 +211,7 @@
                                                 @error('selectedUnit') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
-                                                <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Bed</label>
+                                                <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Bed</label>
                                                 <select wire:model.live="selectedBed" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]" {{ empty($beds) ? 'disabled' : '' }}>
                                                     <option value="">Select Bed</option>
                                                     @foreach($beds as $bed)<option value="{{ $bed->bed_id }}">{{ $bed->bed_number }}</option>@endforeach
@@ -217,7 +219,7 @@
                                                 @error('selectedBed') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
-                                                <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Dorm Type</label>
+                                                <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Dorm Type</label>
                                                 <select wire:model="dormType" disabled class="w-full mt-1 border-gray-300 rounded-lg text-sm bg-gray-50">
                                                     <option value="">—</option>
                                                     <option value="Female">All Female</option>
@@ -229,7 +231,7 @@
                                         <div class="border-t border-gray-100 pt-3">
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Term</label>
+                                                    <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Term</label>
                                                     <select wire:model.live="term" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
                                                         <option value="">Select Term</option>
                                                         <option value="1">1 Month</option>
@@ -240,7 +242,7 @@
                                                     @error('term') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                                 </div>
                                                 <div>
-                                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Shift</label>
+                                                    <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Shift</label>
                                                     <select wire:model="shift" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
                                                         <option value="">Select Shift</option>
                                                         <option value="Morning">Day</option>
@@ -249,7 +251,7 @@
                                                     @error('shift') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                                 </div>
                                                 <div class="col-span-2">
-                                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Move-In Date</label>
+                                                    <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Move-In Date</label>
                                                     <input wire:model="startDate" type="date" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
                                                     @error('startDate') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                                 </div>
@@ -271,22 +273,22 @@
                                     </div>
                                     <div>
                                         <h4 class="text-sm font-bold text-[#070589]">Payment Details</h4>
-                                        <p class="text-[10px] text-gray-400">Financial details for the new assignment</p>
+                                        <p class="text-[11px] text-gray-400">Financial details for the new assignment</p>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
-                                        <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Monthly Rate</label>
+                                        <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Monthly Rate</label>
                                         <div class="relative mt-1"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-gray-400 text-xs">₱</span></div><input wire:model="monthlyRate" type="number" class="w-full pl-8 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]"></div>
                                         @error('monthlyRate') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
-                                        <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Security Deposit</label>
+                                        <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Security Deposit</label>
                                         <div class="relative mt-1"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-gray-400 text-xs">₱</span></div><input wire:model="securityDeposit" type="number" class="w-full pl-8 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]"></div>
                                         @error('securityDeposit') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
-                                        <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Monthly Due Date</label>
+                                        <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Monthly Due Date</label>
                                         <select wire:model="monthlyDueDate" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
                                             <option value="">Select Day</option>
                                             <option value="1">1st of the month</option>
@@ -296,7 +298,7 @@
                                         @error('monthlyDueDate') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
-                                        <label class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Payment Status</label>
+                                        <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Payment Status</label>
                                         <select wire:model="paymentStatus" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
                                             <option value="">Select Status</option>
                                             <option value="Paid">Paid</option>
@@ -348,11 +350,11 @@
                                             <div class="h-1 bg-gray-200 rounded-full overflow-hidden">
                                                 <div class="h-full bg-[#2360E8] rounded-full transition-all duration-200" :style="'width: ' + progress + '%'"></div>
                                             </div>
-                                            <p class="text-[9px] text-[#2360E8] text-center mt-0.5 font-medium">Uploading...</p>
+                                            <p class="text-[11px] text-[#2360E8] text-center mt-0.5 font-medium">Uploading...</p>
                                         </div>
                                         <div x-show="!uploading" class="mt-2 text-center">
                                             <p class="text-xs font-bold text-[#001B5E]">Profile Picture</p>
-                                            <p class="text-[10px] text-gray-500">This will be displayed on your profile</p>
+                                            <p class="text-[11px] text-gray-500">This will be displayed on your profile</p>
                                         </div>
                                     </div>
                                     <div class="flex-1 grid grid-cols-2 gap-4">
@@ -394,7 +396,7 @@
                                     <div>
                                         <label class="text-xs font-semibold text-gray-700">Email Address</label>
                                         <input wire:model="email" type="email" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
-                                        <p class="text-[10px] text-gray-500 mt-1">Login credentials will be sent to this email</p>
+                                        <p class="text-[11px] text-gray-500 mt-1">Login credentials will be sent to this email</p>
                                         @error('email') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div class="col-span-2">
@@ -445,12 +447,16 @@
                                         @if ($governmentIdImage)
                                             <div class="relative inline-block w-full">
                                                 <img src="{{ $governmentIdImage->temporaryUrl() }}" class="w-full max-h-40 object-contain rounded-lg border border-gray-200">
-                                                <button type="button" wire:click="$set('governmentIdImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                                <flux:tooltip :content="'Remove this ID document'" position="bottom">
+                                                    <button type="button" wire:click="$set('governmentIdImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                                </flux:tooltip>
                                             </div>
                                         @elseif ($existingGovernmentIdImage)
                                             <div class="relative inline-block w-full">
                                                 <img src="{{ asset('storage/' . $existingGovernmentIdImage) }}" class="w-full max-h-40 object-contain rounded-lg border border-gray-200">
-                                                <button type="button" wire:click="$set('existingGovernmentIdImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                                <flux:tooltip :content="'Remove this ID document'" position="bottom">
+                                                    <button type="button" wire:click="$set('existingGovernmentIdImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                                </flux:tooltip>
                                             </div>
                                         @endif
 
@@ -459,7 +465,7 @@
                                             <div class="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                                                 <div class="h-full bg-[#2360E8] rounded-full transition-all duration-200" :style="'width: ' + idProgress + '%'"></div>
                                             </div>
-                                            <p class="text-[10px] text-[#2360E8] mt-0.5 font-medium">Uploading... <span x-text="idProgress + '%'"></span></p>
+                                            <p class="text-[11px] text-[#2360E8] mt-0.5 font-medium">Uploading... <span x-text="idProgress + '%'"></span></p>
                                         </div>
 
                                         <label class="mt-2 flex items-center gap-2 cursor-pointer text-sm text-[#2360E8] hover:text-[#070589] font-medium" x-show="!idUploading">
@@ -467,7 +473,7 @@
                                             {{ $governmentIdImage || $existingGovernmentIdImage ? 'Change ID photo' : 'Upload ID photo' }}
                                             <input type="file" wire:model="governmentIdImage" class="hidden" accept="image/*">
                                         </label>
-                                        <p class="text-[10px] text-gray-400 mt-1" x-show="!idUploading">Photo or scan of your valid government ID (max 10MB)</p>
+                                        <p class="text-[11px] text-gray-400 mt-1" x-show="!idUploading">Photo or scan of your valid government ID (max 10MB)</p>
                                         @error('governmentIdImage') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
@@ -576,7 +582,7 @@
                                             <div class="mt-2 bg-amber-50 rounded-lg p-2.5 border border-amber-200">
                                                 <p class="text-xs font-semibold text-amber-700">Short-Term Premium</p>
                                                 <p class="text-sm font-bold text-amber-600 mt-0.5">+ ₱ 500.00 / month</p>
-                                                <p class="text-[10px] text-amber-500 mt-0.5">Applied — term is under 6 months</p>
+                                                <p class="text-[11px] text-amber-500 mt-0.5">Applied — term is under 6 months</p>
                                             </div>
                                         @endif
                                     </div>
@@ -606,12 +612,12 @@
                                 <h3 class="text-base font-bold text-[#070589] mb-4">Payment Details</h3>
                                 <div class="grid grid-cols-2 gap-4 mb-6">
                                     <div>
-                                        <label class="text-xs font-semibold text-gray-700">Monthly Rate</label>
+                                        <label class="text-xs font-semibold text-gray-700">Monthly Rate <span class="font-normal text-gray-400">(1 Month Advance)</span></label>
                                         <div class="relative mt-1"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-gray-500 text-xs">₱</span></div><input wire:model="monthlyRate" type="number" class="w-full pl-8 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500"></div>
                                         @error('monthlyRate') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
-                                        <label class="text-xs font-semibold text-gray-700">Security Deposit</label>
+                                        <label class="text-xs font-semibold text-gray-700">Security Deposit <span class="font-normal text-gray-400">(1 Month Deposit)</span></label>
                                         <div class="relative mt-1"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-gray-500 text-xs">₱</span></div><input wire:model="securityDeposit" type="number" class="w-full pl-8 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500"></div>
                                         @error('securityDeposit') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
@@ -623,7 +629,7 @@
                                             <option value="5">5th of the month</option>
                                             <option value="15">15th of the month</option>
                                         </select>
-                                        <p class="text-[10px] text-gray-400 mt-0.5">The day of the month rent is due</p>
+                                        <p class="text-[11px] text-gray-400 mt-0.5">The day of the month rent is due</p>
                                         @error('monthlyDueDate') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div>
@@ -637,26 +643,9 @@
                                     </div>
                                 </div>
 
-                                <h3 class="text-base font-bold text-[#070589] mb-4">Fixed Contract Terms</h3>
-                                <div class="grid grid-cols-1 gap-3">
-                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                        <p class="text-xs font-semibold text-gray-700">Late Payment Penalty</p>
-                                        <p class="text-sm font-bold text-[#070589] mt-1">₱ 100.00 / day</p>
-                                        <p class="text-[10px] text-gray-400 mt-0.5">Auto-computed on overdue payments</p>
-                                    </div>
-                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                        <p class="text-xs font-semibold text-gray-700">Early Termination Policy</p>
-                                        <p class="text-sm text-gray-600 mt-1">Security deposit is <span class="font-bold text-red-600">forfeited in full</span> if tenant moves out before the lease end date. No additional fee.</p>
-                                    </div>
-                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                        <p class="text-xs font-semibold text-gray-700">Reservation Policy</p>
-                                        <p class="text-sm text-gray-600 mt-1">No reservation fee. Slot is held for <span class="font-bold">3 calendar days</span>. If payment is not completed, the slot is automatically released.</p>
-                                    </div>
-                                </div>
-
                                 {{-- Total Move-In Cost Summary --}}
                                 @if($monthlyRate && $securityDeposit)
-                                    <div class="mt-6 bg-[#EEF2FF] rounded-xl p-4 border border-blue-100">
+                                    <div class="bg-[#EEF2FF] rounded-xl p-4 border border-blue-100 mb-6">
                                         <h4 class="text-xs font-bold text-[#070589] uppercase tracking-wide mb-3">Total Move-In Cost</h4>
                                         <div class="space-y-1.5 text-sm">
                                             <div class="flex justify-between"><span class="text-gray-600">1 Month Advance</span><span class="font-semibold">&#8369; {{ number_format($monthlyRate, 2) }}</span></div>
@@ -668,6 +657,23 @@
                                         </div>
                                     </div>
                                 @endif
+
+                                <h3 class="text-base font-bold text-[#070589] mb-4">Fixed Contract Terms</h3>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                        <p class="text-xs font-semibold text-gray-700">Late Payment Penalty</p>
+                                        <p class="text-sm font-bold text-[#070589] mt-1">1% of monthly rent / day</p>
+                                        <p class="text-[11px] text-gray-400 mt-0.5">Auto-computed on overdue payments</p>
+                                    </div>
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                        <p class="text-xs font-semibold text-gray-700">Early Termination Policy</p>
+                                        <p class="text-xs text-gray-600 mt-1">Deposit is <span class="font-bold text-red-600">forfeited in full</span> if tenant moves out before lease end. No additional fee.</p>
+                                    </div>
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                        <p class="text-xs font-semibold text-gray-700">Reservation Policy</p>
+                                        <p class="text-xs text-gray-600 mt-1">No reservation fee. Slot held for <span class="font-bold">3 calendar days</span>. Auto-released if unpaid.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     @endif

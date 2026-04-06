@@ -33,8 +33,8 @@
                 </svg>
             </div>
             <div class="flex-1">
-                <p class="text-sm font-medium text-blue-700">Pending Move-In Ready</p>
-                <p class="text-2xl font-bold text-blue-900">{{ $pendingMoveInReady }} {{ Str::plural('Unit', $pendingMoveInReady) }}</p>
+                <p class="text-sm font-medium text-blue-700">Pending Requests</p>
+                <p class="text-2xl font-bold text-blue-900">{{ $pendingRequests }} {{ Str::plural('Request', $pendingRequests) }}</p>
             </div>
             <div class="text-sm text-gray-500">
                 In Progress
@@ -49,7 +49,7 @@
             </div>
             <div>
                 <p class="text-sm font-medium text-blue-700">Average Turnaround Time</p>
-                <p class="text-2xl font-bold text-blue-900">{{ $avgTurnaroundTime }} Days</p>
+                <p class="text-2xl font-bold text-blue-900">{{ $avgTurnaroundDays }} Days</p>
             </div>
         </div>
 

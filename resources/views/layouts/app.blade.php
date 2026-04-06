@@ -32,7 +32,7 @@
                 @endauth
             </div>
 
-            <main class="flex-1 overflow-y-auto ml-8 max-sm:ml-0 bg-[#F4F7FC] rounded-tl-4xl [&::-webkit-scrollbar]:w-0">
+            <main class="flex-1 overflow-y-auto ml-8 max-sm:ml-0 bg-[#F4F7FC] rounded-tl-4xl scrollbar-color-[#ACD5FF] scrollbar-thin">
 
                 <div class="w-full min-h-full flex flex-col px-4 md:px-8 lg:px-18 pb-16 gap-6">
 
@@ -91,6 +91,7 @@
     </div>
 
     @livewireScripts
+    @fluxScripts
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
     {{-- <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script> --}}
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>

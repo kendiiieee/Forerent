@@ -637,7 +637,7 @@
     </div>
 
     <div class="penalty-note">
-        <strong>Late Payment Penalty:</strong> PHP <strong>{{ $payment['late_fee'] ?? '______' }}</strong> per day of delay after the due date.
+        <strong>Late Payment Penalty:</strong> <strong>{{ $payment['late_fee'] ?? '1' }}%</strong> of the monthly rent per day of delay after the due date.
     </div>
 
     <div class="law-note">

@@ -1,0 +1,1554 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id('user_id')->primary();
+            $table->string('first_name',255)->nullable();
+            $table->string('last_name',255)->nullable();
+            $table->string('email',255)->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('contact',255)->unique();
+            $table->timestamp('phone_verified_at')->nullable();
+            $table->string('password',255);
+            $table->string('profile_img',255)->nullable();
+            $table->enum('role',['tenant', 'manager', 'landlord'])->default('tenant');
+            $table->rememberToken();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration');
+        });
+
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cache');
+        Schema::dropIfExists('cache_locks');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->text('two_factor_secret')->after('password')->nullable();
+            $table->text('two_factor_recovery_codes')->after('two_factor_secret')->nullable();
+            $table->timestamp('two_factor_confirmed_at')->after('two_factor_recovery_codes')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn([
+                'two_factor_secret',
+                'two_factor_recovery_codes',
+                'two_factor_confirmed_at',
+            ]);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('properties', function (Blueprint $table) {
+            $table->id('property_id')->primary();
+            $table->foreignId('owner_id')
+                ->nullable()
+                ->constrained('users', 'user_id')
+                ->nullOnDelete();
+            $table->string('building_name', 255);
+            $table->string('address', 255);
+            $table->text('prop_description')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('properties');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Create Units Table
+        Schema::create('units', function (Blueprint $table) {
+            $table->id('unit_id')->primary();
+            $table->foreignId('property_id')
+                ->constrained('properties', 'property_id')
+                ->onDelete('cascade');
+            $table->foreignId('manager_id')->nullable()
+                ->constrained('users', 'user_id')->nullOnDelete();
+            $table->integer('floor_number');
+            $table->string('unit_number');
+            $table->enum('occupants', ['Male', 'Female', 'Co-ed'])->default('Co-ed');
+            $table->double('living_area')->nullable();
+            $table->enum('furnishing', ['Bare', 'Semi-furnished', 'Fully Furnished'])->nullable();
+            $table->enum('bed_type', ['Single', 'Bunk'])->nullable();
+            $table->integer('room_cap');
+            $table->decimal('price', 8, 2);
+            $table->string('amenities')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('units');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('beds', function (Blueprint $table) {
+            $table->id('bed_id')->primary();
+            $table->foreignId('unit_id')
+                ->constrained('units', 'unit_id')
+                ->onDelete('cascade');
+            $table->string('bed_number');
+            $table->enum('status', ['Vacant', 'Occupied'])->default('Vacant');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('beds');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('leases', function (Blueprint $table) {
+            $table->id('lease_id')->primary();
+            $table->foreignId('tenant_id')
+                ->constrained('users', 'user_id')
+                ->onDelete('cascade');
+            $table->foreignId('bed_id')
+                ->constrained('beds', 'bed_id')
+                ->onDelete('cascade');
+            $table->enum('status',['Active', 'Expired']);
+            $table->integer('term');
+            $table->enum('shift', ['Night', 'Morning']);
+            $table->boolean('auto_renew');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->decimal('contract_rate', 8, 2);
+            $table->decimal('advance_amount', 8, 2); //
+            $table->decimal('security_deposit', 8, 2); // <-- Auto-generate receipt on Lease Creation
+            $table->date('move_in');
+            $table->date('move_out')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('lease_info');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('billings', function (Blueprint $table) {
+            $table->id('billing_id')->primary();
+            $table->foreignId('lease_id')
+                ->constrained('leases', 'lease_id')
+                ->onDelete('cascade');
+            $table->date('billing_date');
+            $table->date('next_billing');
+            $table->decimal('to_pay', 8, 2);
+            $table->decimal('amount', 8, 2);
+            // Only Visible to manager or tenant when status is unpaid or overdue
+            // Chech daily using job-schedule to update status based on current date
+            $table->enum('status', ['Unpaid', 'Overdue', 'Paid']);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('billings');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('receipts', function (Blueprint $table) {
+            $table->id('receipt_id')->primary();
+            $table->string('reference_no')->unique();
+            $table->foreignId('billing_id')->constrained('billings', 'billing_id')->onDelete('cascade');
+            $table->foreignId('manager_id')->constrained('users', 'user_id')->onDelete('cascade');
+            $table->enum('purpose', ['Lease', 'Deposit', 'Advance']);
+            $table->date('date_issued');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('receipts');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('maintenance_requests', function (Blueprint $table) {
+            $table->id('request_id')->primary();
+            $table->foreignId('lease_id')
+                ->constrained('leases', 'lease_id')
+                ->onDelete('cascade');
+            $table->enum('status', ['Pending', 'Ongoing', 'Completed']);
+            $table->string('logged_by');
+            $table->string('ticket_number');
+            $table->date('log_date');
+            $table->string('problem');
+            $table->enum('urgency', ['Level 1', 'Level 2', 'Level 3', 'Level 4']);
+            $table->enum('category', [
+                'Plumbing',
+                'Electrical',
+                'Structural',
+                'Appliance',
+                'Pest Control'
+            ]);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('maintenance_requests');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('maintenance_logs', function (Blueprint $table) {
+            $table->id('log_id')->primary();
+            $table->foreignId('request_id')
+                ->constrained('maintenance_requests', 'request_id');
+            $table->date('completion_date');
+            $table->decimal('cost', 8, 2);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('maintenance_logs');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('transactions', function (Blueprint $table) {
+            $table->id('transaction_id')->primary();
+            $table->foreignId('billing_id')
+                ->nullable()
+                ->constrained('billings', 'billing_id');
+            $table->string('name')->nullable();
+            $table->string('reference_number');
+            // For forecasting training feature, check if value is cash inflow or outflow //
+            $table->enum('transaction_type', ['Debit', 'Credit'])->default('Credit');
+            $table->enum('category', ['Rent Payment', 'Deposit', 'Advance', 'Maintenance', 'Vendor Payment']);
+            $table->date('transaction_date');
+            $table->decimal('amount', 8, 2)->unsigned();
+            $table->boolean('is_recurring')->default(false);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('transactions');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('announcements', function (Blueprint $table) {
+            $table->id('announcement_id')->primary();
+            $table->foreignId('author_id')->constrained('users', 'user_id')->onDelete('cascade');
+            $table->foreignId('property_id')->nullable()->constrained('properties', 'property_id')->nullOnDelete();
+            $table->string('headline');
+            $table->text('details');
+            $table->enum('sender_role', ['landlord', 'manager'])->default('landlord');
+            $table->enum('recipient_role', ['manager', 'tenant'])->default('manager');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('announcements');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('messages', function (Blueprint $table) {
+            $table->id();
+
+            // Who sent it? Who received it?
+            $table->foreignId('sender_id')->constrained('users', 'user_id')->onDelete('cascade');
+            $table->foreignId('receiver_id')->constrained('users', 'user_id')->onDelete('cascade');
+
+            // The Content
+            $table->text('message')->nullable();
+            $table->string('type')->default('text'); // 'text' or 'file'
+            $table->string('file_path')->nullable(); // If it's a file
+
+            $table->boolean('is_read')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('messages');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            $table->string('file_type')->nullable()->after('file_path');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            $table->dropColumn('file_type');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('maintenance_requests', function (Blueprint $table) {
+            // Add image_path column to store uploaded maintenance photos
+            $table->string('image_path')->nullable()->after('problem');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('maintenance_requests', function (Blueprint $table) {
+            $table->dropColumn('image_path');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('maintenance_requests', function (Blueprint $table) {
+            // Change from VARCHAR(255) to TEXT so we can store JSON array of up to 3 image paths
+            $table->text('image_path')->nullable()->change();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('maintenance_requests', function (Blueprint $table) {
+            $table->string('image_path')->nullable()->change();
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('maintenance_feedback', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('request_id');
+            $table->unsignedBigInteger('tenant_id');
+            $table->tinyInteger('rating');               // 1–5 stars
+            $table->string('experience_tag')->nullable(); // e.g. "Fully Resolved"
+            $table->text('comment')->nullable();
+            $table->timestamps();
+
+            $table->foreign('request_id')
+                  ->references('request_id')
+                  ->on('maintenance_requests')
+                  ->onDelete('cascade');
+
+            $table->foreign('tenant_id')
+                  ->references('user_id')
+                  ->on('users')
+                  ->onDelete('cascade');
+
+            // One feedback per tenant per ticket
+            $table->unique(['request_id', 'tenant_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('maintenance_feedback');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('announcements', function (Blueprint $table) {
+            $table->date('notification_date')->nullable()->after('recipient_role');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('announcements', function (Blueprint $table) {
+            $table->dropColumn('notification_date');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('property_documents', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('property_id')->constrained('properties', 'property_id')->cascadeOnDelete();
+            $table->string('file_path');
+            $table->string('original_name');
+            $table->enum('category', [
+                'property_photo',
+                'business_permit',
+                'bir_2303',
+                'inspection_report',
+                'barangay_clearance',
+                'occupancy_permit',
+            ]);
+            $table->enum('visibility', ['owner_manager', 'all']);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('property_documents');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('maintenance_logs', function (Blueprint $table) {
+            $table->string('description')->nullable()->after('cost');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('maintenance_logs', function (Blueprint $table) {
+            $table->dropColumn('description');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->enum('payment_method', ['GCash', 'Maya', 'Bank Transfer', 'Cash'])->default('Cash')->after('category');
+            $table->string('or_number')->nullable()->after('reference_number');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->dropColumn(['payment_method', 'or_number']);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('billing_items', function (Blueprint $table) {
+            $table->id('billing_item_id')->primary();
+            $table->foreignId('billing_id')
+                ->constrained('billings', 'billing_id')
+                ->onDelete('cascade');
+            $table->enum('charge_category', ['recurring', 'conditional', 'move_in', 'move_out']);
+            $table->string('charge_type'); // e.g. rent, electricity_share, water_share, late_fee, advance, security_deposit
+            $table->string('description');
+            $table->decimal('amount', 10, 2);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('billing_items');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('billings', function (Blueprint $table) {
+            $table->enum('billing_type', ['monthly', 'move_in', 'move_out'])->default('monthly')->after('lease_id');
+            $table->date('due_date')->nullable()->after('next_billing');
+            $table->decimal('previous_balance', 10, 2)->default(0.00)->after('amount');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('billings', function (Blueprint $table) {
+            $table->dropColumn(['billing_type', 'due_date', 'previous_balance']);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('utility_bills', function (Blueprint $table) {
+            $table->id('utility_bill_id')->primary();
+            $table->foreignId('unit_id')
+                ->constrained('units', 'unit_id')
+                ->onDelete('cascade');
+            $table->enum('utility_type', ['electricity', 'water']);
+            $table->date('billing_period'); // first day of the month the bill covers
+            $table->decimal('total_amount', 10, 2);
+            $table->unsignedInteger('tenant_count');
+            $table->decimal('per_tenant_amount', 10, 2);
+            $table->foreignId('entered_by')
+                ->constrained('users', 'user_id')
+                ->onDelete('cascade');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('utility_bills');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->enum('gender', ['Male', 'Female'])->nullable()->after('last_name');
+            $table->text('permanent_address')->nullable()->after('contact');
+            $table->string('government_id_type', 100)->nullable()->after('permanent_address');
+            $table->string('government_id_number', 100)->nullable()->after('government_id_type');
+            $table->string('company_school', 255)->nullable()->after('government_id_number');
+            $table->string('position_course', 255)->nullable()->after('company_school');
+            $table->string('emergency_contact_name', 255)->nullable()->after('position_course');
+            $table->string('emergency_contact_relationship', 100)->nullable()->after('emergency_contact_name');
+            $table->string('emergency_contact_number', 50)->nullable()->after('emergency_contact_relationship');
+        });
+
+        Schema::table('leases', function (Blueprint $table) {
+            $table->unsignedTinyInteger('monthly_due_date')->nullable()->after('security_deposit');
+            $table->decimal('late_payment_penalty', 8, 2)->nullable()->after('monthly_due_date');
+            $table->decimal('short_term_premium', 8, 2)->nullable()->after('late_payment_penalty');
+            $table->decimal('reservation_fee_paid', 8, 2)->nullable()->after('short_term_premium');
+            $table->decimal('early_termination_fee', 8, 2)->nullable()->after('reservation_fee_paid');
+
+            // Move-out fields
+            $table->text('forwarding_address')->nullable()->after('move_out');
+            $table->string('reason_for_vacating', 255)->nullable()->after('forwarding_address');
+            $table->string('deposit_refund_method', 100)->nullable()->after('reason_for_vacating');
+            $table->string('deposit_refund_account', 255)->nullable()->after('deposit_refund_method');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn([
+                'gender',
+                'permanent_address',
+                'government_id_type',
+                'government_id_number',
+                'company_school',
+                'position_course',
+                'emergency_contact_name',
+                'emergency_contact_relationship',
+                'emergency_contact_number',
+            ]);
+        });
+
+        Schema::table('leases', function (Blueprint $table) {
+            $table->dropColumn([
+                'monthly_due_date',
+                'late_payment_penalty',
+                'short_term_premium',
+                'reservation_fee_paid',
+                'early_termination_fee',
+                'forwarding_address',
+                'reason_for_vacating',
+                'deposit_refund_method',
+                'deposit_refund_account',
+            ]);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('government_id_image', 500)->nullable()->after('government_id_number');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('government_id_image');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('move_in_inspections', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('lease_id');
+            $table->enum('type', ['checklist', 'item_received']);
+            $table->string('item_name');
+            $table->enum('condition', ['good', 'damaged', 'missing'])->nullable();
+            $table->unsignedInteger('quantity')->nullable();
+            $table->text('remarks')->nullable();
+            $table->boolean('tenant_confirmed')->default(false);
+            $table->timestamps();
+
+            $table->foreign('lease_id')->references('lease_id')->on('leases')->onDelete('cascade');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('move_in_inspections');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('leases', function (Blueprint $table) {
+            $table->string('tenant_signature')->nullable()->after('early_termination_fee');
+            $table->timestamp('tenant_signed_at')->nullable()->after('tenant_signature');
+            $table->string('tenant_signed_ip')->nullable()->after('tenant_signed_at');
+
+            $table->string('owner_signature')->nullable()->after('tenant_signed_ip');
+            $table->timestamp('owner_signed_at')->nullable()->after('owner_signature');
+            $table->string('owner_signed_ip')->nullable()->after('owner_signed_at');
+
+            $table->string('signed_contract_path')->nullable()->after('owner_signed_ip');
+            $table->boolean('contract_agreed')->default(false)->after('signed_contract_path');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('leases', function (Blueprint $table) {
+            $table->dropColumn([
+                'tenant_signature',
+                'tenant_signed_at',
+                'tenant_signed_ip',
+                'owner_signature',
+                'owner_signed_at',
+                'owner_signed_ip',
+                'signed_contract_path',
+                'contract_agreed',
+            ]);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (!Schema::hasColumn('units', 'living_area')) {
+            Schema::table('units', function (Blueprint $table) {
+                $table->double('living_area')->nullable()->after('occupants');
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        if (Schema::hasColumn('units', 'living_area')) {
+            Schema::table('units', function (Blueprint $table) {
+                $table->dropColumn('living_area');
+            });
+        }
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('move_out_inspections', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('lease_id');
+            $table->enum('type', ['checklist', 'item_returned']);
+            $table->string('item_name');
+            $table->enum('condition', ['good', 'damaged', 'missing'])->nullable();
+            $table->unsignedInteger('quantity')->nullable();
+            $table->text('remarks')->nullable();
+            $table->boolean('tenant_confirmed')->default(false);
+            $table->timestamps();
+
+            $table->foreign('lease_id')->references('lease_id')->on('leases')->onDelete('cascade');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('move_out_inspections');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('leases', function (Blueprint $table) {
+            $table->string('moveout_tenant_signature')->nullable()->after('deposit_refund_account');
+            $table->timestamp('moveout_tenant_signed_at')->nullable()->after('moveout_tenant_signature');
+            $table->string('moveout_tenant_signed_ip')->nullable()->after('moveout_tenant_signed_at');
+            $table->string('moveout_owner_signature')->nullable()->after('moveout_tenant_signed_ip');
+            $table->timestamp('moveout_owner_signed_at')->nullable()->after('moveout_owner_signature');
+            $table->string('moveout_owner_signed_ip')->nullable()->after('moveout_owner_signed_at');
+            $table->boolean('moveout_contract_agreed')->default(false)->after('moveout_owner_signed_ip');
+            $table->string('moveout_signed_contract_path')->nullable()->after('moveout_contract_agreed');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('leases', function (Blueprint $table) {
+            $table->dropColumn([
+                'moveout_tenant_signature',
+                'moveout_tenant_signed_at',
+                'moveout_tenant_signed_ip',
+                'moveout_owner_signature',
+                'moveout_owner_signed_at',
+                'moveout_owner_signed_ip',
+                'moveout_contract_agreed',
+                'moveout_signed_contract_path',
+            ]);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('notifications', function (Blueprint $table) {
+            $table->id('notification_id');
+            $table->unsignedBigInteger('user_id');
+            $table->string('type'); // maintenance_request, contract_signed
+            $table->string('title');
+            $table->text('message');
+            $table->string('link')->nullable();
+            $table->boolean('is_read')->default(false);
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
+            $table->index(['user_id', 'is_read']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('notifications');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE maintenance_requests ALTER COLUMN image_path TYPE TEXT');
+            return;
+        }
+
+        if ($driver === 'mysql') {
+            DB::statement('ALTER TABLE maintenance_requests MODIFY image_path TEXT NULL');
+        }
+    }
+
+    public function down(): void
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE maintenance_requests ALTER COLUMN image_path TYPE VARCHAR(255)');
+            return;
+        }
+
+        if ($driver === 'mysql') {
+            DB::statement('ALTER TABLE maintenance_requests MODIFY image_path VARCHAR(255) NULL');
+        }
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        DB::statement(
+            "SELECT setval(pg_get_serial_sequence('transactions', 'transaction_id'), GREATEST(COALESCE(MAX(transaction_id), 0) + 1, 1), false) FROM transactions"
+        );
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        // No-op: this migration only normalizes sequence state.
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            $table->timestamp('delivered_at')->nullable()->after('is_read');
+            $table->timestamp('read_at')->nullable()->after('delivered_at');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            $table->dropColumn(['delivered_at', 'read_at']);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            $table->boolean('is_auto_reply')->default(false)->after('is_read');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('messages', function (Blueprint $table) {
+            $table->dropColumn('is_auto_reply');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('payment_requests', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('billing_id');
+            $table->unsignedBigInteger('lease_id');
+            $table->unsignedBigInteger('tenant_id');
+            $table->enum('payment_method', ['GCash', 'Maya', 'Bank Transfer', 'Cash']);
+            $table->string('reference_number')->nullable();
+            $table->decimal('amount_paid', 10, 2);
+            $table->string('proof_image');
+            $table->enum('status', ['Pending', 'Confirmed', 'Rejected'])->default('Pending');
+            $table->text('reject_reason')->nullable();
+            $table->unsignedBigInteger('reviewed_by')->nullable();
+            $table->timestamp('reviewed_at')->nullable();
+            $table->timestamps();
+
+            $table->foreign('billing_id')->references('billing_id')->on('billings')->onDelete('cascade');
+            $table->foreign('lease_id')->references('lease_id')->on('leases')->onDelete('cascade');
+            $table->foreign('tenant_id')->references('user_id')->on('users')->onDelete('cascade');
+            $table->foreign('reviewed_by')->references('user_id')->on('users')->onDelete('set null');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('payment_requests');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('maintenance_notes', function (Blueprint $table) {
+            $table->id('note_id');
+            $table->foreignId('request_id')->constrained('maintenance_requests', 'request_id')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade');
+            $table->text('note');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('maintenance_notes');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('maintenance_activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('request_id')->constrained('maintenance_requests', 'request_id')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade');
+            $table->string('action');       // e.g. 'status_changed', 'cost_added', 'note_added', 'urgency_changed'
+            $table->text('details');         // e.g. 'Status changed from Pending to Ongoing'
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('maintenance_activities');
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('maintenance_requests', function (Blueprint $table) {
+            $table->string('assigned_to')->nullable()->after('urgency');
+            $table->date('expected_completion_date')->nullable()->after('assigned_to');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('maintenance_requests', function (Blueprint $table) {
+            $table->dropColumn(['assigned_to', 'expected_completion_date']);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('maintenance_logs', function (Blueprint $table) {
+            $table->enum('charged_to', ['owner', 'tenant'])->default('owner')->after('description');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('maintenance_logs', function (Blueprint $table) {
+            $table->dropColumn('charged_to');
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('payment_requests', function (Blueprint $table) {
+            $table->string('proof_image')->nullable()->change();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('payment_requests', function (Blueprint $table) {
+            $table->string('proof_image')->nullable(false)->change();
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // --- Leases: contract status machine + deposit refund ---
+        Schema::table('leases', function (Blueprint $table) {
+            $table->string('contract_status', 30)->default('draft')
+                ->after('status')
+                ->comment('draft|pending_signatures|pending_tenant|pending_owner|executed');
+
+            $table->decimal('deposit_refund_amount', 10, 2)->nullable()->after('deposit_refund_account');
+            $table->json('deposit_deductions')->nullable()->after('deposit_refund_amount')
+                ->comment('JSON breakdown of deductions from deposit');
+        });
+
+        // --- Inspections: tenant dispute workflow ---
+        Schema::table('move_in_inspections', function (Blueprint $table) {
+            $table->string('dispute_status', 20)->default('none')
+                ->after('tenant_confirmed')
+                ->comment('none|disputed|resolved');
+            $table->text('dispute_remarks')->nullable()->after('dispute_status');
+            $table->timestamp('disputed_at')->nullable()->after('dispute_remarks');
+            $table->text('resolution_remarks')->nullable()->after('disputed_at');
+            $table->timestamp('resolved_at')->nullable()->after('resolution_remarks');
+        });
+
+        Schema::table('move_out_inspections', function (Blueprint $table) {
+            $table->string('dispute_status', 20)->default('none')
+                ->after('tenant_confirmed')
+                ->comment('none|disputed|resolved');
+            $table->text('dispute_remarks')->nullable()->after('dispute_status');
+            $table->timestamp('disputed_at')->nullable()->after('dispute_remarks');
+            $table->text('resolution_remarks')->nullable()->after('disputed_at');
+            $table->timestamp('resolved_at')->nullable()->after('resolution_remarks');
+        });
+
+        // --- Properties: per-property contract template settings ---
+        Schema::table('properties', function (Blueprint $table) {
+            $table->json('contract_settings')->nullable()->after('prop_description')
+                ->comment('Per-property customization: house_rules, inclusions, exclusions, policies');
+        });
+
+        // --- Contract audit trail ---
+        Schema::create('contract_audit_logs', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('lease_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('action', 50);
+            $table->string('field_changed')->nullable();
+            $table->text('old_value')->nullable();
+            $table->text('new_value')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('lease_id')->references('lease_id')->on('leases')->cascadeOnDelete();
+            $table->foreign('user_id')->references('user_id')->on('users')->nullOnDelete();
+            $table->index(['lease_id', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('contract_audit_logs');
+
+        Schema::table('properties', function (Blueprint $table) {
+            $table->dropColumn('contract_settings');
+        });
+
+        Schema::table('move_out_inspections', function (Blueprint $table) {
+            $table->dropColumn(['dispute_status', 'dispute_remarks', 'disputed_at', 'resolution_remarks', 'resolved_at']);
+        });
+
+        Schema::table('move_in_inspections', function (Blueprint $table) {
+            $table->dropColumn(['dispute_status', 'dispute_remarks', 'disputed_at', 'resolution_remarks', 'resolved_at']);
+        });
+
+        Schema::table('leases', function (Blueprint $table) {
+            $table->dropColumn(['contract_status', 'deposit_refund_amount', 'deposit_deductions']);
+        });
+    }
+};
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('leases', function (Blueprint $table) {
+            $table->timestamp('move_out_initiated_at')->nullable()->after('move_out');
+            $table->string('moveout_contract_status', 30)->default('draft')->after('moveout_contract_agreed');
+        });
+
+        Schema::table('move_out_inspections', function (Blueprint $table) {
+            $table->decimal('repair_cost', 10, 2)->nullable()->after('remarks');
+            $table->decimal('replacement_cost', 10, 2)->nullable()->after('repair_cost');
+            $table->boolean('is_returned')->default(false)->after('tenant_confirmed');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('leases', function (Blueprint $table) {
+            $table->dropColumn(['move_out_initiated_at', 'moveout_contract_status']);
+        });
+
+        Schema::table('move_out_inspections', function (Blueprint $table) {
+            $table->dropColumn(['repair_cost', 'replacement_cost', 'is_returned']);
+        });
+    }
+};

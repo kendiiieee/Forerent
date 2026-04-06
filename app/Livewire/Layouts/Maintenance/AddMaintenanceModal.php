@@ -8,17 +8,18 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
+use App\Services\UrgencyEvaluator;
+use App\Livewire\Concerns\WithNotifications;
 
 class AddMaintenanceModal extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithNotifications;
 
     public $modalId;
     public $isOpen = false;
 
     public $category    = 'Plumbing';
     public $description = '';       // Owned by Alpine via setDescription(), NOT wire:model
-    public $urgency     = 'Level 2'; // Auto-assigned, not shown to tenant
     public $images      = [];        // Up to 3 images
 
     public $residentName  = '';
@@ -59,8 +60,9 @@ class AddMaintenanceModal extends Component
         $user = Auth::user();
         $this->residentName = $user->first_name . ' ' . $user->last_name;
 
-        $nextId = (DB::table('maintenance_requests')->max('request_id') ?? 0) + 1;
-        $this->ticketNumber = 'MR-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        // Ticket number is now generated at save time to prevent race conditions.
+        // Display a placeholder until then.
+        $this->ticketNumber = 'MR-XXXX';
 
         $leaseDetails = DB::table('leases')
             ->join('beds', 'leases.bed_id', '=', 'beds.bed_id')
@@ -122,20 +124,32 @@ class AddMaintenanceModal extends Component
 
         $user = Auth::user();
 
-        DB::table('maintenance_requests')->insert([
-            'lease_id'      => $this->leaseId,
-            'ticket_number' => $this->ticketNumber,
-            'problem'       => $this->description,
-            'category'      => $this->category,
-            'status'        => 'Pending',
-            'urgency'       => $this->urgency,
-            'logged_by'     => $user->first_name . ' ' . $user->last_name,
-            'log_date'      => Carbon::now()->format('Y-m-d'),
-            'image_path'    => !empty($imagePaths) ? json_encode($imagePaths) : null,
-            'created_at'    => now(),
-            'updated_at'    => now(),
-        ]);
+        // Auto-evaluate urgency based on category + description keywords
+        $evaluatedUrgency = UrgencyEvaluator::evaluate($this->category, $this->description);
 
+        // Generate ticket number inside a transaction with advisory lock to prevent race conditions
+        DB::transaction(function () use ($user, $imagePaths, $evaluatedUrgency) {
+            // Use PostgreSQL advisory lock to serialize ticket number generation
+            DB::statement('SELECT pg_advisory_xact_lock(1)');
+            $nextId = (DB::table('maintenance_requests')->max('request_id') ?? 0) + 1;
+            $ticketNumber = 'MR-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+
+            DB::table('maintenance_requests')->insert([
+                'lease_id'      => $this->leaseId,
+                'ticket_number' => $ticketNumber,
+                'problem'       => $this->description,
+                'category'      => $this->category,
+                'status'        => 'Pending',
+                'urgency'       => $evaluatedUrgency,
+                'logged_by'     => $user->first_name . ' ' . $user->last_name,
+                'log_date'      => Carbon::now()->format('Y-m-d'),
+                'image_path'    => !empty($imagePaths) ? json_encode($imagePaths) : null,
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ]);
+        });
+
+        $this->notifySuccess('Request Submitted', 'Your maintenance request has been submitted successfully.');
         $this->dispatch('close-modal', 'save-maintenance-confirmation');
         $this->dispatch('refresh-maintenance-list');
         $this->close();
@@ -156,7 +170,6 @@ class AddMaintenanceModal extends Component
     {
         $this->reset(['description', 'images', 'leaseId']);
         $this->category = 'Plumbing';
-        $this->urgency  = 'Level 2';
         $this->resetValidation();
     }
 

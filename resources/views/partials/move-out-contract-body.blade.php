@@ -26,6 +26,10 @@
     $moveOutOwnerSignedAt = $moveOutOwnerSignedAt ?? null;
     $moveOutContractAgreed = $moveOutContractAgreed ?? false;
     $signatureMode = $signatureMode ?? 'tenant';
+    $outstandingBalances = $outstandingBalances ?? [];
+    $depositRefund = $depositRefund ?? [];
+    $checklistItemNames = \App\Livewire\Concerns\InspectionConfig::CHECKLIST_ITEMS;
+    $returnItemNames = \App\Livewire\Concerns\InspectionConfig::RETURNED_ITEMS;
 @endphp
 
 {{-- Page Header --}}
@@ -106,12 +110,12 @@
     <div class="space-y-1 ml-2 text-xs text-gray-700">
         @foreach($reasons as $r)
             <div class="flex items-center gap-2">
-                <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[10px] {{ $reason === $r ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($reason === $r)&#10003;@endif</span>
+                <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[11px] {{ $reason === $r ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($reason === $r)&#10003;@endif</span>
                 <span>{{ $r }}</span>
             </div>
         @endforeach
         <div class="flex items-center gap-2">
-            <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[10px] {{ $isOther ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($isOther)&#10003;@endif</span>
+            <span class="w-3.5 h-3.5 border border-gray-400 rounded-sm flex items-center justify-center text-[11px] {{ $isOther ? 'bg-[#3B5998] text-white border-[#3B5998]' : '' }}">@if($isOther)&#10003;@endif</span>
             <span>Other: {{ $isOther ? $reason : '___________________________________' }}</span>
         </div>
     </div>
@@ -133,42 +137,31 @@
             <th class="p-2 text-right w-28">Est. Repair Cost (PHP)</th>
         </tr></thead>
         <tbody>
-            @php
-                $checklistItems = [
-                    'Bed Frame & Mattress / Foam',
-                    'Cabinet / Wardrobe (doors & locks)',
-                    'Air Conditioning Unit & Remote',
-                    'Bathroom Fixtures (shower, toilet, faucet, heater)',
-                    'Electrical Outlets & Light Switches',
-                    'Windows, Curtains / Blinds',
-                    'Walls (stains, cracks, holes)',
-                    'Floor Condition',
-                    'Door Lock & Keys',
-                ];
-            @endphp
-            @foreach($checklistItems as $index => $itemName)
+            @php $totalRepairCost = 0; @endphp
+            @foreach($checklistItemNames as $index => $itemName)
                 @php
                     $moveInItem = collect($inspectionChecklist)->firstWhere('item_name', $itemName);
                     $moveOutItem = collect($moveOutChecklist)->firstWhere('item_name', $itemName);
                     $moveInCond = $moveInItem['condition'] ?? '';
                     $moveOutCond = $moveOutItem['condition'] ?? '';
                     $damageFound = $moveInCond && $moveOutCond && $moveInCond !== $moveOutCond && $moveOutCond !== 'good';
+                    $repairCost = (float) ($moveOutItem['repair_cost'] ?? 0);
+                    if ($damageFound) $totalRepairCost += $repairCost;
                 @endphp
                 <tr class="border-b {{ $damageFound ? 'bg-red-50' : '' }}">
                     <td class="p-2 font-medium">{{ $itemName }}</td>
                     <td class="p-2 text-center border-l capitalize">{{ $moveInCond ?: '' }}</td>
                     <td class="p-2 text-center border-l capitalize {{ $damageFound ? 'text-red-600 font-bold' : '' }}">{{ $moveOutCond ?: '' }}</td>
                     <td class="p-2 text-center border-l {{ $damageFound ? 'text-red-600 font-bold' : '' }}">{{ $damageFound ? 'Yes' : ($moveOutCond ? 'No' : '') }}</td>
-                    <td class="p-2 text-right border-l">{{ $damageFound ? '( ₱ ________ )' : '' }}</td>
+                    <td class="p-2 text-right border-l">{{ $damageFound && $repairCost > 0 ? '&#8369; ' . number_format($repairCost, 2) : ($damageFound ? 'TBD' : '') }}</td>
                 </tr>
             @endforeach
-            <tr class="border-b">
-                <td class="p-2 font-medium text-gray-400">Other: ___________________</td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 text-right border-l"></td>
+            @if($totalRepairCost > 0)
+            <tr class="bg-gray-50">
+                <td class="p-2 font-bold" colspan="4">Total Damage Repair Cost</td>
+                <td class="p-2 text-right border-l font-bold">&#8369; {{ number_format($totalRepairCost, 2) }}</td>
             </tr>
+            @endif
         </tbody>
     </table>
     <p class="text-xs text-gray-600 mt-3 italic leading-relaxed">Move-out photographs shall be compared against move-in photographs on file. Both parties acknowledge the accuracy of the inspection findings recorded above.</p>
@@ -188,28 +181,28 @@
             <th class="p-2 text-right w-32">Replacement Cost (PHP)</th>
         </tr></thead>
         <tbody>
-            @php
-                $returnItems = ['Unit Key(s)', 'Building Access Card / Fob', 'Air Conditioning Remote', 'Cabinet Key'];
-            @endphp
-            @foreach($returnItems as $itemName)
+            @php $totalReplacementCost = 0; @endphp
+            @foreach($returnItemNames as $itemName)
                 @php
                     $returned = collect($itemsReturned)->firstWhere('item_name', $itemName);
-                    $isReturned = $returned && $returned['tenant_confirmed'];
+                    $isReturned = $returned && ($returned['is_returned'] ?? false);
                     $condition = $returned['condition'] ?? '';
+                    $replacementCost = (float) ($returned['replacement_cost'] ?? 0);
+                    if (!$isReturned && $returned) $totalReplacementCost += $replacementCost;
                 @endphp
                 <tr class="border-b">
                     <td class="p-2 font-medium">{{ $itemName }}</td>
                     <td class="p-2 text-center border-l">{{ $isReturned ? '✓ Yes' : ($returned ? '✗ No' : '') }}</td>
                     <td class="p-2 border-l">{{ $condition }}</td>
-                    <td class="p-2 text-right border-l">{{ (!$isReturned && $returned) ? '( ₱ ________ )' : '' }}</td>
+                    <td class="p-2 text-right border-l">{{ (!$isReturned && $returned && $replacementCost > 0) ? '&#8369; ' . number_format($replacementCost, 2) : ((!$isReturned && $returned) ? 'TBD' : '') }}</td>
                 </tr>
             @endforeach
-            <tr class="border-b">
-                <td class="p-2 font-medium text-gray-400">Other: ____________</td>
-                <td class="p-2 text-center border-l"></td>
-                <td class="p-2 border-l"></td>
-                <td class="p-2 text-right border-l"></td>
+            @if($totalReplacementCost > 0)
+            <tr class="bg-gray-50">
+                <td class="p-2 font-bold" colspan="3">Total Replacement Cost</td>
+                <td class="p-2 text-right border-l font-bold">&#8369; {{ number_format($totalReplacementCost, 2) }}</td>
             </tr>
+            @endif
         </tbody>
     </table>
 </div>
@@ -227,13 +220,21 @@
             <th class="p-2 text-right w-36">Amount (PHP)</th>
         </tr></thead>
         <tbody>
-            <tr class="border-b"><td class="p-2">Unpaid Monthly Rent</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Unpaid Electricity Share</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Unpaid Water Share</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Late Payment Fees</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">Violation Fines</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2 text-gray-400">Other: _______________</td><td class="p-2"></td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="bg-gray-50"><td class="p-2 font-bold" colspan="2">TOTAL OUTSTANDING BALANCE</td><td class="p-2 text-right font-bold"></td></tr>
+            @php $totalOutstanding = 0; @endphp
+            @forelse($outstandingBalances as $balance)
+                @php $totalOutstanding += (float) $balance['amount']; @endphp
+                <tr class="border-b">
+                    <td class="p-2">{{ $balance['charge'] }}</td>
+                    <td class="p-2">{{ $balance['period'] ?? '' }}</td>
+                    <td class="p-2 text-right">&#8369; {{ number_format($balance['amount'], 2) }}</td>
+                </tr>
+            @empty
+                <tr class="border-b"><td class="p-2 text-gray-400 text-center" colspan="3">No outstanding balances</td></tr>
+            @endforelse
+            <tr class="bg-gray-50">
+                <td class="p-2 font-bold" colspan="2">TOTAL OUTSTANDING BALANCE</td>
+                <td class="p-2 text-right font-bold">&#8369; {{ number_format($totalOutstanding, 2) }}</td>
+            </tr>
         </tbody>
     </table>
 </div>
@@ -245,6 +246,11 @@
     <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 6 — Security Deposit Refund Calculation</h3>
     <p class="text-xs text-gray-700 mb-3">In accordance with RA 9653, the security deposit refund is calculated as follows:</p>
 
+    @php
+        $deductions = $depositRefund['deductions'] ?? [];
+        $refundAmount = $depositRefund['amount'] ?? null;
+        $totalDeductions = collect($deductions)->sum('amount');
+    @endphp
     <table class="w-full border border-gray-300 text-sm">
         <thead><tr class="bg-[#3B5998] text-white">
             <th class="p-2 text-left">Item</th>
@@ -252,14 +258,34 @@
         </tr></thead>
         <tbody>
             <tr class="border-b"><td class="p-2 font-semibold">Original Security Deposit Held</td><td class="p-2 text-right font-semibold">&#8369; {{ number_format($deposit, 2) }}</td></tr>
-            <tr class="border-b"><td class="p-2">(+) Interest Earned on Deposit (per RA 9653)</td><td class="p-2 text-right text-gray-400"></td></tr>
-            <tr class="border-b"><td class="p-2">(-) Unpaid Utility Balances</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Damage Repair Costs (per Section 3)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Lost / Unreturned Keys or Cards (per Section 4)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Early Termination Penalty (if applicable)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Cleaning Fee (if applicable)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="border-b"><td class="p-2">(-) Outstanding Rent or Other Charges (per Section 5)</td><td class="p-2 text-right text-gray-400">( &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; )</td></tr>
-            <tr class="bg-blue-50"><td class="p-2 font-bold text-[#3B5998]">NET DEPOSIT REFUND</td><td class="p-2 text-right font-bold text-[#3B5998]">PHP ___________</td></tr>
+            @forelse($deductions as $deduction)
+                <tr class="border-b">
+                    <td class="p-2">(-) {{ $deduction['label'] }}</td>
+                    <td class="p-2 text-right {{ (float) $deduction['amount'] > 0 ? 'text-red-600 font-medium' : 'text-gray-400' }}">
+                        @if((float) $deduction['amount'] > 0)
+                            (&#8369; {{ number_format($deduction['amount'], 2) }})
+                        @else
+                            TBD
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr class="border-b"><td class="p-2 text-gray-400" colspan="2">No deductions recorded yet</td></tr>
+            @endforelse
+            <tr class="border-b bg-gray-50">
+                <td class="p-2 font-semibold">Total Deductions</td>
+                <td class="p-2 text-right font-semibold text-red-600">(&#8369; {{ number_format($totalDeductions, 2) }})</td>
+            </tr>
+            <tr class="bg-blue-50">
+                <td class="p-2 font-bold text-[#3B5998]">NET DEPOSIT REFUND</td>
+                <td class="p-2 text-right font-bold text-[#3B5998]">
+                    @if($refundAmount !== null)
+                        &#8369; {{ number_format($refundAmount, 2) }}
+                    @else
+                        &#8369; {{ number_format(max(0, $deposit - $totalDeductions), 2) }}
+                    @endif
+                </td>
+            </tr>
         </tbody>
     </table>
 
@@ -267,7 +293,11 @@
     <table class="w-full border border-gray-300 text-sm"><tbody>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 w-1/3 border-r bg-gray-50">Refund Method (GCash / Bank / Cash):</td><td class="p-2">{{ $t['move_out_details']['deposit_refund_method'] ?? '___________________________' }}</td></tr>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Account Name or Number:</td><td class="p-2">{{ $t['move_out_details']['deposit_refund_account'] ?? '___________________________' }}</td></tr>
-        <tr><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Expected Refund Date (within 30 days of clearance):</td><td class="p-2">___________________________</td></tr>
+        @php
+            $moveOutDate = $t['move_out_details']['move_out_date'] ?? null;
+            $expectedRefund = $moveOutDate ? \Carbon\Carbon::parse($moveOutDate)->addDays(30)->format('F d, Y') : null;
+        @endphp
+        <tr><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Expected Refund Date (within 30 days of clearance):</td><td class="p-2">{{ $expectedRefund ?? 'To be determined upon move-out completion' }}</td></tr>
     </tbody></table>
 </div>
 
@@ -312,24 +342,14 @@
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-800">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
-                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
             @else
-                @if($signatureMode === 'manager')
-                    <button
-                        wire:click="openMoveOutSignatureModal('tenant')"
-                        class="w-full border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer group no-print"
-                    >
-                        <svg class="w-6 h-6 text-blue-400 group-hover:text-blue-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="text-[10px] font-semibold text-blue-500 group-hover:text-blue-600">Click to Sign</span>
-                    </button>
-                @else
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
-                    </div>
-                @endif
+                <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
+                    <span class="text-[11px] text-gray-400">Awaiting tenant signature</span>
+                </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</p>
-                <p class="text-[10px] text-gray-400 mt-1">Tenant's Signature Over Printed Name</p>
+                <p class="text-[11px] text-gray-400 mt-1">Tenant's Signature Over Printed Name</p>
             @endif
             <p class="text-xs text-gray-400 mt-2">Date: {{ $moveOutTenantSignedAt ?? '___________________' }}</p>
         </div>
@@ -342,7 +362,7 @@
                 </div>
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-800">{{ $t['lessor_info']['representative'] }}</p>
-                <p class="text-[10px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutOwnerSignedAt }}</p>
+                <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutOwnerSignedAt }}</p>
             @else
                 @if($signatureMode === 'manager')
                     <button
@@ -350,16 +370,16 @@
                         class="w-full border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-indigo-50 hover:border-indigo-400 transition-all cursor-pointer group no-print"
                     >
                         <svg class="w-6 h-6 text-indigo-400 group-hover:text-indigo-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="text-[10px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
+                        <span class="text-[11px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
                     </button>
                 @else
                     <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[10px] text-gray-400">Awaiting signature</span>
+                        <span class="text-[11px] text-gray-400">Awaiting signature</span>
                     </div>
                 @endif
                 <div class="border-b border-gray-400 mb-1"></div>
                 <p class="text-xs font-semibold text-gray-500">{{ $t['lessor_info']['representative'] }}</p>
-                <p class="text-[10px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
+                <p class="text-[11px] text-gray-400 mt-1">Lessor / Authorized Representative</p>
             @endif
             <p class="text-xs text-gray-400 mt-2">Date: {{ $moveOutOwnerSignedAt ?? '___________________' }}</p>
         </div>
@@ -369,7 +389,7 @@
     @if($moveOutContractAgreed)
         <div class="mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
             <span class="text-sm font-bold text-emerald-700">Move-Out Contract Fully Signed</span>
-            <p class="text-[10px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
+            <p class="text-[11px] text-emerald-600 mt-1">Both parties have signed this agreement electronically per RA 8792.</p>
         </div>
     @endif
 
@@ -416,5 +436,5 @@
 
 {{-- Footer --}}
 <div class="border-t pt-3 mt-6 text-center">
-    <p class="text-[10px] text-gray-400">This document is confidential and intended solely for the parties named herein.</p>
+    <p class="text-[11px] text-gray-400">This document is confidential and intended solely for the parties named herein.</p>
 </div>

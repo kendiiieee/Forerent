@@ -63,6 +63,11 @@ class Dashboard extends Component
 
     public $vacantUnits = 0;
 
+    public $prevTotalUnits = 0;
+    public $prevFullyBookedUnits = 0;
+    public $prevAvailableUnits = 0;
+    public $prevVacantUnits = 0;
+
     public function mount()
     {
         $this->selectedDate = Carbon::today();
@@ -109,12 +114,48 @@ class Dashboard extends Component
         $this->vacantUnits = Unit::whereDoesntHave('beds', function ($bedQuery) use ($activeLeaseConstraint) {
             $bedQuery->whereHas('leases', $activeLeaseConstraint);
         })->count();
+
+        // Previous month stats for comparison
+        $prevDate = Carbon::today()->subMonth()->endOfMonth();
+        $prevLeaseConstraint = function ($query) use ($prevDate) {
+            $query->where('status', 'Active')
+                ->where(function ($q) use ($prevDate) {
+                    $q->whereNull('move_out')
+                        ->orWhereDate('move_out', '>', $prevDate);
+                })
+                ->where(function ($q) use ($prevDate) {
+                    $q->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $prevDate);
+                })
+                ->whereDate('start_date', '<=', $prevDate);
+        };
+
+        $this->prevTotalUnits = Unit::count();
+
+        $this->prevFullyBookedUnits = Unit::whereHas('beds')
+            ->whereDoesntHave('beds', function ($bedQuery) use ($prevLeaseConstraint) {
+                $bedQuery->whereDoesntHave('leases', $prevLeaseConstraint);
+            })
+            ->count();
+
+        $this->prevAvailableUnits = Unit::whereHas('beds', function ($bedQuery) use ($prevLeaseConstraint) {
+            $bedQuery->whereHas('leases', $prevLeaseConstraint);
+        })->whereHas('beds', function ($bedQuery) use ($prevLeaseConstraint) {
+            $bedQuery->whereDoesntHave('leases', $prevLeaseConstraint);
+        })->count();
+
+        $this->prevVacantUnits = Unit::whereDoesntHave('beds', function ($bedQuery) use ($prevLeaseConstraint) {
+            $bedQuery->whereHas('leases', $prevLeaseConstraint);
+        })->count();
     }
 
     public function updatedRentSummaryMonth(): void
     {
         $this->loadFinancialData();
-        $this->dispatch('dashboard-refresh-charts');
+        $this->dispatch('dashboard-refresh-charts', [
+            'collected' => $this->totalRentCollected,
+            'uncollected' => $this->totalUncollectedRent,
+        ]);
     }
 
     private function initializeRentSummaryMonthFilter(): void

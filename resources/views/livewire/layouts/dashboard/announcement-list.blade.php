@@ -4,16 +4,17 @@
 
        {{-- Show Add button for Landlord and Manager only --}}
         @if(in_array($role, ['landlord', 'manager'], true))
-            <button
-                wire:click="$dispatch('open-announcement-modal')"
-                type="button"
-                class="inline-flex items-center gap-1.5 sm:gap-2 text-white hover:text-gray-200 transition-colors text-sm font-semibold"
-                title="Create Announcement">
-                <span class="hidden sm:inline">Create Announcement</span>
-                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-            </button>
+            <flux:tooltip :content="'Post a new announcement for tenants'" position="bottom">
+                <button
+                    wire:click="$dispatch('open-announcement-modal')"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 sm:gap-2 text-white hover:text-gray-200 transition-colors text-sm font-semibold">
+                    <span class="hidden sm:inline">Create Announcement</span>
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
+            </flux:tooltip>
         @endif
     </div>
     <div class="p-4 sm:p-6 space-y-4 overflow-y-auto" style="max-height: 300px;">
@@ -27,16 +28,17 @@
 
             {{-- Edit button (show only for owners/managers) --}}
             @if(in_array($role, ['landlord', 'manager'], true))
-            <button
-                wire:click="$dispatch('edit-announcement', { announcementId: {{ $announcement->announcement_id }} })"
-                type="button"
-                class="ml-3 text-gray-400 hover:text-blue-700 transition-colors opacity-0 group-hover:opacity-100 focus:outline-none"
-                title="Edit announcement"
-            >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-            </button>
+            <flux:tooltip :content="'Modify this announcement'" position="bottom">
+                <button
+                    wire:click="$dispatch('edit-announcement', { announcementId: {{ $announcement->announcement_id }} })"
+                    type="button"
+                    class="ml-3 text-gray-400 hover:text-blue-700 transition-colors opacity-0 group-hover:opacity-100 focus:outline-none"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
+            </flux:tooltip>
             @endif
         </div>
         @empty

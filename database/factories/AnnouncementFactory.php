@@ -23,6 +23,9 @@ class AnnouncementFactory extends Factory
         // Generate title and description based on context
         [$headline, $details] = $this->generateHeadlineAndDetails($propertyName);
 
+        $date = $this->faker->dateTimeBetween('-6 months', 'now');
+
+
         return [
             'author_id'      => $authorId,
             'property_id'    => $property->property_id,
@@ -30,9 +33,9 @@ class AnnouncementFactory extends Factory
             'details'        => $details,
             'sender_role'    => $author->role,
             'recipient_role' => $this->determineRecipientRole($author->role),
-            'notification_date' => $this->faker->dateTimeBetween('first day of November this year', 'last day of November this year')->format('Y-m-d'),
-            'created_at'     => $this->faker->dateTimeBetween('first day of November this year', 'last day of November this year'),
-            'updated_at'     => $this->faker->dateTimeBetween('first day of November this year', 'last day of November this year')
+            'notification_date' => $date->format('Y-m-d'),
+            'created_at'     => $date,
+            'updated_at'     => $date,
         ];
     }
 

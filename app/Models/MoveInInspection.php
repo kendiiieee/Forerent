@@ -15,10 +15,17 @@ class MoveInInspection extends Model
         'quantity',
         'remarks',
         'tenant_confirmed',
+        'dispute_status',
+        'dispute_remarks',
+        'disputed_at',
+        'resolution_remarks',
+        'resolved_at',
     ];
 
     protected $casts = [
         'tenant_confirmed' => 'boolean',
+        'disputed_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     public function lease(): BelongsTo

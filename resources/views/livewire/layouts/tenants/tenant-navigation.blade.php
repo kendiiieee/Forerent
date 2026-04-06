@@ -9,6 +9,7 @@
         @php
             $tabs = [
                 'current'     => 'Current',
+                'moving_out'  => 'Moving Out',
                 'transferred' => 'Transferred',
                 'moved_out'   => 'Moved Out',
             ];
@@ -22,11 +23,34 @@
 
         />
 
-        {{-- Right Side: Add Button & Sort --}}
+        {{-- Right Side: Building Filter, Sort & Add Button --}}
         <div class="flex items-center gap-3">
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
+
+            {{-- Building Filter Dropdown --}}
+            <x-dropdown label="{{ $selectedBuildingName ? explode(' ', $selectedBuildingName)[0] : 'Building' }}" tooltip="Filter tenants by building">
+                <x-dropdown-item
+                    wire:click="selectBuilding(null)"
+                    @click="open = false"
+                    :active="$selectedBuildingId === null"
+                >
+                    All Buildings
+                </x-dropdown-item>
+
+                @foreach ($buildingOptions as $id => $name)
+                    <x-dropdown-item
+                        wire:click="selectBuilding({{ $id }})"
+                        @click="open = false"
+                        :active="$selectedBuildingId === $id"
+                    >
+                        {{ $name }}
+                    </x-dropdown-item>
+                @endforeach
+            </x-dropdown>
+
             <x-ui.button-add
                 text="Add Tenant"
+                tooltip="Register a new tenant to a unit"
                 x-on:click="$dispatch('open-add-tenant-modal')"
             />
         </div>
@@ -60,6 +84,7 @@
                             'Unpaid'      => 'text-amber-700 bg-amber-50 border-amber-200',
                             'Pending'     => 'text-amber-700 bg-amber-50 border-amber-200',
                             'Overdue'     => 'text-red-700 bg-red-50 border-red-200',
+                            'Moving Out'  => 'text-orange-700 bg-orange-50 border-orange-200',
                             'Transferred' => 'text-blue-700 bg-blue-50 border-blue-200',
                             'Moved Out'   => 'text-gray-600 bg-gray-50 border-gray-200',
                             default       => 'text-gray-600 bg-gray-50 border-gray-200'
@@ -69,6 +94,7 @@
                             'Unpaid'      => 'bg-amber-500',
                             'Pending'     => 'bg-amber-500',
                             'Overdue'     => 'bg-red-500',
+                            'Moving Out'  => 'bg-orange-500',
                             'Transferred' => 'bg-blue-500',
                             'Moved Out'   => 'bg-gray-400',
                             default       => 'bg-gray-400'
@@ -88,7 +114,7 @@
                             <h3 class="font-bold text-sm {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
                                 {{ $tenant['first_name'] }} {{ $tenant['last_name'] }}
                             </h3>
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border {{ $statusStyles }}">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border {{ $statusStyles }}">
                                 <span class="w-1.5 h-1.5 rounded-full {{ $dotStyles }}"></span>
                                 {{ $tenant['payment_status'] }}
                             </span>
@@ -102,11 +128,11 @@
                                 Bed {{ $tenant['bed_number'] }}
                             </p>
                             @if($tenant['next_billing'])
-                                <p class="text-[10px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
+                                <p class="text-[11px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
                                     {{ \Carbon\Carbon::parse($tenant['next_billing'])->format('M d, Y') }}
                                 </p>
                             @else
-                                <p class="text-[10px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
+                                <p class="text-[11px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
                                     No date
                                 </p>
                             @endif
@@ -129,11 +155,12 @@
 
         {{-- RIGHT PANEL: DETAIL (70% width) --}}
         <div class="w-full lg:w-[70%] h-[750px] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            <livewire:layouts.tenants.tenant-detail />
+            <livewire:layouts.tenants.tenant-detail :initialTenantId="$activeTenantId" />
         </div>
 
     </div>
 
     <livewire:layouts.tenants.add-tenant-modal />
+    <livewire:layouts.violations.add-violation-modal />
 
 </div>

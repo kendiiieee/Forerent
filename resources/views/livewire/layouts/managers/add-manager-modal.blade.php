@@ -14,15 +14,17 @@
                                 {{ $managerId ? 'Update manager information and property assignments.' : 'Create an account for the new property manager.' }}
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            x-on:click="$dispatch('open-modal', 'discard-manager-confirmation')"
-                            class="text-white hover:text-blue-200 transition-colors focus:outline-none">
-                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            <span class="sr-only">Close modal</span>
-                        </button>
+                        <flux:tooltip :content="'Close manager form without saving'" position="bottom">
+                            <button
+                                type="button"
+                                x-on:click="$dispatch('open-modal', 'discard-manager-confirmation')"
+                                class="text-white hover:text-blue-200 transition-colors focus:outline-none">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                <span class="sr-only">Close modal</span>
+                            </button>
+                        </flux:tooltip>
                     </div>
                 </div>
 

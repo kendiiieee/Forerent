@@ -4,6 +4,7 @@
     <div class="flex justify-end mb-4">
         <x-ui.button-add
             text="Add Manager"
+            tooltip="Assign a new manager to your properties"
             wire:click="$dispatch('openManagerModal_manager-dashboard')"
         />
     </div>
@@ -67,7 +68,7 @@
 
         {{-- Detail Card --}}
         <div id="unit-detail-card" class="w-full lg:w-[70%] h-[750px]">
-            <livewire:layouts.managers.manager-detail />
+            <livewire:layouts.managers.manager-detail :initialManagerId="$activeManagerId" />
         </div>
     </div>
 </div>

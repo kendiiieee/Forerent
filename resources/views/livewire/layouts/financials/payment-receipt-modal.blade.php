@@ -242,16 +242,18 @@
                 </div>
 
                 {{-- Close button --}}
-                <button @click="show = false" class="no-print absolute top-4 z-20 text-white/80 hover:text-white transition-colors" style="right: 24px;">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                <flux:tooltip :content="'Close this receipt'" position="bottom">
+                    <button @click="show = false" class="no-print absolute top-4 z-20 text-white/80 hover:text-white transition-colors" style="right: 24px;">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </flux:tooltip>
 
                 <div class="relative z-10 px-8 pt-5 pb-5 flex flex-col text-white">
 
                     {{-- ABC COMPANY label --}}
-                    <p class="text-[10px] font-semibold uppercase tracking-[1.5px] opacity-75 leading-tight mb-0.5">ABC COMPANY</p>
+                    <p class="text-[11px] font-semibold uppercase tracking-[1.5px] opacity-75 leading-tight mb-0.5">ABC COMPANY</p>
 
                     {{-- Title + Status Badge --}}
                     <div class="flex items-center gap-3">
@@ -421,26 +423,40 @@
 
                             @if(!empty($data['items']))
                                 @foreach($data['items'] as $item)
+                                    @php
+                                        $categoryColors = [
+                                            'recurring' => 'bg-blue-100 text-blue-700',
+                                            'conditional' => 'bg-amber-100 text-amber-700',
+                                            'move_in' => 'bg-green-100 text-green-700',
+                                            'move_out' => 'bg-red-100 text-red-700',
+                                        ];
+                                        $categoryLabels = [
+                                            'recurring' => 'Recurring',
+                                            'conditional' => 'One-Time',
+                                            'move_in' => 'Move-In',
+                                            'move_out' => 'Move-Out',
+                                        ];
+                                        $catClass = $categoryColors[$item['category']] ?? 'bg-gray-100 text-gray-700';
+                                        $catLabel = $categoryLabels[$item['category']] ?? ucfirst($item['category']);
+
+                                        // Split late fee description into label + breakdown
+                                        $isLateFee = ($item['type'] ?? '') === 'late_fee';
+                                        $mainLabel = $item['description'];
+                                        $subLabel = null;
+                                        if ($isLateFee && preg_match('/^(.+?)\s*\((.+)\)$/', $item['description'], $m)) {
+                                            $mainLabel = $m[1];
+                                            $subLabel = $m[2];
+                                        }
+                                    @endphp
                                     <div class="financial-row bg-white px-6 py-4 flex justify-between items-center border-b border-gray-100 min-h-[50px]">
                                         <div class="flex items-center gap-3">
-                                            @php
-                                                $categoryColors = [
-                                                    'recurring' => 'bg-blue-100 text-blue-700',
-                                                    'conditional' => 'bg-amber-100 text-amber-700',
-                                                    'move_in' => 'bg-green-100 text-green-700',
-                                                    'move_out' => 'bg-red-100 text-red-700',
-                                                ];
-                                                $categoryLabels = [
-                                                    'recurring' => 'Recurring',
-                                                    'conditional' => 'One-Time',
-                                                    'move_in' => 'Move-In',
-                                                    'move_out' => 'Move-Out',
-                                                ];
-                                                $catClass = $categoryColors[$item['category']] ?? 'bg-gray-100 text-gray-700';
-                                                $catLabel = $categoryLabels[$item['category']] ?? ucfirst($item['category']);
-                                            @endphp
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $catClass }}">{{ $catLabel }}</span>
-                                            <span class="detail-label text-sm font-medium text-gray-800">{{ $item['description'] }}</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider {{ $catClass }}">{{ $catLabel }}</span>
+                                            <div class="flex flex-col">
+                                                <span class="detail-label text-sm font-medium text-gray-800">{{ $mainLabel }}</span>
+                                                @if($subLabel)
+                                                    <span class="text-[11px] text-gray-400 mt-0.5">{{ $subLabel }}</span>
+                                                @endif
+                                            </div>
                                         </div>
                                         <span class="detail-value text-sm font-bold text-gray-800">&#8369; {{ number_format($item['amount'], 2) }}</span>
                                     </div>
@@ -450,7 +466,7 @@
                                 @if(($data['previous_balance'] ?? 0) > 0)
                                     <div class="financial-row bg-red-50 px-6 py-4 flex justify-between items-center border-b border-gray-100 min-h-[50px]">
                                         <div class="flex items-center gap-3">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700">Balance</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-red-100 text-red-700">Balance</span>
                                             <span class="detail-label text-sm font-medium text-red-700">Previous Unpaid Balance</span>
                                         </div>
                                         <span class="detail-value text-sm font-bold text-red-700">&#8369; {{ number_format($data['previous_balance'], 2) }}</span>

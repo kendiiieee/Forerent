@@ -14,11 +14,24 @@ class MoveOutInspection extends Model
         'condition',
         'quantity',
         'remarks',
+        'repair_cost',
+        'replacement_cost',
         'tenant_confirmed',
+        'is_returned',
+        'dispute_status',
+        'dispute_remarks',
+        'disputed_at',
+        'resolution_remarks',
+        'resolved_at',
     ];
 
     protected $casts = [
         'tenant_confirmed' => 'boolean',
+        'is_returned' => 'boolean',
+        'repair_cost' => 'decimal:2',
+        'replacement_cost' => 'decimal:2',
+        'disputed_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     public function lease(): BelongsTo

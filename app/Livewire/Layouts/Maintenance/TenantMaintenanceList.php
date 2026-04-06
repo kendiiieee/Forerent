@@ -45,7 +45,8 @@ class TenantMaintenanceList extends Component
             ->pluck('lease_id');
 
         $baseQuery = DB::table('maintenance_requests')
-            ->whereIn('lease_id', $tenantLeaseIds);
+            ->whereIn('lease_id', $tenantLeaseIds)
+            ->whereNull('deleted_at');
 
         // Apply search filter
         if (!empty($this->search)) {
@@ -94,6 +95,11 @@ class TenantMaintenanceList extends Component
 
         $direction = $this->sortOrder === 'newest' ? 'desc' : 'asc';
         $requests = $query->orderBy('created_at', $direction)->get();
+
+        // Auto-select first request if none is selected
+        if ($this->activeRequestId === null && $requests->isNotEmpty()) {
+            $this->selectRequest($requests->first()->request_id);
+        }
 
         // Build suggestions from all requests (unfiltered)
         $allRequests = DB::table('maintenance_requests')

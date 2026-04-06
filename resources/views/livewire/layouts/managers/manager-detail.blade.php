@@ -5,11 +5,9 @@
             {{-- Left Column: Profile Info --}}
             <div class="flex items-center gap-4">
 
-                {{-- Large User Icon (Fixed Size) --}}
-                <div class="flex-shrink-0 bg-white p-3 rounded-full shadow-lg">
-                    <svg class="w-14 h-14 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                    </svg>
+                {{-- Profile Image --}}
+                <div class="flex-shrink-0 bg-white rounded-full shadow-lg overflow-hidden w-20 h-20">
+                    <img src="{{ $currentManager->profile_image_url }}" alt="{{ $currentManager->first_name }}" class="w-full h-full object-cover">
                 </div>
 
                 {{-- User Info --}}
@@ -17,18 +15,18 @@
                     <h3 class="font-bold text-2xl mb-2">{{ $currentManager->first_name }} {{ $currentManager->last_name }}</h3>
                     <div class="flex flex-col gap-1.5">
                         <span class="flex items-center gap-2 text-sm text-white/90">
-                            {{-- Solid Mail Icon (Fixed) --}}
-                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            {{-- Mail Icon --}}
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
+                                <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
                             </svg>
                             {{ $currentManager->email }}
                         </span>
                         <span class="flex items-center gap-2 text-sm text-white/90">
-                            {{-- Solid Phone Icon (Fixed) --}}
                             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C6.477 18 2 13.523 2 8V3z" />
                             </svg>
-                            {{ $currentManager->contact }}
+                            {{ '(+63) ' . substr($currentManager->contact, -10, 3) . '-' . substr($currentManager->contact, -7, 3) . '-' . substr($currentManager->contact, -4) }}
                         </span>
                     </div>
                 </div>
@@ -57,16 +55,17 @@
                 <h4 class="font-bold text-gray-900 text-xl">Assigned Properties</h4>
 
                 {{-- Edit button  --}}
-                <button
-            type="button"
-            wire:click="editManager"
-            class="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-full hover:bg-blue-50"
-            title="Edit Manager Details"
-        >
-            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-            </svg>
-        </button>
+                <flux:tooltip :content="'Update this manager\'s profile information'" position="bottom">
+                    <button
+                        type="button"
+                        wire:click="editManager"
+                        class="text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-full hover:bg-blue-50"
+                    >
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                        </svg>
+                    </button>
+                </flux:tooltip>
 
             </div>
             <h5 class="font-bold text-gray-800 text-base mb-3">Buildings</h5>

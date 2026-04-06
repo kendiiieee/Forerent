@@ -1,4 +1,4 @@
-<div class="relative" x-data="{ open: false }" @click.away="open = false">
+<div class="relative" x-data="{ open: false }" @click.away="open = false" wire:poll.10s="loadNotifications">
     {{-- Bell Button --}}
     <button @click="open = !open" class="relative p-2 text-gray-500 hover:text-blue-900 transition-colors rounded-full hover:bg-blue-50 focus:outline-none">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

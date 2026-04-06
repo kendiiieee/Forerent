@@ -18,7 +18,7 @@
             />
 
             {{-- Month Filter --}}
-            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}">
+            <x-dropdown label="{{ $monthOptions[$selectedMonth] ?? 'Month' }}" tooltip="Filter records by month">
                 <x-dropdown-item wire:click="$set('selectedMonth', null)" @click="open = false">
                     All Months
                 </x-dropdown-item>
@@ -35,7 +35,7 @@
             </x-dropdown>
 
             {{-- Building Filter --}}
-            <x-dropdown label="{{ $selectedBuilding ?? 'Building' }}">
+            <x-dropdown label="{{ $selectedBuilding ?? 'Building' }}" tooltip="Filter records by building">
                 {{-- CLEAR FILTER OPTION --}}
                 <x-dropdown-item wire:click="$set('selectedBuilding', null)" @click="open = false">
                     All Buildings
@@ -76,12 +76,14 @@
                             <x-ui.td>{{ \Carbon\Carbon::parse($payment->transaction_date)->format('F d, Y') }}</x-ui.td>
                             <x-ui.td>₱ {{ number_format($payment->amount, 2) }}</x-ui.td>
                             <x-ui.td>
-                                <button
-                                    wire:click="viewReceipt({{ $payment->billing_id }})"
-                                    class="inline-flex items-center px-3 py-1 border border-[#0906ae] text-[#0906ae] rounded-md text-xs font-bold hover:bg-blue-50 transition-colors"
-                                >
-                                    View
-                                </button>
+                                <flux:tooltip :content="'View payment receipt and details'" position="bottom">
+                                    <button
+                                        wire:click="viewReceipt({{ $payment->billing_id }})"
+                                        class="inline-flex items-center px-3 py-1 border border-[#0906ae] text-[#0906ae] rounded-md text-xs font-bold hover:bg-blue-50 transition-colors"
+                                    >
+                                        View
+                                    </button>
+                                </flux:tooltip>
                             </x-ui.td>
                         </x-ui.tr>
                     @endforeach

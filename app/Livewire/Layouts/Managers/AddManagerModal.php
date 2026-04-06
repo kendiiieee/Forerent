@@ -127,14 +127,27 @@ class AddManagerModal extends Component
         $this->availableUnits = [];
 
         if ($propertyId) {
+            $pendingUnitIds = array_map(
+                'intval',
+                array_merge(...array_values($this->allSelectedUnits) ?: [[]])
+            );
+
             $this->floors = Unit::where('property_id', $propertyId)
+                ->where(function ($query) use ($pendingUnitIds) {
+                    $query->whereNull('manager_id');
+                    if (!is_null($this->managerId)) {
+                        $query->orWhere('manager_id', $this->managerId);
+                    }
+                    if (!empty($pendingUnitIds)) {
+                        $query->orWhereIn('unit_id', $pendingUnitIds);
+                    }
+                })
                 ->distinct()
                 ->orderBy('floor_number')
                 ->pluck('floor_number')
                 ->toArray();
         }
     }
-
     public function updatedSelectedFloor($floor): void
     {
         $this->availableUnits = [];

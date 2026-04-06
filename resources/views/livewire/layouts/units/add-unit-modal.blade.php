@@ -15,15 +15,17 @@
             </p>
         </div>
 
-        <button
-            type="button"
-            x-on:click="$dispatch('open-modal', 'discard-unit-confirmation')"
-            class="text-white hover:text-blue-200 transition-colors focus:outline-none">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <span class="sr-only">Close modal</span>
-        </button>
+        <flux:tooltip :content="'Close unit form without saving'" position="bottom">
+            <button
+                type="button"
+                x-on:click="$dispatch('open-modal', 'discard-unit-confirmation')"
+                class="text-white hover:text-blue-200 transition-colors focus:outline-none">
+                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span class="sr-only">Close modal</span>
+            </button>
+        </flux:tooltip>
 
         </div>
 </div>

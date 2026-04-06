@@ -37,13 +37,13 @@
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
                 {{-- ─── HERO SECTION: Photo + Info side by side ─── --}}
-                <div class="flex flex-col sm:flex-row">
+                <div class="flex flex-col sm:flex-row sm:items-stretch">
 
                     {{-- Left: Photo Gallery Area --}}
                     @if(count($photos) > 0)
                         <div class="sm:w-[45%] relative">
                             <div
-                                class="relative h-56 sm:h-full sm:min-h-[280px] cursor-pointer group overflow-hidden"
+                                class="relative h-56 sm:h-full cursor-pointer group overflow-hidden"
                                 @click="openLightbox({{ $activePhotoIndex }})"
                             >
                                 <img
@@ -105,11 +105,11 @@
                                 <div class="flex items-center gap-1.5 flex-shrink-0">
                                     <div class="bg-[#2360E8]/10 rounded-lg px-2.5 py-1.5 text-center">
                                         <p class="text-[#2360E8] text-sm font-bold leading-none">{{ $unitCount }}</p>
-                                        <p class="text-[#2360E8]/60 text-[9px] uppercase tracking-wider mt-0.5 font-medium">Units</p>
+                                        <p class="text-[#2360E8]/60 text-[11px] uppercase tracking-wider mt-0.5 font-medium">Units</p>
                                     </div>
                                     <div class="bg-[#070589]/10 rounded-lg px-2.5 py-1.5 text-center">
                                         <p class="text-[#070589] text-sm font-bold leading-none">{{ count($photos) }}</p>
-                                        <p class="text-[#070589]/60 text-[9px] uppercase tracking-wider mt-0.5 font-medium">Photos</p>
+                                        <p class="text-[#070589]/60 text-[11px] uppercase tracking-wider mt-0.5 font-medium">Photos</p>
                                     </div>
                                 </div>
                             </div>
@@ -140,7 +140,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                             </svg>
                                             <h4 class="text-xs font-semibold text-gray-900 uppercase tracking-wider">Documents</h4>
-                                            <span class="bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full px-1.5 py-0.5">{{ count($documents) }}</span>
+                                            <span class="bg-gray-100 text-gray-500 text-[11px] font-bold rounded-full px-1.5 py-0.5">{{ count($documents) }}</span>
                                         </div>
                                         @if(count($documents) > 2)
                                             <button
@@ -179,7 +179,7 @@
                                                     <p class="text-xs font-semibold text-gray-700 group-hover:text-[#2360E8] transition-colors truncate">
                                                         {{ $this->getCategoryLabel($doc['category']) }}
                                                     </p>
-                                                    <p class="text-[10px] text-gray-400 truncate">{{ $doc['name'] }}</p>
+                                                    <p class="text-[11px] text-gray-400 truncate">{{ $doc['name'] }}</p>
                                                 </div>
 
                                                 <div class="flex items-center gap-2 flex-shrink-0">
@@ -223,31 +223,37 @@
                     @touchstart="touchStartX = $event.touches[0].clientX"
                     @touchend="touchEndX = $event.changedTouches[0].clientX; handleSwipe()"
                 >
-                    <button @click="closeLightbox()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'Close the image viewer'" position="bottom">
+                        <button @click="closeLightbox()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </flux:tooltip>
 
                     <div class="absolute top-4 left-4 text-white/70 text-sm font-medium bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
                         <span x-text="lightboxIndex + 1"></span> / <span x-text="photos.length"></span>
                     </div>
 
-                    <button x-show="photos.length > 1" @click.stop="prevPhoto()" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all cursor-pointer">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'View the previous photo'" position="bottom">
+                        <button x-show="photos.length > 1" @click.stop="prevPhoto()" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all cursor-pointer">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+                            </svg>
+                        </button>
+                    </flux:tooltip>
 
                     <div class="max-w-5xl max-h-[85vh] flex items-center justify-center">
                         <img :src="photos[lightboxIndex]?.url" :alt="photos[lightboxIndex]?.name" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
                     </div>
 
-                    <button x-show="photos.length > 1" @click.stop="nextPhoto()" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all cursor-pointer">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'View the next photo'" position="bottom">
+                        <button x-show="photos.length > 1" @click.stop="nextPhoto()" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-all cursor-pointer">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                            </svg>
+                        </button>
+                    </flux:tooltip>
 
                     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-2">
                         <template x-for="(photo, i) in photos" :key="i">

@@ -9,41 +9,44 @@
             <div class="max-w-sm mx-auto">
                 {{-- Calendar Header with Navigation --}}
                 <div class="flex items-center justify-between mb-4">
-                    <button
-                        wire:click="previousMonth"
-                        type="button"
-                        class="p-1 hover:bg-gray-100 rounded transition-colors"
-                        title="Previous month"
-                    >
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'Navigate to the previous month'" position="bottom">
+                        <button
+                            wire:click="previousMonth"
+                            type="button"
+                            class="p-1 hover:bg-gray-100 rounded transition-colors"
+                        >
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                    </flux:tooltip>
 
                     <h3 class="text-sm font-bold text-gray-900 text-center flex-1">{{ $currentMonth }}</h3>
 
-                    <button
-                        wire:click="nextMonth"
-                        type="button"
-                        class="p-1 hover:bg-gray-100 rounded transition-colors"
-                        title="Next month"
-                    >
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
+                    <flux:tooltip :content="'Navigate to the next month'" position="bottom">
+                        <button
+                            wire:click="nextMonth"
+                            type="button"
+                            class="p-1 hover:bg-gray-100 rounded transition-colors"
+                        >
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </flux:tooltip>
                 </div>
 
                 {{-- Return to Today Button --}}
                 @if(\Carbon\Carbon::parse($selectedDate)->format('Y-m') !== \Carbon\Carbon::now()->format('Y-m'))
-                <button
-                    wire:click="currentMonth"
-                    type="button"
-                    class="w-full mb-3 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded px-2 py-1 transition-colors"
-                    title="Return to today"
-                >
-                    Today
-                </button>
+                <flux:tooltip :content="'Jump back to current date'" position="bottom">
+                    <button
+                        wire:click="currentMonth"
+                        type="button"
+                        class="w-full mb-3 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded px-2 py-1 transition-colors"
+                    >
+                        Today
+                    </button>
+                </flux:tooltip>
                 @endif
 
                 {{-- Calendar Grid --}}

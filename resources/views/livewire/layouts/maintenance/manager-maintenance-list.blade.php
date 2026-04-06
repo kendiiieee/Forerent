@@ -20,12 +20,29 @@
 
         />
 
-        {{-- Right Side: Sort --}}
+        {{-- Right Side: Building Filter & Sort --}}
         <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            {{-- Building Filter --}}
+            <x-dropdown label="{{ $selectedBuilding ? Str::before($selectedBuilding, ' ') . '...' : 'Building' }}" tooltip="Filter requests by building">
+                <x-dropdown-item wire:click="$set('selectedBuilding', null)" @click="open = false">
+                    All Buildings
+                </x-dropdown-item>
+                @foreach ($buildingOptions as $value => $label)
+                    <x-dropdown-item
+                        wire:click="$set('selectedBuilding', '{{ $value }}')"
+                        @click="open = false"
+                        :active="$selectedBuilding === $value"
+                    >
+                        {{ $label }}
+                    </x-dropdown-item>
+                @endforeach
+            </x-dropdown>
+
             <x-ui.sort-dropdown model="sortOrder" :current="$sortOrder" />
         </div>
 
     </div>
+
 
     {{-- 2. MAIN CONTENT GRID --}}
     <div class="flex flex-col lg:flex-row gap-6 w-full">
@@ -80,7 +97,7 @@
                             <h3 class="font-bold text-sm {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
                                 {{ $ticketId }}
                             </h3>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $statusStyles }}">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ $statusStyles }}">
                                 {{ $req->status }}
                             </span>
                         </div>
@@ -97,7 +114,7 @@
                             <p class="text-sm font-medium {{ $isActive ? 'text-white' : 'text-gray-600' }}">
                                 {{ $req->category ?? 'General Maintenance' }}
                             </p>
-                            <p class="text-[10px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
+                            <p class="text-[11px] {{ $isActive ? 'text-blue-100' : 'text-gray-400' }}">
                                 {{ \Carbon\Carbon::parse($req->created_at)->format('M d, Y') }}
                             </p>
                         </div>
@@ -105,13 +122,25 @@
                     </div>
                 @empty
                     <div class="flex flex-col items-center justify-center h-full text-gray-400 py-16">
-                        <div class="bg-[#F4F7FF] p-6 rounded-full mb-4">
-                            <svg class="h-10 w-10 text-[#2B66F5] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                        </div>
-                        <p class="font-semibold text-gray-500 text-sm">No requests found</p>
-                        <p class="text-xs text-gray-400 mt-1">There are currently no tickets in this category.</p>
+                        @if(!empty($search) || $activeTab !== 'all' || $selectedBuilding)
+                            {{-- Filtered but no results --}}
+                            <div class="bg-gray-50 p-6 rounded-full mb-4">
+                                <svg class="h-10 w-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <p class="font-semibold text-gray-500 text-sm">No matching requests</p>
+                            <p class="text-xs text-gray-400 mt-1">Try adjusting your search, filter, or tab.</p>
+                        @else
+                            {{-- Truly empty --}}
+                            <div class="bg-[#F4F7FF] p-6 rounded-full mb-4">
+                                <svg class="h-10 w-10 text-[#2B66F5] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="font-semibold text-gray-500 text-sm">No maintenance requests yet</p>
+                            <p class="text-xs text-gray-400 mt-1 text-center px-4">Requests from tenants will appear here once submitted.</p>
+                        @endif
                     </div>
                 @endforelse
             </div>
@@ -119,7 +148,7 @@
 
         {{-- RIGHT PANEL: DETAIL (70% width) --}}
         <div class="w-full lg:w-[70%] h-[750px] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            <livewire:layouts.maintenance.manager-maintenance-detail />
+            <livewire:layouts.maintenance.manager-maintenance-detail :initialRequestId="$activeRequestId" />
         </div>
 
     </div>
