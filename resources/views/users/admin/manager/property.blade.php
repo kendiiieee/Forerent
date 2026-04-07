@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('header-title', 'PROPERTY')
+@section('header-title', 'PROPERTIES MANAGEMENT')
 @section('header-subtitle', 'Centralized rental property management overview')
 
 @section('content')

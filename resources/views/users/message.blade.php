@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('header-title', 'MESSAGE')
+@section('header-title', 'MESSENGER')
 @section('header-subtitle', 'View and send messages')
 
 @section('content')

@@ -35,6 +35,22 @@
                 @endforeach
             </x-dropdown>
 
+            {{-- Year Filter --}}
+            <x-dropdown label="{{ $selectedYear ?: 'Year' }}" tooltip="Filter requests by year">
+                <x-dropdown-item wire:click="$set('selectedYear', '')" @click="open = false">
+                    All Years
+                </x-dropdown-item>
+                @foreach ($yearOptions as $value => $label)
+                    <x-dropdown-item
+                        wire:click="$set('selectedYear', '{{ $value }}')"
+                        @click="open = false"
+                        :active="$selectedYear == $value"
+                    >
+                        {{ $label }}
+                    </x-dropdown-item>
+                @endforeach
+            </x-dropdown>
+
             {{-- Building Filter --}}
             <x-dropdown label="{{ $selectedBuilding ?: 'Building' }}" tooltip="Filter requests by building">
                 <x-dropdown-item wire:click="$set('selectedBuilding', '')" @click="open = false">

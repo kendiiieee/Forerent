@@ -14,6 +14,7 @@ class TenantUtilityHistory extends Component
 
     public $activeTab = 'all';
     public $selectedMonth = null;
+    public $selectedYear = null;
     public $search = '';
     public $expandedRow = null;
 
@@ -25,6 +26,7 @@ class TenantUtilityHistory extends Component
     public function setTab($tab) { $this->activeTab = $tab; $this->resetPage(); }
     public function updatedActiveTab() { $this->resetPage(); }
     public function updatedSelectedMonth() { $this->resetPage(); }
+    public function updatedSelectedYear() { $this->resetPage(); }
     public function updatedSearch() { $this->resetPage(); }
 
     private function baseQuery()
@@ -78,6 +80,12 @@ class TenantUtilityHistory extends Component
             });
         }
 
+        if ($this->selectedYear) {
+            $query->whereHas('billing', function ($q) {
+                $q->whereYear('billing_date', $this->selectedYear);
+            });
+        }
+
         $items = $query->orderBy('created_at', 'desc')->paginate(10);
 
         // Load utility bill breakdown for the expanded row
@@ -112,10 +120,17 @@ class TenantUtilityHistory extends Component
             }
         }
 
+        $currentYear = (int) date('Y');
+        $yearOptions = array_combine(
+            range($currentYear, $currentYear - 4),
+            range($currentYear, $currentYear - 4)
+        );
+
         return view('livewire.layouts.tenants.tenant-utility-history', [
             'items'        => $items,
             'counts'       => $counts,
             'monthOptions' => $monthOptions,
+            'yearOptions'  => $yearOptions,
             'expandedBill' => $expandedBill,
         ]);
     }

@@ -21,6 +21,22 @@
                     </x-dropdown-item>
                 @endforeach
             </x-dropdown>
+
+            {{-- Year Filter --}}
+            <x-dropdown label="{{ $selectedYear ?? 'Year' }}" tooltip="Filter utility history by year">
+                <x-dropdown-item wire:click="$set('selectedYear', null)" @click="open = false">
+                    All Years
+                </x-dropdown-item>
+                @foreach ($yearOptions as $value => $label)
+                    <x-dropdown-item
+                        wire:click="$set('selectedYear', {{ $value }})"
+                        @click="open = false"
+                        :active="$selectedYear == $value"
+                    >
+                        {{ $label }}
+                    </x-dropdown-item>
+                @endforeach
+            </x-dropdown>
         </x-slot:filters>
 
         {{-- TABLE SLOT --}}

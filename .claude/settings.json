@@ -137,7 +137,9 @@
       "Bash(find e:\\\\reigne\\\\Citispace-Forerent -type f \\\\\\( -name \"*.php\" -o -name \"*.blade.php\" \\\\\\) -exec grep -l \"spa_document\\\\|spa_original_name\\\\|spaDocument\\\\|Special Power of Attorney\" {} \\\\;)",
       "Bash(rm -f resources/views/users/admin/owner/contracts.blade.php app/Livewire/Layouts/Contracts/ContractsOverview.php resources/views/livewire/layouts/contracts/contracts-overview.blade.php resources/views/components/icons/contracts.blade.php)",
       "Bash(rmdir app/Livewire/Layouts/Contracts)",
-      "Bash(rmdir resources/views/livewire/layouts/contracts)"
+      "Bash(rmdir resources/views/livewire/layouts/contracts)",
+      "Bash(find \"e:\\\\reigne\\\\Citispace-Forerent/resources/views\" -type f -name \"*.blade.php\" -exec grep -l \"deposit.*deduction\\\\|deduction.*tenant\" {} \\\\;)",
+      "Bash(grep -E \"\\\\.blade\\\\.php$\")"
     ],
     "additionalDirectories": [
       "\\tmp"

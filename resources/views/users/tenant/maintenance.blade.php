@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('header-title', 'MAINTENANCE MANAGEMENT')
-@section('header-subtitle', 'Monitor costs, track trends, and manage repair tickets')
+@section('header-title', 'MAINTENANCE REQUEST MANAGEMENT')
+@section('header-subtitle', 'Submit and track your maintenance requests')
 
 @section('content')
 <div class="w-full flex flex-col font-['Open_Sans']">

@@ -392,27 +392,20 @@
     <p class="text-xs text-gray-700 mb-2">Both parties hereby certify the following:</p>
     <ul class="text-xs text-gray-600 list-disc pl-5 space-y-1.5">
         <li>The joint move-out inspection has been completed and all findings are accurately recorded in this Agreement.</li>
-        <li>All outstanding balances have been settled in full or will be deducted from the security deposit as agreed.</li>
-        <li>All keys, access cards, and borrowed items have been returned or accounted for above.</li>
-        <li>The Lessee has vacated the premises and removed all personal belongings. Any items left behind after the move-out date shall be disposed of at the Lessor's discretion.</li>
+        <li>All outstanding balances have been settled in full or will be deducted from the security deposit as agreed. <strong>If the total outstanding balance exceeds the security deposit, the Lessee remains liable for the deficit and shall settle the remaining amount within fifteen (15) calendar days from the date of this clearance.</strong></li>
+        <li>A final utility meter reading (electricity and water) has been conducted as of the move-out date. Any remaining utility charges will be included in the outstanding balances above.</li>
+        <li>All keys, access cards, Wi-Fi credentials, and borrowed items have been returned or accounted for above.</li>
+        <li>The Lessee has vacated the premises and removed all personal belongings. Any items left behind may be coordinated for retrieval through the messaging system within a reasonable period.</li>
         <li>The Lessor agrees to process and release the deposit refund within thirty (30) calendar days from the date of this clearance.</li>
         <li>Both parties release each other from any further claims, demands, or liabilities related to this lease, except as expressly specified in this Agreement.</li>
     </ul>
 </div>
 
 {{-- ═══════════════════════════════════════════════
-     SECTION 8 — GOVERNING LAW
+     SECTION 8 — AGREEMENT AND SIGNATURES
 ═══════════════════════════════════════════════ --}}
 <div>
-    <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 8 — Governing Law</h3>
-    <p class="text-xs text-gray-700 leading-relaxed">This Agreement is governed by the laws of the Republic of the Philippines, including Republic Act No. 9653 (Rent Control Act of 2009). Any dispute shall first be resolved through amicable negotiation, then through Barangay mediation, and thereafter through the proper courts of competent jurisdiction.</p>
-</div>
-
-{{-- ═══════════════════════════════════════════════
-     SECTION 9 — AGREEMENT AND SIGNATURES
-═══════════════════════════════════════════════ --}}
-<div>
-    <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 9 — Agreement and Signatures</h3>
+    <h3 class="text-sm font-bold text-[#3B5998] uppercase mb-3 border-b border-gray-200 pb-1">Section 8 — Agreement and Signatures</h3>
     <p class="text-xs text-gray-700 mb-6">By signing below, both parties confirm that the move-out inspection has been conducted, all balances have been accounted for, and they voluntarily agree to the deposit settlement terms stated herein.</p>
 
     {{-- 3 Signature blocks: Owner (1st) → Manager/Witness (2nd) → Tenant (3rd) --}}
@@ -428,19 +421,28 @@
                 <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutOwnerSignedAt }}</p>
             @else
                 @if($signatureMode === 'owner')
-                    <div x-data="{ ownerReadConfirmed: false }">
+                    <div x-data="{ ownerReadConfirmed: false, showConfirm: false }">
                         <label class="inline-flex items-start gap-2 mb-2 cursor-pointer px-1">
                             <input type="checkbox" x-model="ownerReadConfirmed" class="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                             <span class="text-[10px] text-gray-600 text-left leading-tight">I have read and agree to all terms in this contract.</span>
                         </label>
                         <button
-                            x-show="ownerReadConfirmed"
-                            wire:click="openMoveOutSignatureModal"
+                            x-show="ownerReadConfirmed && !showConfirm"
+                            x-on:click="showConfirm = true"
                             class="w-full border-2 border-dashed border-indigo-300 bg-indigo-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-indigo-50 hover:border-indigo-400 transition-all cursor-pointer group no-print"
                         >
                             <svg class="w-6 h-6 text-indigo-400 group-hover:text-indigo-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
                             <span class="text-[11px] font-semibold text-indigo-500 group-hover:text-indigo-600">Click to Sign</span>
                         </button>
+                        {{-- Confirmation dialog --}}
+                        <div x-show="showConfirm" x-cloak class="border-2 border-indigo-400 bg-indigo-50 rounded-xl p-3 mb-2 no-print">
+                            <p class="text-[11px] text-indigo-800 font-semibold mb-2">Are you sure you want to sign this contract?</p>
+                            <p class="text-[10px] text-indigo-600 mb-3">This action cannot be undone.</p>
+                            <div class="flex gap-2 justify-center">
+                                <button x-on:click="showConfirm = false" class="px-3 py-1 text-[10px] bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button wire:click="openMoveOutSignatureModal" class="px-3 py-1 text-[10px] bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Yes, Sign</button>
+                            </div>
+                        </div>
                         <div x-show="!ownerReadConfirmed" class="border-2 border-dashed border-gray-200 rounded-xl h-24 mb-2 flex items-center justify-center">
                             <span class="text-[11px] text-gray-400">Check the box above to sign</span>
                         </div>
@@ -468,16 +470,35 @@
                 <p class="text-[11px] text-amber-600 font-medium mt-1">Witnessed: {{ $moveOutManagerSignedAt }}</p>
             @else
                 @if($signatureMode === 'manager' && $moveOutOwnerSignature)
-                    <button
-                        wire:click="openMoveOutSignatureModal('manager')"
-                        class="w-full border-2 border-dashed border-amber-300 bg-amber-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-amber-50 hover:border-amber-400 transition-all cursor-pointer group no-print"
-                    >
-                        <svg class="w-6 h-6 text-amber-400 group-hover:text-amber-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="text-[11px] font-semibold text-amber-500 group-hover:text-amber-600">Sign as Witness</span>
-                    </button>
+                    <div x-data="{ managerReadConfirmed: false, showConfirm: false }">
+                        <label class="inline-flex items-start gap-2 mb-2 cursor-pointer px-1">
+                            <input type="checkbox" x-model="managerReadConfirmed" class="mt-0.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                            <span class="text-[10px] text-gray-600 text-left leading-tight">I have read and agree to all terms in this contract.</span>
+                        </label>
+                        <button
+                            x-show="managerReadConfirmed && !showConfirm"
+                            x-on:click="showConfirm = true"
+                            class="w-full border-2 border-dashed border-amber-300 bg-amber-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-amber-50 hover:border-amber-400 transition-all cursor-pointer group no-print"
+                        >
+                            <svg class="w-6 h-6 text-amber-400 group-hover:text-amber-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                            <span class="text-[11px] font-semibold text-amber-500 group-hover:text-amber-600">Sign as Witness</span>
+                        </button>
+                        {{-- Confirmation dialog --}}
+                        <div x-show="showConfirm" x-cloak class="border-2 border-amber-400 bg-amber-50 rounded-xl p-3 mb-2 no-print">
+                            <p class="text-[11px] text-amber-800 font-semibold mb-2">Are you sure you want to sign this contract as witness?</p>
+                            <p class="text-[10px] text-amber-600 mb-3">This action cannot be undone.</p>
+                            <div class="flex gap-2 justify-center">
+                                <button x-on:click="showConfirm = false" class="px-3 py-1 text-[10px] bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button wire:click="openMoveOutSignatureModal('manager')" class="px-3 py-1 text-[10px] bg-amber-500 text-white rounded-lg hover:bg-amber-600">Yes, Sign</button>
+                            </div>
+                        </div>
+                        <div x-show="!managerReadConfirmed" class="border-2 border-dashed border-gray-200 rounded-xl h-24 mb-2 flex items-center justify-center">
+                            <span class="text-[11px] text-gray-400">Check the box above to sign</span>
+                        </div>
+                    </div>
                 @else
                     <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[11px] text-gray-400">{{ $moveOutOwnerSignature ? 'Awaiting witness signature' : 'Waiting for owner' }}</span>
+                        <span class="text-[11px] text-gray-400">{{ $moveOutOwnerSignature ? 'Awaiting witness signature' : 'Waiting for owner to sign first' }}</span>
                     </div>
                 @endif
                 <div class="border-b border-gray-400 mb-1"></div>
@@ -498,26 +519,43 @@
                 <p class="text-[11px] text-emerald-600 font-medium mt-1">Signed: {{ $moveOutTenantSignedAt }}</p>
             @else
                 @if($signatureMode === 'tenant' && $moveOutOwnerSignature && $moveOutManagerSignature)
-                    <div x-data="{ tenantReadConfirmed: false }">
+                    <div x-data="{ tenantReadConfirmed: false, showConfirm: false }">
                         <label class="inline-flex items-start gap-2 mb-2 cursor-pointer px-1">
                             <input type="checkbox" x-model="tenantReadConfirmed" class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                             <span class="text-[10px] text-gray-600 text-left leading-tight">I have read and agree to all terms in this contract.</span>
                         </label>
                         <button
-                            x-show="tenantReadConfirmed"
-                            wire:click="openMoveOutSignatureModal"
+                            x-show="tenantReadConfirmed && !showConfirm"
+                            x-on:click="showConfirm = true"
                             class="w-full border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-xl h-24 mb-2 flex flex-col items-center justify-center hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer group no-print"
                         >
                             <svg class="w-6 h-6 text-blue-400 group-hover:text-blue-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
                             <span class="text-[11px] font-semibold text-blue-500 group-hover:text-blue-600">Click to Sign</span>
                         </button>
+                        {{-- Confirmation dialog --}}
+                        <div x-show="showConfirm" x-cloak class="border-2 border-blue-400 bg-blue-50 rounded-xl p-3 mb-2 no-print">
+                            <p class="text-[11px] text-blue-800 font-semibold mb-2">Are you sure you want to sign this contract?</p>
+                            <p class="text-[10px] text-blue-600 mb-3">By signing, you agree to all terms including deposit deductions.</p>
+                            <div class="flex gap-2 justify-center">
+                                <button x-on:click="showConfirm = false" class="px-3 py-1 text-[10px] bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button wire:click="openMoveOutSignatureModal" class="px-3 py-1 text-[10px] bg-blue-500 text-white rounded-lg hover:bg-blue-600">Yes, Sign</button>
+                            </div>
+                        </div>
                         <div x-show="!tenantReadConfirmed" class="border-2 border-dashed border-gray-200 rounded-xl h-24 mb-2 flex items-center justify-center">
                             <span class="text-[11px] text-gray-400">Check the box above to sign</span>
                         </div>
                     </div>
                 @else
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center">
-                        <span class="text-[11px] text-gray-400">{{ ($moveOutOwnerSignature && $moveOutManagerSignature) ? 'Awaiting tenant signature' : 'Waiting for owner & witness' }}</span>
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl h-24 mb-2 flex items-center justify-center flex-col gap-1">
+                        @if(!$moveOutOwnerSignature)
+                            <span class="text-[11px] text-gray-400">Step 1: Waiting for owner signature</span>
+                            <span class="text-[10px] text-gray-300">Owner has been notified</span>
+                        @elseif(!$moveOutManagerSignature)
+                            <span class="text-[11px] text-gray-400">Step 2: Waiting for manager/witness</span>
+                            <span class="text-[10px] text-gray-300">Owner signed {{ $moveOutOwnerSignedAt }}</span>
+                        @else
+                            <span class="text-[11px] text-gray-400">Awaiting tenant signature</span>
+                        @endif
                     </div>
                 @endif
                 <div class="border-b border-gray-400 mb-1"></div>

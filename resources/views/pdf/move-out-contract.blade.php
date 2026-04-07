@@ -340,6 +340,10 @@
         <span class="field-label">Authorized Representative:</span>
         <span class="field-value">{{ $tenant['lessor_info']['representative'] ?? '' }}</span>
     </div>
+    <div class="field-row">
+        <span class="field-label">Government ID:</span>
+        <span class="field-value">{{ $tenant['lessor_info']['government_id_type'] ?? '' }} — {{ $tenant['lessor_info']['government_id_number'] ?? '' }}</span>
+    </div>
     <div class="field-row two-col">
         <div class="field-row" style="flex:1;">
             <span class="field-label">Contact Number:</span>
@@ -370,6 +374,10 @@
         <span class="field-label">Forwarding Address:</span>
         <span class="field-value">{{ $tenant['move_out_details']['forwarding_address'] ?? '' }}</span>
     </div>
+    <div class="field-row">
+        <span class="field-label">Emergency Contact:</span>
+        <span class="field-value">{{ $tenant['personal_info']['emergency_contact_name'] ?? '' }} ({{ $tenant['personal_info']['emergency_contact_relationship'] ?? '' }}) — {{ $tenant['personal_info']['emergency_contact_number'] ?? '' }}</span>
+    </div>
 
     {{-- SECTION 2 — LEASE REFERENCE --}}
     <div class="section-heading">Section 2 — Lease Reference</div>
@@ -395,8 +403,8 @@
         </div>
     </div>
     <div class="field-row">
-        <span class="field-label">Building / Unit / Bed:</span>
-        <span class="field-value">{{ $tenant['personal_info']['property'] }} / {{ $tenant['personal_info']['unit'] }} / {{ $tenant['rent_details']['bed_number'] }}</span>
+        <span class="field-label">Building / Unit / Floor / Bed:</span>
+        <span class="field-value">{{ $tenant['personal_info']['property'] }} / {{ $tenant['personal_info']['unit'] }} / Floor {{ $tenant['rent_details']['floor'] ?? '—' }} / Bed {{ $tenant['rent_details']['bed_number'] }}</span>
     </div>
     <div class="field-row">
         <span class="field-label">Reason for Vacating:</span>
@@ -428,13 +436,17 @@
                 $moveOutItem = collect($moveOutChecklist)->firstWhere('item_name', $itemName);
                 $moveInCond = $moveInItem['condition'] ?? '';
                 $moveOutCond = $moveOutItem['condition'] ?? '';
-                $damageFound = $moveInCond && $moveOutCond && $moveInCond !== $moveOutCond && $moveOutCond !== 'good';
+
+                $conditionWorsened = $moveInCond && $moveOutCond && $moveInCond !== $moveOutCond && $moveOutCond !== 'good';
+                $noMoveInButDamaged = !$moveInCond && in_array($moveOutCond, ['damaged', 'poor', 'missing']);
+                $damageFound = $conditionWorsened || $noMoveInButDamaged;
+
                 $repairCost = (float) ($moveOutItem['repair_cost'] ?? 0);
                 if ($damageFound) $totalRepairCost += $repairCost;
             @endphp
             <tr class="{{ $damageFound ? 'damage-row' : '' }}">
                 <td style="font-weight:500;">{{ $itemName }}</td>
-                <td class="check-cell" style="text-transform:capitalize;">{{ $moveInCond }}</td>
+                <td class="check-cell" style="text-transform:capitalize; {{ !$moveInCond && $moveOutCond ? 'color:#b45309; font-style:italic;' : '' }}">{{ $moveInCond ?: 'Not recorded' }}</td>
                 <td class="check-cell" style="text-transform:capitalize; {{ $damageFound ? 'color:#c0392b; font-weight:bold;' : '' }}">{{ $moveOutCond }}</td>
                 <td class="check-cell" style="{{ $damageFound ? 'color:#c0392b; font-weight:bold;' : '' }}">{{ $damageFound ? 'Yes' : ($moveOutCond ? 'No' : '') }}</td>
                 <td style="text-align:right;">{{ $damageFound && $repairCost > 0 ? '₱ ' . number_format($repairCost, 2) : '' }}</td>
@@ -470,8 +482,9 @@
         <thead>
         <tr>
             <th>Item</th>
-            <th style="text-align:center;">Qty</th>
-            <th style="text-align:center;">Returned?</th>
+            <th style="text-align:center;">Qty Issued</th>
+            <th style="text-align:center;">Qty Returned</th>
+            <th style="text-align:center;">Status</th>
             <th>Condition</th>
             <th style="text-align:right;">Replacement Cost</th>
         </tr>
@@ -481,21 +494,32 @@
         @foreach($returnItemNames as $itemName)
             @php
                 $returned = collect($itemsReturned)->firstWhere('item_name', $itemName);
+                $issuedQty = (int) ($returned['quantity'] ?? 0);
+                $returnedQty = (int) ($returned['quantity_returned'] ?? 0);
                 $isReturned = $returned && ($returned['is_returned'] ?? false);
+                $isPartial = $isReturned && $issuedQty > 0 && $returnedQty < $issuedQty;
                 $condition = $returned['condition'] ?? '';
                 $replacementCost = (float) ($returned['replacement_cost'] ?? 0);
-                if (!$isReturned && $returned) $totalReplacementCost += $replacementCost;
+                if ((!$isReturned || $isPartial) && $returned) $totalReplacementCost += $replacementCost;
+
+                $statusLabel = '';
+                if ($returned) {
+                    if (!$isReturned) $statusLabel = 'Not Returned';
+                    elseif ($isPartial) $statusLabel = 'Partial';
+                    else $statusLabel = 'Complete';
+                }
             @endphp
             <tr>
                 <td style="font-weight:500;">{{ $itemName }}</td>
-                <td style="text-align:center;">{{ $returned['quantity'] ?? '' }}</td>
-                <td style="text-align:center;">{{ $isReturned ? 'Yes' : ($returned ? 'No' : '') }}</td>
+                <td style="text-align:center;">{{ $issuedQty ?: '' }}</td>
+                <td style="text-align:center;">{{ $returned ? $returnedQty : '' }}</td>
+                <td style="text-align:center; {{ (!$isReturned && $returned) ? 'color:#c0392b; font-weight:bold;' : ($isPartial ? 'color:#b45309; font-weight:bold;' : '') }}">{{ $statusLabel }}</td>
                 <td>{{ $condition }}</td>
-                <td style="text-align:right;">{{ (!$isReturned && $returned && $replacementCost > 0) ? '₱ ' . number_format($replacementCost, 2) : '' }}</td>
+                <td style="text-align:right;">{{ ((!$isReturned || $isPartial) && $returned && $replacementCost > 0) ? '₱ ' . number_format($replacementCost, 2) : '' }}</td>
             </tr>
         @endforeach
         @if($totalReplacementCost > 0)
-        <tr><td colspan="4" style="font-weight:bold; text-align:right;">Total Replacement Cost</td><td style="text-align:right; font-weight:bold;">₱ {{ number_format($totalReplacementCost, 2) }}</td></tr>
+        <tr><td colspan="5" style="font-weight:bold; text-align:right;">Total Replacement Cost</td><td style="text-align:right; font-weight:bold;">₱ {{ number_format($totalReplacementCost, 2) }}</td></tr>
         @endif
         </tbody>
     </table>
@@ -509,7 +533,8 @@
 
     @php
         $deductions = $depositRefund['deductions'] ?? [];
-        $refundAmount = $depositRefund['refund_amount'] ?? null;
+        $refundAmount = $depositRefund['amount'] ?? $depositRefund['refund_amount'] ?? null;
+        $interestEarned = (float) ($depositRefund['interest_earned'] ?? 0);
         $totalDeductions = collect($deductions)->sum('amount');
     @endphp
     <table class="payment-table" style="margin-top:8px;">
@@ -524,17 +549,23 @@
             <td><strong>Original Security Deposit Held</strong></td>
             <td class="right"><strong>&#8369; {{ number_format($deposit, 2) }}</strong></td>
         </tr>
+        @if($interestEarned > 0)
+        <tr>
+            <td style="color:#166534;">(+) Deposit Interest Earned (RA 9653 IRR §7b)</td>
+            <td class="right" style="color:#166534;">₱ {{ number_format($interestEarned, 2) }}</td>
+        </tr>
+        @endif
         @forelse($deductions as $deduction)
         <tr>
             <td>(-) {{ $deduction['label'] }}</td>
-            <td class="right">{{ (float) $deduction['amount'] > 0 ? '(₱ ' . number_format($deduction['amount'], 2) . ')' : 'TBD' }}</td>
+            <td class="right" style="{{ (float) $deduction['amount'] > 0 ? 'color:#c0392b;' : 'color:#999;' }}">{{ (float) $deduction['amount'] > 0 ? '(₱ ' . number_format($deduction['amount'], 2) . ')' : 'TBD' }}</td>
         </tr>
         @empty
         <tr><td colspan="2" style="color:#999;">No deductions</td></tr>
         @endforelse
         <tr class="total-row">
             <td><strong>NET DEPOSIT REFUND</strong></td>
-            <td class="right"><strong>&#8369; {{ $refundAmount !== null ? number_format($refundAmount, 2) : number_format(max(0, $deposit - $totalDeductions), 2) }}</strong></td>
+            <td class="right"><strong>&#8369; {{ $refundAmount !== null ? number_format($refundAmount, 2) : number_format(max(0, $deposit - $totalDeductions + $interestEarned), 2) }}</strong></td>
         </tr>
         </tbody>
     </table>
@@ -554,22 +585,16 @@
     <p style="font-size:8.5pt; color:#333; margin-bottom:5px;">Both parties hereby certify the following:</p>
     <ul class="policy-list">
         <li>The joint move-out inspection has been completed and all findings are accurately recorded in this Agreement.</li>
-        <li>All outstanding balances have been settled in full or will be deducted from the security deposit as agreed.</li>
-        <li>All keys, access cards, and borrowed items have been returned or accounted for above.</li>
-        <li>The Lessee has vacated the premises and removed all personal belongings.</li>
+        <li>All outstanding balances have been settled in full or will be deducted from the security deposit as agreed. <strong>If the total outstanding balance exceeds the security deposit, the Lessee remains liable for the deficit and shall settle the remaining amount within fifteen (15) calendar days from the date of this clearance.</strong></li>
+        <li>A final utility meter reading (electricity and water) has been conducted as of the move-out date. Any remaining utility charges will be included in the outstanding balances above.</li>
+        <li>All keys, access cards, Wi-Fi credentials, and borrowed items have been returned or accounted for above.</li>
+        <li>The Lessee has vacated the premises and removed all personal belongings. Any items left behind may be coordinated for retrieval through the messaging system within a reasonable period.</li>
         <li>The Lessor agrees to process and release the deposit refund within thirty (30) calendar days from the date of this clearance.</li>
         <li>Both parties release each other from any further claims related to this lease, except as specified herein.</li>
     </ul>
 
-    {{-- SECTION 7 — GOVERNING LAW --}}
-    <div class="section-heading">Section 7 — Governing Law</div>
-
-    <p style="font-size:9pt; color:#222; line-height:1.6; text-align:justify;">
-        This Agreement is governed by the laws of the Republic of the Philippines, including <em>Republic Act No. 9653 (Rent Control Act of 2009)</em>. Any dispute shall first be resolved through amicable negotiation, then through Barangay mediation, and thereafter through the proper courts of competent jurisdiction.
-    </p>
-
-    {{-- SECTION 8 — SIGNATURES --}}
-    <div class="section-heading">Section 8 — Agreement and Signatures</div>
+    {{-- SECTION 7 — SIGNATURES --}}
+    <div class="section-heading">Section 7 — Agreement and Signatures</div>
 
     <p style="font-size:9pt; color:#222; line-height:1.55; margin-bottom:8px; text-align:justify;">
         By signing below, all parties confirm that the move-out inspection has been conducted, all balances have been accounted for, and they voluntarily agree to the deposit settlement terms stated herein.

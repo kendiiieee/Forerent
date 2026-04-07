@@ -28,6 +28,7 @@ class PaymentRequests extends Component
     // Filters
     public $search = '';
     public $selectedMonth = '';
+    public $selectedYear = '';
     public $selectedBuilding = '';
 
     public function updatedSearch(): void
@@ -36,6 +37,11 @@ class PaymentRequests extends Component
     }
 
     public function updatedSelectedMonth(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedYear(): void
     {
         $this->resetPage();
     }
@@ -235,6 +241,11 @@ class PaymentRequests extends Component
                 $query->whereHas('billing', fn($b) => $b->whereRaw("TO_CHAR(billing_date, 'YYYY-MM') = ?", [$this->selectedMonth]));
             }
 
+            // Year filter
+            if (!empty($this->selectedYear)) {
+                $query->whereHas('billing', fn($b) => $b->whereYear('billing_date', $this->selectedYear));
+            }
+
             // Building filter
             if (!empty($this->selectedBuilding)) {
                 $query->whereHas('lease.bed.unit.property', fn($p) => $p->where('building_name', $this->selectedBuilding));
@@ -266,11 +277,18 @@ class PaymentRequests extends Component
             ->pluck('month_label', 'month_value')
             ->toArray();
 
+        $currentYear = (int) date('Y');
+        $yearOptions = array_combine(
+            range($currentYear, $currentYear - 4),
+            range($currentYear, $currentYear - 4)
+        );
+
         return view('livewire.layouts.financials.payment-requests', [
             'requests' => $requests,
             'counts' => $counts,
             'buildingOptions' => $buildingOptions,
             'monthOptions' => $monthOptions,
+            'yearOptions' => $yearOptions,
         ]);
     }
 }

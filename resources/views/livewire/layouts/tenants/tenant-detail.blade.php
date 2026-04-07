@@ -976,8 +976,9 @@
                                             <table class="w-full text-xs">
                                                 <thead>
                                                     <tr class="bg-gray-50 border-b border-gray-200">
-                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-1/4">Item</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Qty</th>
+                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-1/5">Item</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Qty Issued</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Qty Returned</th>
                                                         <th class="text-left p-2.5 font-semibold text-gray-600">Condition</th>
                                                         <th class="text-center p-2.5 font-semibold text-gray-600 w-16">Returned</th>
                                                         <th class="text-right p-2.5 font-semibold text-gray-600 w-24">Replacement</th>
@@ -999,6 +1000,15 @@
                                                                        onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
                                                                        oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
                                                                        class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.quantity") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
+                                                            </td>
+                                                            <td class="p-2.5 text-center">
+                                                                <input type="number" min="0" step="1"
+                                                                       wire:model.live.debounce.300ms="itemsReturned.{{ $index }}.quantity_returned"
+                                                                       placeholder="0"
+                                                                       onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
+                                                                       oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
+                                                                       class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.quantity_returned") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
+                                                                @error("itemsReturned.{$index}.quantity_returned") <p class="text-[10px] text-red-500 mt-0.5">{{ $message }}</p> @enderror
                                                             </td>
                                                             <td class="p-2.5">
                                                                 <div x-data="{

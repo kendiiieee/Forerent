@@ -14,12 +14,14 @@ class UtilityBillTable extends Component
 
     public $activeTab = 'all';
     public $selectedMonth = null;
+    public $selectedYear = null;
     public $selectedBuilding = null;
     public $search = '';
 
     public function setTab($tab) { $this->activeTab = $tab; $this->resetPage(); }
     public function updatedActiveTab() { $this->resetPage(); }
     public function updatedSelectedMonth() { $this->resetPage(); }
+    public function updatedSelectedYear() { $this->resetPage(); }
     public function updatedSelectedBuilding() { $this->resetPage(); }
     public function updatedSearch() { $this->resetPage(); }
 
@@ -77,6 +79,10 @@ class UtilityBillTable extends Component
             $query->whereMonth('billing_period', $this->selectedMonth);
         }
 
+        if ($this->selectedYear) {
+            $query->whereYear('billing_period', $this->selectedYear);
+        }
+
         if ($this->selectedBuilding) {
             $query->whereHas('unit.property', function ($q) {
                 $q->where('building_name', $this->selectedBuilding);
@@ -96,10 +102,17 @@ class UtilityBillTable extends Component
             ->values()
             ->toArray();
 
+        $currentYear = (int) date('Y');
+        $yearOptions = array_combine(
+            range($currentYear, $currentYear - 4),
+            range($currentYear, $currentYear - 4)
+        );
+
         return view('livewire.layouts.financials.utility-bill-table', [
             'bills'            => $bills,
             'counts'           => $counts,
             'monthOptions'     => $monthOptions,
+            'yearOptions'      => $yearOptions,
             'buildingOptions'  => $buildingOptions,
             'suggestions'      => $suggestions,
         ]);

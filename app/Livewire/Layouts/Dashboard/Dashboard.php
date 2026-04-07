@@ -325,7 +325,7 @@ class Dashboard extends Component
                 'lease_id' => $lease->lease_id,
                 'tenant_name' => ($lease->tenant?->first_name ?? '') . ' ' . ($lease->tenant?->last_name ?? ''),
                 'tenant_initial' => strtoupper(substr($lease->tenant?->first_name ?? '?', 0, 1)),
-                'property' => $lease->bed?->unit?->property?->property_name,
+                'property' => $lease->bed?->unit?->property?->building_name,
                 'unit' => $lease->bed?->unit?->unit_number,
                 'contract_status' => $lease->contract_status ?? 'draft',
                 'needs_owner_sign' => !$lease->owner_signature,

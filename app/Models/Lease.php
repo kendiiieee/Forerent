@@ -266,7 +266,8 @@ class Lease extends Model
             $deductions[] = ['label' => 'Unreturned / Missing Items', 'amount' => $replacementCost, 'items' => $missingItems];
         }
 
-        // 5. Early termination — deposit forfeited in full (no additional fee per contract Section 7)
+        // 5. Early termination — full deposit forfeiture (Contract Section 7, Civil Code Art. 1306)
+        //    No additional fee beyond forfeiture. Tenant agreed to this at move-in signing.
         $isEarlyTermination = $this->move_out && $endDate && $this->move_out->lt($endDate);
         if ($isEarlyTermination) {
             $deductions[] = ['label' => 'Early Termination — Deposit Forfeiture', 'amount' => $deposit];

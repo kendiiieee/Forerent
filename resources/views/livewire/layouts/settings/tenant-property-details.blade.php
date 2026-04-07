@@ -22,7 +22,7 @@
             <div style="background: #fff; border-radius: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.04), 0 24px 48px rgba(0,0,0,0.03); overflow: hidden; transition: box-shadow 0.25s ease; font-family: 'Open Sans', sans-serif;">
 
                 {{-- Header: dark section with unit info --}}
-                <div style="background: linear-gradient(135deg, #0f1035 0%, #1a1b5a 50%, #141545 100%); padding: 24px 28px 20px;">
+                <div style="background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%); padding: 24px 28px 20px;">
                     <div>
                         <h3 style="color: #fff; font-size: 20px; font-weight: 800; line-height: 1.2; margin: 0;">Unit #{{ $unit['unit_number'] }}</h3>
                         <p style="color: rgba(255,255,255,0.4); font-size: 13px; margin: 2px 0 0;">{{ $buildingName }}</p>

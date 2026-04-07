@@ -34,7 +34,8 @@
             this.width = el.offsetWidth;
         }
     }"
-    x-init="activeIndex = {{ $activeIndex }}; requestAnimationFrame(() => { requestAnimationFrame(() => { recalc(); }) })"
+    x-init="$nextTick(() => { recalc(); })"
+    x-effect="activeIndex; $nextTick(() => { recalc(); })"
     x-on:resize.window.debounce.150ms="recalc()"
     {{ $attributes->merge(['class' => "relative flex items-center gap-1 bg-white rounded-lg shadow-sm border border-gray-200 w-full md:w-auto $containerPadding"]) }}
 >

@@ -22,6 +22,7 @@ class PaymentReceipts extends Component
 
     public $activeTab = 'all';
     public $selectedMonth = null;
+    public $selectedYear = null;
     public $selectedBuilding = null;
     public $billingIdToMarkPaid = null;
     public $search = '';
@@ -29,6 +30,7 @@ class PaymentReceipts extends Component
     public function setTab($tab) { $this->activeTab = $tab; $this->resetPage(); }
     public function updatedActiveTab()   { $this->resetPage(); }
     public function updatedSelectedMonth() { $this->resetPage(); }
+    public function updatedSelectedYear() { $this->resetPage(); }
     public function updatedSelectedBuilding() { $this->resetPage(); }
     public function updatedSearch() { $this->resetPage(); }
 
@@ -386,6 +388,10 @@ class PaymentReceipts extends Component
             $query->whereMonth('billings.billing_date', $this->selectedMonth);
         }
 
+        if ($this->selectedYear) {
+            $query->whereYear('billings.billing_date', $this->selectedYear);
+        }
+
         if ($this->selectedBuilding) {
             $query->where('properties.building_name', $this->selectedBuilding);
         }
@@ -405,10 +411,17 @@ class PaymentReceipts extends Component
             ->values()
             ->toArray();
 
+        $currentYear = (int) date('Y');
+        $yearOptions = array_combine(
+            range($currentYear, $currentYear - 4),
+            range($currentYear, $currentYear - 4)
+        );
+
         return view('livewire.layouts.financials.payment-receipts', [
             'payments'        => $payments,
             'counts'          => $counts,
             'monthOptions'    => $monthOptions,
+            'yearOptions'     => $yearOptions,
             'buildingOptions' => $buildingOptions,
             'suggestions'     => $suggestions,
         ]);

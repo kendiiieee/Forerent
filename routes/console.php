@@ -890,6 +890,22 @@ Artisan::command('deposits:send-refund-reminders', function () {
             $sent++;
         }
 
+        // Notify tenant about refund status
+        $tenantTitle = $daysRemaining < 0
+            ? 'Your Deposit Refund is Overdue'
+            : ($daysRemaining === 0 ? 'Your Deposit Refund is Due Today' : "Your Deposit Refund is in {$daysRemaining} Days");
+        $tenantMsg = "Your security deposit refund of PHP {$amount} is " .
+            ($daysRemaining < 0 ? 'overdue. Please contact management.' : "expected by " . $deadline->format('M d, Y') . ".");
+
+        \App\Models\Notification::create([
+            'user_id' => $lease->tenant_id,
+            'type' => 'deposit_refund_reminder',
+            'title' => $tenantTitle,
+            'message' => $tenantMsg,
+            'link' => '/tenant?tab=inspection',
+        ]);
+        $sent++;
+
         $this->line("  Lease #{$lease->lease_id}: {$tenantName} — {$title}");
     }
 

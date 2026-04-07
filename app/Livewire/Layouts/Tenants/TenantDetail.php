@@ -631,6 +631,19 @@ class TenantDetail extends Component
             'link' => '/tenant?tab=inspection',
         ]);
 
+        // Notify owner that their signature will be needed on the move-out contract
+        $ownerId = $this->findOwnerIdForLease($lease);
+        if ($ownerId) {
+            $tenantName = $lease->tenant ? ($lease->tenant->first_name . ' ' . $lease->tenant->last_name) : 'a tenant';
+            Notification::create([
+                'user_id' => $ownerId,
+                'type' => 'move_out_initiated',
+                'title' => 'Move-Out Contract Signature Needed',
+                'message' => "Move-out process has been initiated for {$tenantName}. Your signature on the move-out contract will be required after the inspection is completed. Please review and sign at your earliest convenience.",
+                'link' => '/owner/property',
+            ]);
+        }
+
         $this->dispatch('close-modal', 'initiate-move-out');
         $this->moveOutInitiated = true;
 
@@ -1289,12 +1302,13 @@ class TenantDetail extends Component
             ->map(fn($i) => ['item_name' => $i->item_name, 'condition' => $i->condition, 'remarks' => $i->remarks, 'repair_cost' => $i->repair_cost])
             ->toArray();
 
-        // Build items returned (include is_returned + replacement_cost)
+        // Build items returned (include is_returned + quantity_returned + replacement_cost)
         $itemsReturned = $lease->moveOutInspections
             ->where('type', 'item_returned')
             ->map(fn($i) => [
                 'item_name' => $i->item_name,
                 'quantity' => $i->quantity,
+                'quantity_returned' => $i->quantity_returned,
                 'condition' => $i->remarks,
                 'tenant_confirmed' => (bool) $i->tenant_confirmed,
                 'is_returned' => (bool) $i->is_returned,

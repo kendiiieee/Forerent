@@ -819,7 +819,10 @@ class TenantDashboardOverview extends Component
             'id' => $i->id,
             'item_name' => $i->item_name,
             'quantity' => $i->quantity,
+            'quantity_returned' => $i->quantity_returned,
             'condition' => $i->remarks,
+            'is_returned' => (bool) $i->is_returned,
+            'replacement_cost' => $i->replacement_cost,
             'tenant_confirmed' => (bool) $i->tenant_confirmed,
             'dispute_status' => $i->dispute_status ?? 'none',
             'resolution_remarks' => $i->resolution_remarks,
@@ -834,6 +837,7 @@ class TenantDashboardOverview extends Component
             'item_name' => $i->item_name,
             'condition' => $i->condition,
             'remarks' => $i->remarks,
+            'repair_cost' => $i->repair_cost,
         ])->toArray();
 
         // Move-in checklist for comparison

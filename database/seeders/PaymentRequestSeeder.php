@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Billing;
 use App\Models\Lease;
+use App\Models\PaymentCategory;
 use App\Models\PaymentRequest;
 use App\Models\Unit;
 use Carbon\Carbon;
@@ -25,6 +26,9 @@ class PaymentRequestSeeder extends Seeder
             'Bank Transfer' => 'BT',
             'Cash'          => 'CS',
         ];
+
+        // Get active income payment categories for random assignment
+        $incomeCategories = PaymentCategory::active()->income()->pluck('payment_category_id')->toArray();
 
         // Get active leases to create payment requests for their billings
         $leases = Lease::where('status', 'Active')->with('bed.unit')->get();
@@ -56,18 +60,19 @@ class PaymentRequestSeeder extends Seeder
                 $submittedAt = Carbon::parse($billing->billing_date)->addDays(rand(1, 10));
 
                 PaymentRequest::create([
-                    'billing_id'       => $billing->billing_id,
-                    'lease_id'         => $lease->lease_id,
-                    'tenant_id'        => $lease->tenant_id,
-                    'payment_method'   => $method,
-                    'reference_number' => $method !== 'Cash'
+                    'billing_id'           => $billing->billing_id,
+                    'lease_id'             => $lease->lease_id,
+                    'tenant_id'            => $lease->tenant_id,
+                    'payment_category_id'  => $this->faker->randomElement($incomeCategories),
+                    'payment_method'       => $method,
+                    'reference_number'     => $method !== 'Cash'
                         ? $prefix . '-' . strtoupper($this->faker->bothify('???####'))
                         : null,
-                    'amount_paid'      => $billing->to_pay,
-                    'proof_image'      => 'payment_proofs/sample_proof_' . $this->faker->numberBetween(1, 5) . '.svg',
-                    'status'           => 'Pending',
-                    'created_at'       => $submittedAt,
-                    'updated_at'       => $submittedAt,
+                    'amount_paid'          => $billing->to_pay,
+                    'proof_image'          => 'payment_proofs/sample_proof_' . $this->faker->numberBetween(1, 5) . '.svg',
+                    'status'               => 'Pending',
+                    'created_at'           => $submittedAt,
+                    'updated_at'           => $submittedAt,
                 ]);
             }
 
@@ -79,20 +84,21 @@ class PaymentRequestSeeder extends Seeder
                 $reviewedAt = $submittedAt->copy()->addDays(rand(1, 3));
 
                 PaymentRequest::create([
-                    'billing_id'       => $billing->billing_id,
-                    'lease_id'         => $lease->lease_id,
-                    'tenant_id'        => $lease->tenant_id,
-                    'payment_method'   => $method,
-                    'reference_number' => $method !== 'Cash'
+                    'billing_id'           => $billing->billing_id,
+                    'lease_id'             => $lease->lease_id,
+                    'tenant_id'            => $lease->tenant_id,
+                    'payment_category_id'  => $this->faker->randomElement($incomeCategories),
+                    'payment_method'       => $method,
+                    'reference_number'     => $method !== 'Cash'
                         ? $prefix . '-' . strtoupper($this->faker->bothify('???####'))
                         : null,
-                    'amount_paid'      => $billing->to_pay,
-                    'proof_image'      => 'payment_proofs/sample_proof_' . $this->faker->numberBetween(1, 5) . '.svg',
-                    'status'           => 'Confirmed',
-                    'reviewed_by'      => $managerId,
-                    'reviewed_at'      => $reviewedAt,
-                    'created_at'       => $submittedAt,
-                    'updated_at'       => $reviewedAt,
+                    'amount_paid'          => $billing->to_pay,
+                    'proof_image'          => 'payment_proofs/sample_proof_' . $this->faker->numberBetween(1, 5) . '.svg',
+                    'status'               => 'Confirmed',
+                    'reviewed_by'          => $managerId,
+                    'reviewed_at'          => $reviewedAt,
+                    'created_at'           => $submittedAt,
+                    'updated_at'           => $reviewedAt,
                 ]);
             }
 
@@ -118,21 +124,22 @@ class PaymentRequestSeeder extends Seeder
                 ];
 
                 PaymentRequest::create([
-                    'billing_id'       => $rejectedBilling->billing_id,
-                    'lease_id'         => $lease->lease_id,
-                    'tenant_id'        => $lease->tenant_id,
-                    'payment_method'   => $method,
-                    'reference_number' => $method !== 'Cash'
+                    'billing_id'           => $rejectedBilling->billing_id,
+                    'lease_id'             => $lease->lease_id,
+                    'tenant_id'            => $lease->tenant_id,
+                    'payment_category_id'  => $this->faker->randomElement($incomeCategories),
+                    'payment_method'       => $method,
+                    'reference_number'     => $method !== 'Cash'
                         ? $prefix . '-' . strtoupper($this->faker->bothify('???####'))
                         : null,
-                    'amount_paid'      => $rejectedBilling->to_pay,
-                    'proof_image'      => 'payment_proofs/sample_proof_' . $this->faker->numberBetween(1, 5) . '.svg',
-                    'status'           => 'Rejected',
-                    'reject_reason'    => $this->faker->randomElement($rejectReasons),
-                    'reviewed_by'      => $managerId,
-                    'reviewed_at'      => $reviewedAt,
-                    'created_at'       => $submittedAt,
-                    'updated_at'       => $reviewedAt,
+                    'amount_paid'          => $rejectedBilling->to_pay,
+                    'proof_image'          => 'payment_proofs/sample_proof_' . $this->faker->numberBetween(1, 5) . '.svg',
+                    'status'               => 'Rejected',
+                    'reject_reason'        => $this->faker->randomElement($rejectReasons),
+                    'reviewed_by'          => $managerId,
+                    'reviewed_at'          => $reviewedAt,
+                    'created_at'           => $submittedAt,
+                    'updated_at'           => $reviewedAt,
                 ]);
             }
         }

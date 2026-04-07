@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 {{-- 1. Pass the Title and Subtitle to the Main Layout --}}
-@section('header-title', 'REVENUE')
+@section('header-title', 'REVENUE MANAGEMENT')
 @section('header-subtitle', 'Track and manage property income')
 
 @section('content')
