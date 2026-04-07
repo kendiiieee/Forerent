@@ -169,7 +169,7 @@ class AddViolationModal extends Component
                 'issued_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ], 'violation_id');
 
             $violation = \App\Models\Violation::find($violationId);
         });

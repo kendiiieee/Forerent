@@ -4,9 +4,9 @@
         <h2 class="text-2xl font-bold text-[#070642]">Financial Overview</h2>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
         {{-- Financial Inflows and Outflows --}}
-        <div class="bg-white rounded-2xl p-6 shadow-lg h-full flex flex-col" wire:ignore>
+        <div class="xl:col-span-2 bg-white rounded-2xl p-6 shadow-lg flex flex-col min-w-0" wire:ignore>
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold text-[#070642]">Financial Inflows and Outflows</h3>
                 <div class="flex items-center gap-5">
@@ -26,7 +26,7 @@
         </div>
 
         {{-- Maintenance Expenses Breakdown --}}
-        <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-lg h-full flex flex-col">
+        <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-lg flex flex-col">
             {{-- Header --}}
             <div class="flex items-start justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
                 <div class="min-w-0">

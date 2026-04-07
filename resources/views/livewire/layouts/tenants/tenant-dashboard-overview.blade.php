@@ -209,7 +209,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2.5">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
-                            <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                         </div>
                         <h3 class="text-sm font-bold text-gray-900">Contract</h3>
                     </div>
@@ -275,118 +275,119 @@
             </div>
         </div>
 
-        {{-- Violation Records --}}
-        @if($violationCounts['total'] > 0)
-        <div class="bg-white rounded-2xl border border-gray-100 p-5">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50">
-                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-bold text-gray-900">Violation Records</h3>
-                        <p class="text-xs text-gray-400">{{ $violationCounts['total'] }} total &middot; {{ $violationCounts['issued'] }} unacknowledged</p>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    @if($violationCounts['issued'] > 0)
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700">{{ $violationCounts['issued'] }} Issued</span>
-                    @endif
-                    @if($violationCounts['acknowledged'] > 0)
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700">{{ $violationCounts['acknowledged'] }} Acknowledged</span>
-                    @endif
-                    @if($violationCounts['resolved'] > 0)
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">{{ $violationCounts['resolved'] }} Resolved</span>
-                    @endif
-                </div>
-            </div>
+        {{-- Violation Records + Move Dates (bento row) --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-            <div class="space-y-2.5">
-                @foreach($violations as $vio)
-                    @php
-                        $vStatusStyles = match($vio['status']) {
-                            'Resolved'     => 'bg-green-100 text-green-700',
-                            'Issued'       => 'bg-red-100 text-red-700',
-                            'Acknowledged' => 'bg-yellow-100 text-yellow-800',
-                            default        => 'bg-gray-100 text-gray-700'
-                        };
-                        $vSeverityStyles = match($vio['severity']) {
-                            'serious' => 'bg-red-50 text-red-600',
-                            'major'   => 'bg-orange-50 text-orange-600',
-                            'minor'   => 'bg-blue-50 text-blue-600',
-                            default   => 'bg-gray-50 text-gray-600'
-                        };
-                        $vOffenseLabel = match($vio['offense_number']) {
-                            1 => '1st', 2 => '2nd', 3 => '3rd', default => $vio['offense_number'] . 'th'
-                        };
-                        $vPenaltyLabel = match($vio['penalty_type']) {
-                            'written_warning' => 'Written Warning',
-                            'fine' => 'Fine — PHP ' . number_format($vio['fine_amount'] ?? 0, 2),
-                            'lease_termination' => 'Lease Termination',
-                            default => ucfirst($vio['penalty_type']),
-                        };
-                        $vPenaltyStyles = match($vio['penalty_type']) {
-                            'written_warning' => 'bg-yellow-50 text-yellow-800 border-yellow-100',
-                            'fine' => 'bg-orange-50 text-orange-800 border-orange-100',
-                            'lease_termination' => 'bg-red-50 text-red-800 border-red-100',
-                            default => 'bg-gray-50 text-gray-700 border-gray-100',
-                        };
-                    @endphp
-                    <div class="rounded-xl p-4 border border-gray-100 {{ $vio['status'] === 'Issued' ? 'bg-red-50/30' : 'bg-gray-50/50' }}">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold text-[#070589]">{{ $vio['violation_number'] }}</span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vStatusStyles }}">{{ $vio['status'] }}</span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vSeverityStyles }}">{{ ucfirst($vio['severity']) }}</span>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">{{ $vOffenseLabel }} Offense</span>
-                            </div>
-                            <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($vio['violation_date'])->format('M d, Y') }}</span>
+            {{-- Violation Records (70% = col-span-2) --}}
+            @if($violationCounts['total'] > 0)
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-blue-100 p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
+                            <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                         </div>
-
-                        <p class="text-sm font-semibold text-gray-800 mb-1">{{ $vio['category'] }}</p>
-                        <p class="text-xs text-gray-500 mb-2 line-clamp-2">{{ $vio['description'] }}</p>
-
-                        {{-- Penalty Badge --}}
-                        <div class="flex items-center justify-between">
-                            <span class="inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ $vPenaltyStyles }}">{{ $vPenaltyLabel }}</span>
-
-                            @if($vio['status'] === 'Issued')
-                                <button
-                                    wire:click="promptAcknowledgeViolation({{ $vio['violation_id'] }})"
-                                    class="px-3 py-1.5 bg-[#070589] text-white text-[10px] font-bold rounded-lg hover:bg-[#0a0a6e] transition"
-                                >
-                                    Acknowledge
-                                </button>
-                            @endif
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">Violation Records</h3>
+                            <p class="text-xs text-gray-400">{{ $violationCounts['total'] }} total &middot; {{ $violationCounts['issued'] }} unacknowledged</p>
                         </div>
-
-                        @if($vio['status'] === 'Resolved' && !empty($vio['resolution_notes']))
-                            <div class="mt-2 bg-green-50 rounded-lg p-2.5 border border-green-100">
-                                <p class="text-[10px] font-bold text-green-700 uppercase mb-0.5">Resolution</p>
-                                <p class="text-xs text-green-800">{{ $vio['resolution_notes'] }}</p>
-                            </div>
+                    </div>
+                    <div class="flex gap-2">
+                        @if($violationCounts['issued'] > 0)
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold" style="background:#eef2ff;color:#070589">{{ $violationCounts['issued'] }} Issued</span>
+                        @endif
+                        @if($violationCounts['acknowledged'] > 0)
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700">{{ $violationCounts['acknowledged'] }} Acknowledged</span>
+                        @endif
+                        @if($violationCounts['resolved'] > 0)
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">{{ $violationCounts['resolved'] }} Resolved</span>
                         @endif
                     </div>
-                @endforeach
-            </div>
+                </div>
 
-            {{-- Penalty Schedule Reference --}}
-            <div class="mt-4 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
-                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">Penalty Schedule (Per Contract)</p>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-600">
-                    <p><span class="font-semibold">1st Offense:</span> Written Warning</p>
-                    <p><span class="font-semibold">2nd Offense:</span> Fine of PHP 500.00</p>
-                    <p><span class="font-semibold">3rd Offense:</span> Lease Termination</p>
-                    <p><span class="font-semibold">Serious:</span> Immediate Termination</p>
+                <div class="space-y-2.5">
+                    @foreach($violations as $vio)
+                        @php
+                            $vStatusStyles = match($vio['status']) {
+                                'Resolved'     => 'bg-green-100 text-green-700',
+                                'Issued'       => 'text-[#070589]',
+                                'Acknowledged' => 'bg-yellow-100 text-yellow-800',
+                                default        => 'bg-gray-100 text-gray-700'
+                            };
+                            $vSeverityStyles = match($vio['severity']) {
+                                'serious' => 'bg-red-50 text-red-600',
+                                'major'   => 'bg-orange-50 text-orange-600',
+                                'minor'   => 'bg-blue-50 text-blue-600',
+                                default   => 'bg-gray-50 text-gray-600'
+                            };
+                            $vOffenseLabel = match($vio['offense_number']) {
+                                1 => '1st', 2 => '2nd', 3 => '3rd', default => $vio['offense_number'] . 'th'
+                            };
+                            $vPenaltyLabel = match($vio['penalty_type']) {
+                                'written_warning' => 'Written Warning',
+                                'fine' => 'Fine — PHP ' . number_format($vio['fine_amount'] ?? 0, 2),
+                                'lease_termination' => 'Lease Termination',
+                                default => ucfirst($vio['penalty_type']),
+                            };
+                            $vPenaltyStyles = match($vio['penalty_type']) {
+                                'written_warning' => 'bg-yellow-50 text-yellow-800 border-yellow-100',
+                                'fine' => 'bg-orange-50 text-orange-800 border-orange-100',
+                                'lease_termination' => 'bg-red-50 text-red-800 border-red-100',
+                                default => 'bg-gray-50 text-gray-700 border-gray-100',
+                            };
+                        @endphp
+                        <div class="rounded-xl p-4 border {{ $vio['status'] === 'Issued' ? 'border-blue-100 bg-[#f8f9ff]' : 'border-gray-100 bg-gray-50/50' }}">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-[#070589]">{{ $vio['violation_number'] }}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vStatusStyles }}" @if($vio['status'] === 'Issued') style="background:#eef2ff" @endif>{{ $vio['status'] }}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vSeverityStyles }}">{{ ucfirst($vio['severity']) }}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">{{ $vOffenseLabel }} Offense</span>
+                                </div>
+                                <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($vio['violation_date'])->format('M d, Y') }}</span>
+                            </div>
+
+                            <p class="text-sm font-semibold text-gray-800 mb-1">{{ $vio['category'] }}</p>
+                            <p class="text-xs text-gray-500 mb-2 line-clamp-2">{{ $vio['description'] }}</p>
+
+                            {{-- Penalty Badge --}}
+                            <div class="flex items-center justify-between">
+                                <span class="inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ $vPenaltyStyles }}">{{ $vPenaltyLabel }}</span>
+
+                                @if($vio['status'] === 'Issued')
+                                    <button
+                                        wire:click="promptAcknowledgeViolation({{ $vio['violation_id'] }})"
+                                        class="px-3 py-1.5 bg-[#070589] text-white text-[10px] font-bold rounded-lg hover:bg-[#0a0a6e] transition"
+                                    >
+                                        Acknowledge
+                                    </button>
+                                @endif
+                            </div>
+
+                            @if($vio['status'] === 'Resolved' && !empty($vio['resolution_notes']))
+                                <div class="mt-2 bg-green-50 rounded-lg p-2.5 border border-green-100">
+                                    <p class="text-[10px] font-bold text-green-700 uppercase mb-0.5">Resolution</p>
+                                    <p class="text-xs text-green-800">{{ $vio['resolution_notes'] }}</p>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Penalty Schedule Reference --}}
+                <div class="mt-4 rounded-xl p-3.5 border border-blue-100" style="background:#f8f9ff">
+                    <p class="text-[10px] font-bold uppercase tracking-wide mb-1.5" style="color:#070589">Penalty Schedule (Per Contract)</p>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-600">
+                        <p><span class="font-semibold">1st Offense:</span> Written Warning</p>
+                        <p><span class="font-semibold">2nd Offense:</span> Fine of PHP 500.00</p>
+                        <p><span class="font-semibold">3rd Offense:</span> Lease Termination</p>
+                        <p><span class="font-semibold">Serious:</span> Immediate Termination</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        @endif
+            @endif
 
-        {{-- Move Dates + Payment Requests (bento row) --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Move Dates --}}
-            <div class="bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="{{ $violationCounts['total'] > 0 ? '' : 'lg:col-span-1' }} bg-white rounded-2xl border border-gray-100 p-5">
                 <div class="flex items-center gap-2.5 mb-4">
                     <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#eef2ff">
                         <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -414,10 +415,11 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            {{-- Payment Requests --}}
-            @if(count($pendingPaymentRequests) > 0 || count($rejectedPaymentRequests) > 0)
-            <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        {{-- Payment Requests --}}
+        @if(count($pendingPaymentRequests) > 0 || count($rejectedPaymentRequests) > 0)
+            <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                         <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#eef2ff">
@@ -452,8 +454,7 @@
                     @endforeach
                 </div>
             </div>
-            @endif
-        </div>
+        @endif
 
     </div>
 

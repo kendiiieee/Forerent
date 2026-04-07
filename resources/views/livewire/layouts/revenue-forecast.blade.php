@@ -75,18 +75,6 @@
                     </div>
 
                     <div class="flex items-center gap-6">
-                        {{-- Legend --}}
-                        <div class="hidden sm:flex items-center gap-5">
-                            <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-sm" style="background-color: #8CC5FF;"></span>
-                                <span class="text-sm text-gray-500 font-medium">Actual Earnings</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-sm" style="background-color: #1E1B4B;"></span>
-                                <span class="text-sm text-gray-500 font-medium">Forecasted Revenue</span>
-                            </div>
-                        </div>
-
                         <!-- Download Dropdown -->
                         <div x-data="{ open: false }" @click.away="open = false" @keydown.escape.stop="open = false" class="relative">
                             <button
@@ -120,6 +108,18 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {{-- Legend below header --}}
+                <div class="flex items-center gap-5 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-sm" style="background-color: #8CC5FF;"></span>
+                        <span class="text-sm text-gray-500 font-medium">Actual Earnings</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-sm" style="background-color: #1E1B4B;"></span>
+                        <span class="text-sm text-gray-500 font-medium">Forecasted Revenue</span>
                     </div>
                 </div>
 

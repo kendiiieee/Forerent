@@ -19,9 +19,9 @@ class PropertySeeder extends Seeder
 
         $liam = \App\Models\User::where('email', 'landlord@example.com')->first();
 
-        // Create 3 properties owned by Liam Landlord
+        // Create 7 properties owned by Liam Landlord
         Property::factory()
-            ->count(3)
+            ->count(7)
             ->create(['owner_id' => $liam->user_id]);
     }
 }
