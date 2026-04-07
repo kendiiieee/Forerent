@@ -17,6 +17,7 @@ class ContractsPanel extends Component
     public string $activeTab = 'all';
     public string $search = '';
     public ?int $selectedMonth = null;
+    public ?int $selectedYear = null;
     public ?string $selectedBuilding = null;
 
     public function updatedSearch(): void
@@ -25,6 +26,11 @@ class ContractsPanel extends Component
     }
 
     public function updatedSelectedMonth(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedYear(): void
     {
         $this->resetPage();
     }
@@ -74,6 +80,11 @@ class ContractsPanel extends Component
             $baseQuery->whereMonth('start_date', $this->selectedMonth);
         }
 
+        // Apply year filter
+        if ($this->selectedYear) {
+            $baseQuery->whereYear('start_date', $this->selectedYear);
+        }
+
         // Apply building filter
         if ($this->selectedBuilding) {
             $baseQuery->whereHas('bed.unit.property', fn($q) => $q->where('building_name', $this->selectedBuilding));
@@ -120,10 +131,17 @@ class ContractsPanel extends Component
             ->values()
             ->toArray();
 
+        $currentYear = (int) date('Y');
+        $yearOptions = array_combine(
+            range($currentYear, $currentYear - 4),
+            range($currentYear, $currentYear - 4)
+        );
+
         return view('livewire.layouts.properties.contracts-panel', [
             'leases' => $query->latest('start_date')->paginate(10),
             'counts' => $counts,
             'monthOptions' => $monthOptions,
+            'yearOptions' => $yearOptions,
             'buildingOptions' => $buildingOptions,
             'suggestions' => $suggestions,
         ]);

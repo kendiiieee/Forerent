@@ -17,6 +17,7 @@ class RevenueRecords extends Component
 
     public $activeTab = 'payment';
     public $selectedMonth = null;
+    public $selectedYear = null;
     public $selectedBuilding = null;
     public $search = '';
 
@@ -29,6 +30,12 @@ class RevenueRecords extends Component
 
     // Reset pagination when filters change
     public function updatedSelectedMonth()
+    {
+        $this->resetPage('paymentPage');
+        $this->resetPage('maintenancePage');
+    }
+
+    public function updatedSelectedYear()
     {
         $this->resetPage('paymentPage');
         $this->resetPage('maintenancePage');
@@ -196,6 +203,9 @@ class RevenueRecords extends Component
                 $monthNumber = Carbon::parse($this->selectedMonth)->month;
                 $query->whereMonth('transactions.transaction_date', $monthNumber);
             })
+            ->when($this->selectedYear, function ($query) {
+                $query->whereYear('transactions.transaction_date', $this->selectedYear);
+            })
             ->when($this->selectedBuilding, function ($query) {
                 $query->where('properties.building_name', $this->selectedBuilding);
             })
@@ -254,6 +264,9 @@ class RevenueRecords extends Component
                 $monthNumber = Carbon::parse($this->selectedMonth)->month;
                 $query->whereMonth('maintenance_logs.completion_date', $monthNumber);
             })
+            ->when($this->selectedYear, function ($query) {
+                $query->whereYear('maintenance_logs.completion_date', $this->selectedYear);
+            })
             ->when($this->selectedBuilding, function ($query) {
                 $query->where('properties.building_name', $this->selectedBuilding);
             })
@@ -301,10 +314,17 @@ class RevenueRecords extends Component
                 ->paginate(10, ['*'], 'maintenancePage');
         }
 
+        $currentYear = (int) date('Y');
+        $yearOptions = array_combine(
+            range($currentYear, $currentYear - 4),
+            range($currentYear, $currentYear - 4)
+        );
+
         return view('livewire.layouts.financials.revenue-records', [
             'paymentHistory' => $paymentHistory,
             'maintenanceHistory' => $maintenanceHistory,
             'monthOptions' => $monthOptions,
+            'yearOptions' => $yearOptions,
             'buildingOptions' => $buildingOptions,
         ]);
     }
