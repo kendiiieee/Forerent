@@ -1169,54 +1169,49 @@
                 $dueDay = $t['move_in_details']['monthly_due_date'];
                 $dueSfx = match((int) $dueDay) { 1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th' };
                 $totalMoveIn = $rate + $deposit;
-                $moveInHasAnySig = $ownerSignature || $managerSignature || $tenantSignature;
             @endphp
-            <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
-                 x-data="{ showLeaveConfirm: false }">
-                <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-                    <div class="bg-[#070589] text-white p-5 flex items-center justify-between flex-shrink-0">
-                        <h2 class="text-lg font-bold">Move-In Contract</h2>
-                        <flux:tooltip :content="'Close the contract viewer'" position="bottom">
-                            <button @click="{{ $moveInHasAnySig ? "\$el.closest('.fixed').style.display='none'; \$wire.closeMoveInContract()" : 'showLeaveConfirm = true' }}" class="text-white hover:text-blue-200"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-                        </flux:tooltip>
-                    </div>
-                    <div class="flex-1 overflow-y-auto p-8 space-y-6 text-sm text-gray-800" id="move-in-contract" style="font-family: 'Open Sans', sans-serif;">
+            <x-inspection.contract-viewer-modal
+                :show="true"
+                title="Move-In Contract"
+                wireCloseMethod="closeMoveInContract"
+                contractId="move-in-contract-manager"
+                :hasSignatures="(bool) ($ownerSignature || $managerSignature || $tenantSignature)"
+                :contractAgreed="(bool) $contractAgreed"
+                :statusText="$contractAgreed ? 'Contract fully signed' : (!$managerSignature && $ownerSignature ? 'Sign this contract as unit manager' : 'Waiting for other parties to sign')"
+            >
+                @include('partials.move-in-contract-body', [
+                    't' => $t,
+                    'rate' => $rate,
+                    'deposit' => $deposit,
+                    'premium' => $premium,
+                    'dueDay' => $dueDay,
+                    'dueSfx' => $dueSfx,
+                    'totalMoveIn' => $totalMoveIn,
+                    'inspectionChecklist' => $inspectionChecklist,
+                    'itemsReceived' => $itemsReceived,
+                    'tenantSignature' => $tenantSignature,
+                    'ownerSignature' => $ownerSignature,
+                    'managerSignature' => $managerSignature,
+                    'tenantSignedAt' => $tenantSignedAt,
+                    'ownerSignedAt' => $ownerSignedAt,
+                    'managerSignedAt' => $managerSignedAt,
+                    'contractAgreed' => $contractAgreed,
+                    'signatureMode' => 'manager',
+                ])
 
-                        @include('partials.move-in-contract-body', [
-                            't' => $t,
-                            'rate' => $rate,
-                            'deposit' => $deposit,
-                            'premium' => $premium,
-                            'dueDay' => $dueDay,
-                            'dueSfx' => $dueSfx,
-                            'totalMoveIn' => $totalMoveIn,
-                            'inspectionChecklist' => $inspectionChecklist,
-                            'itemsReceived' => $itemsReceived,
-                            'tenantSignature' => $tenantSignature,
-                            'ownerSignature' => $ownerSignature,
-                            'managerSignature' => $managerSignature,
-                            'tenantSignedAt' => $tenantSignedAt,
-                            'ownerSignedAt' => $ownerSignedAt,
-                            'managerSignedAt' => $managerSignedAt,
-                            'contractAgreed' => $contractAgreed,
-                            'signatureMode' => 'manager',
-                        ])
-
-                    </div>
-                    <div class="p-4 bg-gray-50 border-t flex justify-end gap-3 flex-shrink-0">
-                        @if($contractAgreed)
-                            <button wire:click="downloadSignedContract" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
-                                Download Signed PDF
-                            </button>
-                        @endif
-                        <button onclick="printContract('move-in-contract')" class="bg-[#070589] hover:bg-[#000060] text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors">
-                            Print Contract
+                <x-slot:footer>
+                    @if(!$managerSignature && $ownerSignature)
+                        <button wire:click="openSignatureModal" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                            Sign Contract
                         </button>
-                    </div>
-                </div>
-                <x-contract-leave-confirm closeAction="$el.closest('.fixed').style.display='none'; $wire.closeMoveInContract()" />
-            </div>
+                    @endif
+                    <button wire:click="downloadSignedContract" class="bg-[#070589] hover:bg-[#050467] text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                        Download PDF
+                    </button>
+                </x-slot:footer>
+            </x-inspection.contract-viewer-modal>
         @endif
 
         {{-- ═══════════════════════════════════════════════
@@ -1226,52 +1221,47 @@
             @php
                 $t = $currentTenant;
                 $deposit = $t['move_in_details']['security_deposit'];
-                $moveOutHasAnySig = $moveOutOwnerSignature || $moveOutManagerSignature || $moveOutTenantSignature;
             @endphp
-            <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
-                 x-data="{ showLeaveConfirm: false }">
-                <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-                    <div class="bg-[#070589] text-white p-5 flex items-center justify-between flex-shrink-0">
-                        <h2 class="text-lg font-bold">Move-Out Clearance & Deposit Settlement</h2>
-                        <flux:tooltip :content="'Close the contract viewer'" position="bottom">
-                            <button @click="{{ $moveOutHasAnySig ? "\$el.closest('.fixed').style.display='none'; \$wire.closeMoveOutContract()" : 'showLeaveConfirm = true' }}" class="text-white hover:text-blue-200"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-                        </flux:tooltip>
-                    </div>
-                    <div class="flex-1 overflow-y-auto p-8 space-y-6 text-sm text-gray-800" id="move-out-contract" style="font-family: 'Open Sans', sans-serif;">
+            <x-inspection.contract-viewer-modal
+                :show="true"
+                title="Move-Out Clearance & Deposit Settlement"
+                wireCloseMethod="closeMoveOutContract"
+                contractId="move-out-contract-manager"
+                :hasSignatures="(bool) ($moveOutOwnerSignature || $moveOutManagerSignature || $moveOutTenantSignature)"
+                :contractAgreed="(bool) $moveOutContractAgreed"
+                :statusText="$moveOutContractAgreed ? 'Contract fully signed' : (!$moveOutManagerSignature && $moveOutOwnerSignature ? 'Sign this contract as unit manager' : 'Waiting for other parties to sign')"
+            >
+                @include('partials.move-out-contract-body', [
+                    't' => $t,
+                    'deposit' => $deposit,
+                    'moveOutChecklist' => $moveOutChecklist,
+                    'itemsReturned' => $itemsReturned,
+                    'inspectionChecklist' => $inspectionChecklist,
+                    'moveOutTenantSignature' => $moveOutTenantSignature,
+                    'moveOutOwnerSignature' => $moveOutOwnerSignature,
+                    'moveOutManagerSignature' => $moveOutManagerSignature,
+                    'moveOutTenantSignedAt' => $moveOutTenantSignedAt,
+                    'moveOutOwnerSignedAt' => $moveOutOwnerSignedAt,
+                    'moveOutManagerSignedAt' => $moveOutManagerSignedAt,
+                    'moveOutContractAgreed' => $moveOutContractAgreed,
+                    'outstandingBalances' => $t['outstanding_balances'] ?? [],
+                    'depositRefund' => $t['deposit_refund'] ?? [],
+                    'signatureMode' => 'manager',
+                ])
 
-                        @include('partials.move-out-contract-body', [
-                            't' => $t,
-                            'deposit' => $deposit,
-                            'moveOutChecklist' => $moveOutChecklist,
-                            'itemsReturned' => $itemsReturned,
-                            'inspectionChecklist' => $inspectionChecklist,
-                            'moveOutTenantSignature' => $moveOutTenantSignature,
-                            'moveOutOwnerSignature' => $moveOutOwnerSignature,
-                            'moveOutManagerSignature' => $moveOutManagerSignature,
-                            'moveOutTenantSignedAt' => $moveOutTenantSignedAt,
-                            'moveOutOwnerSignedAt' => $moveOutOwnerSignedAt,
-                            'moveOutManagerSignedAt' => $moveOutManagerSignedAt,
-                            'moveOutContractAgreed' => $moveOutContractAgreed,
-                            'outstandingBalances' => $t['outstanding_balances'] ?? [],
-                            'depositRefund' => $t['deposit_refund'] ?? [],
-                            'signatureMode' => 'manager',
-                        ])
-
-                    </div>
-                    <div class="p-4 bg-gray-50 border-t flex justify-end gap-3 flex-shrink-0">
-                        @if($moveOutContractAgreed)
-                            <button wire:click="downloadMoveOutSignedContract" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
-                                Download Signed PDF
-                            </button>
-                        @endif
-                        <button onclick="printContract('move-out-contract')" class="bg-[#070589] hover:bg-[#000060] text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors">
-                            Print Contract
+                <x-slot:footer>
+                    @if(!$moveOutManagerSignature && $moveOutOwnerSignature)
+                        <button wire:click="openMoveOutSignatureModal" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                            Sign Contract
                         </button>
-                    </div>
-                </div>
-                <x-contract-leave-confirm closeAction="$el.closest('.fixed').style.display='none'; $wire.closeMoveOutContract()" />
-            </div>
+                    @endif
+                    <button wire:click="downloadMoveOutSignedContract" class="bg-[#070589] hover:bg-[#050467] text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                        Download PDF
+                    </button>
+                </x-slot:footer>
+            </x-inspection.contract-viewer-modal>
         @endif
 
     @else

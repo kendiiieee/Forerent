@@ -29,8 +29,8 @@ class="fixed inset-0 bg-gradient-to-br from-gray-900/50 via-gray-900/20 to-gray-
 </div>
 
     <button @click="toggleMobileSidebar()"
-            class="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg lg:hidden hover:bg-gray-100 transition-colors">
-        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="fixed top-3 sm:top-4 left-3 sm:left-4 z-50 p-1.5 sm:p-2 rounded-lg bg-white shadow-lg lg:hidden hover:bg-gray-100 transition-colors">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
     </button>

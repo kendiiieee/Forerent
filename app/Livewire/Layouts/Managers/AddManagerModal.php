@@ -22,6 +22,8 @@ class AddManagerModal extends Component
 {
     use WithFileUploads, WithNotifications;
 
+    public const MAX_UNITS_PER_MANAGER = 10;
+
     public $isOpen = false;
     public $modalId;
 
@@ -104,11 +106,29 @@ class AddManagerModal extends Component
             ->get(['property_id', 'building_name']);
     }
 
+    public function getTotalSelectedUnitsProperty(): int
+    {
+        return count(array_merge(...array_values($this->allSelectedUnits) ?: [[]]));
+    }
+
     public function updatedSelectedUnits(): void
     {
         if ($this->selectedBuilding && $this->selectedFloor) {
             $key = $this->selectedBuilding . '_' . $this->selectedFloor;
+
+            // Temporarily save to compute total, then enforce the cap
+            $previousForKey = $this->allSelectedUnits[$key] ?? [];
             $this->allSelectedUnits[$key] = $this->selectedUnits;
+
+            if ($this->totalSelectedUnits > self::MAX_UNITS_PER_MANAGER) {
+                // Revert and notify
+                $this->allSelectedUnits[$key] = $previousForKey;
+                $this->selectedUnits = $previousForKey;
+                $this->notifyWarning(
+                    'Unit Limit Reached',
+                    'A manager can handle a maximum of ' . self::MAX_UNITS_PER_MANAGER . ' units.'
+                );
+            }
         }
     }
 
@@ -265,6 +285,15 @@ class AddManagerModal extends Component
                 'intval',
                 array_merge(...array_values($this->allSelectedUnits) ?: [[]])
             );
+
+            // Enforce maximum unit cap (server-side guard)
+            if (count($allSelectedUnitIds) > self::MAX_UNITS_PER_MANAGER) {
+                $this->notifyError(
+                    'Unit Limit Exceeded',
+                    'A manager can handle a maximum of ' . self::MAX_UNITS_PER_MANAGER . ' units.'
+                );
+                return;
+            }
 
             if (!empty($allSelectedUnitIds)) {
                 Unit::where('manager_id', $manager->user_id)

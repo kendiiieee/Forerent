@@ -11,64 +11,30 @@ class MaintenanceSeeder extends Seeder
 {
     protected Generator $faker;
 
-    private array $maintenanceCategories = [
-        'Plumbing',
-        'Electrical',
-        'Structural',
-        'Appliance',
-        'Pest Control',
+    private array $categories = [
+        'Plumbing', 'Electrical', 'Structural', 'Appliance', 'Pest Control',
     ];
 
     private array $problems = [
         'Plumbing' => [
-            'Leaking faucet in bathroom',
-            'Clogged drain in kitchen sink',
-            'Running toilet in unit',
-            'Low water pressure in shower',
-            'Water heater not working',
-            'Pipe leakage under sink',
-            'Dripping shower head needs replacement',
-            'Sink drainage issue in common area',
+            'Leaking faucet', 'Clogged drain', 'Running toilet', 'Low water pressure',
+            'Water heater broken', 'Pipe leakage', 'Dripping shower head', 'Sink drainage issue'
         ],
         'Electrical' => [
-            'Power outlet not working',
-            'Light fixture malfunction',
-            'Circuit breaker tripping',
-            'AC unit electrical issues',
-            'Wiring problem in bedroom',
-            'Switch not functioning',
-            'Flickering lights in hallway',
-            'Electrical panel inspection needed',
+            'Power outlet not working', 'Light fixture malfunction', 'Circuit breaker tripping',
+            'AC unit electrical issues', 'Wiring problem', 'Switch not working', 'Flickering lights', 'Electrical panel inspection'
         ],
         'Structural' => [
-            'Crack in wall needs repair',
-            'Door frame damage',
-            'Window frame repair needed',
-            'Ceiling crack inspection',
-            'Flooring issue in living room',
-            'Wall damage from moisture',
-            'Loose floor tiles in bathroom',
-            'Door not closing properly',
+            'Wall crack', 'Door frame damage', 'Window frame repair', 'Ceiling crack',
+            'Flooring issue', 'Wall damage', 'Loose tiles', 'Door not closing'
         ],
         'Appliance' => [
-            'Refrigerator not cooling',
-            'Oven temperature inaccurate',
-            'Microwave not heating',
-            'Washing machine malfunction',
-            'Dryer not working properly',
-            'Dishwasher leakage',
-            'AC remote control not working',
-            'Exhaust fan making noise',
+            'Refrigerator not cooling', 'Oven issue', 'Microwave not heating', 'Washing machine malfunction',
+            'Dryer not working', 'Dishwasher leakage', 'AC remote issue', 'Exhaust fan noise'
         ],
         'Pest Control' => [
-            'Ant infestation in kitchen',
-            'Cockroach sighting in bathroom',
-            'Rodent activity detected',
-            'Termite inspection needed',
-            'Spider infestation in corners',
-            'General pest control treatment',
-            'Mosquito problem near windows',
-            'Bed bug inspection requested',
+            'Ant infestation', 'Cockroach sighting', 'Rodent activity', 'Termite inspection',
+            'Spider infestation', 'General pest treatment', 'Mosquito problem', 'Bed bug inspection'
         ],
     ];
 
@@ -76,93 +42,98 @@ class MaintenanceSeeder extends Seeder
     {
         $this->faker = app(Generator::class);
 
-        $allLeases = DB::table('leases')
+        // Fetch all relevant leases in one query
+        $leases = DB::table('leases')
             ->whereIn('status', ['Active', 'Expired'])
-            ->get(['lease_id', 'status', 'bed_id']);
+            ->get(['lease_id', 'bed_id', 'status']);
 
-        $expiredLeases = $allLeases->where('status', 'Expired')->pluck('lease_id')->flip()->toArray();
+        if ($leases->isEmpty()) {
+            $this->command->error('No leases found. Run LeaseSeeder first.');
+            return;
+        }
 
-        // Group leases by unit via beds
-        $bedIds = $allLeases->pluck('bed_id')->unique()->toArray();
+        // Map beds to units
+        $bedIds = $leases->pluck('bed_id')->unique()->toArray();
         $bedToUnit = DB::table('beds')
             ->whereIn('bed_id', $bedIds)
             ->pluck('unit_id', 'bed_id')
             ->toArray();
 
-        // Group leases by unit_id
+        // Group leases by unit for batch maintenance generation
         $leasesByUnit = [];
-        foreach ($allLeases as $lease) {
+        foreach ($leases as $lease) {
             $unitId = $bedToUnit[$lease->bed_id] ?? null;
             if ($unitId) {
-                $leasesByUnit[$unitId][] = $lease->lease_id;
+                $leasesByUnit[$unitId][] = $lease;
             }
         }
 
-        $managerNames = DB::table('users')
-            ->where('role', 'manager')
-            ->get(['first_name', 'last_name'])
-            ->map(fn($u) => "{$u->first_name} {$u->last_name}")
-            ->toArray();
-
         if (empty($leasesByUnit)) {
-            $this->command->error('No leases found. Run LeaseSeeder first.');
+            $this->command->error('No units found for leases.');
             return;
         }
 
-        if (empty($managerNames)) {
+        $managers = DB::table('users')
+            ->where('role', 'manager')
+            ->get(['user_id', 'first_name', 'last_name'])
+            ->map(fn($u) => ['user_id' => $u->user_id, 'name' => "{$u->first_name} {$u->last_name}"])
+            ->toArray();
+
+        if (empty($managers)) {
             $this->command->error('No managers found. Run UserSeeder first.');
             return;
         }
 
-        $maintenanceRequests = [];
-        $maintenanceLogs     = [];
-        $requestId           = 1;
+        $requests = [];
+        $logs = [];
+        $requestId = 1;
 
         $currentDate = Carbon::create(2021, 1, 1);
-        $endDate     = Carbon::now();
+        $endDate = Carbon::now();
 
         while ($currentDate->lte($endDate)) {
             $monthStart = $currentDate->copy()->startOfMonth();
-            $monthEnd   = $currentDate->copy()->endOfMonth()->min($endDate);
+            $monthEnd = $currentDate->copy()->endOfMonth()->min($endDate);
 
-            // Each unit gets its own random request count this month
-            foreach ($leasesByUnit as $unitId => $unitLeaseIds) {
-                $requestsThisUnit = rand(0, 2); // 0–2 requests per unit per month
+            foreach ($leasesByUnit as $unitId => $unitLeases) {
+                $requestsThisUnit = rand(0, 2); // max 2 requests per unit per month
 
                 for ($i = 0; $i < $requestsThisUnit; $i++) {
-                    $category = $this->maintenanceCategories[array_rand($this->maintenanceCategories)];
-                    $urgency  = $this->getWeightedUrgency($category);
-                    $leaseId  = $unitLeaseIds[array_rand($unitLeaseIds)];
-                    $logDate  = $monthStart->copy()->addDays(rand(0, $monthStart->diffInDays($monthEnd)));
+                    $lease = $unitLeases[array_rand($unitLeases)];
+                    $category = $this->categories[array_rand($this->categories)];
+                    $problem = $this->problems[$category][array_rand($this->problems[$category])];
+                    $urgency = $this->getWeightedUrgency($category);
+                    $logDate = $monthStart->copy()->addDays(rand(0, $monthStart->diffInDays($monthEnd)));
 
+                    // Determine status
                     $monthsAgo = $logDate->diffInMonths(Carbon::now());
-                    $status    = isset($expiredLeases[$leaseId])
-                        ? 'Completed'
-                        : $this->resolveStatus($monthsAgo);
+                    $status = $lease->status === 'Expired' ? 'Completed' : $this->resolveStatus($monthsAgo);
 
-                    $maintenanceRequests[] = [
-                        'lease_id'      => $leaseId,
-                        'status'        => $status,
-                        'logged_by'     => $managerNames[array_rand($managerNames)],
+                    $manager = $managers[array_rand($managers)];
+
+                    $requests[] = [
+                        'lease_id' => $lease->lease_id,
+                        'status' => $status,
+                        'logged_by' => $manager['name'],
                         'ticket_number' => 'TICKET-' . str_pad($requestId, 6, '0', STR_PAD_LEFT),
-                        'log_date'      => $logDate->format('Y-m-d'),
-                        'problem'       => $this->problems[$category][array_rand($this->problems[$category])],
-                        'urgency'       => $urgency,
-                        'category'      => $category,
-                        'created_at'    => $logDate->format('Y-m-d H:i:s'),
-                        'updated_at'    => $logDate->format('Y-m-d H:i:s'),
+                        'log_date' => $logDate->format('Y-m-d'),
+                        'problem' => $problem,
+                        'urgency' => $urgency,
+                        'category' => $category,
+                        'created_at' => $logDate,
+                        'updated_at' => $logDate,
                     ];
 
                     if ($status === 'Completed') {
                         $completionDays = $this->getCompletionDays($category, $urgency);
                         $completionDate = $logDate->copy()->addDays($completionDays)->min($endDate);
 
-                        $maintenanceLogs[] = [
-                            'request_id'      => $requestId,
+                        $logs[] = [
+                            'request_id' => $requestId,
                             'completion_date' => $completionDate->format('Y-m-d'),
-                            'cost'            => $this->calculateCost($category, $logDate->month),
-                            'created_at'      => $completionDate->format('Y-m-d H:i:s'),
-                            'updated_at'      => $completionDate->format('Y-m-d H:i:s'),
+                            'cost' => $this->calculateCost($category, $logDate->month),
+                            'created_at' => $completionDate,
+                            'updated_at' => $completionDate,
                         ];
                     }
 
@@ -173,19 +144,16 @@ class MaintenanceSeeder extends Seeder
             $currentDate->addMonth()->startOfMonth();
         }
 
-        $this->command->info("Inserting " . count($maintenanceRequests) . " maintenance requests...");
-        foreach (array_chunk($maintenanceRequests, 500) as $chunk) {
+        foreach (array_chunk($requests, 500) as $chunk) {
             DB::table('maintenance_requests')->insert($chunk);
         }
 
-        $this->command->info("Inserting " . count($maintenanceLogs) . " maintenance logs...");
-        foreach (array_chunk($maintenanceLogs, 500) as $chunk) {
+        foreach (array_chunk($logs, 500) as $chunk) {
             DB::table('maintenance_logs')->insert($chunk);
         }
 
-        $totalCost = array_sum(array_column($maintenanceLogs, 'cost'));
-        $this->command->info("✅ Successfully seeded maintenance data!");
-        $this->command->info("📊 Total Maintenance Cost: ₱" . number_format($totalCost, 2));
+        $totalCost = array_sum(array_column($logs, 'cost'));
+        $this->command->info("✅ Maintenance seeded: " . count($requests) . " requests, total cost: ₱" . number_format($totalCost, 2));
     }
 
     private function resolveStatus(int $monthsAgo): string
@@ -193,47 +161,44 @@ class MaintenanceSeeder extends Seeder
         if ($monthsAgo >= 2) {
             return $this->getWeightedRandom(['Completed' => 0.90, 'Ongoing' => 0.07, 'Pending' => 0.03]);
         }
-
         if ($monthsAgo === 1) {
             return $this->getWeightedRandom(['Completed' => 0.75, 'Ongoing' => 0.15, 'Pending' => 0.10]);
         }
-
-        // Current month
         return $this->getWeightedRandom(['Completed' => 0.40, 'Ongoing' => 0.35, 'Pending' => 0.25]);
     }
 
     private function calculateCost(string $category, int $month): float
     {
         $ranges = [
-            'Plumbing'     => [1500, 8000],
-            'Electrical'   => [2500, 8000],
-            'Structural'   => [3000, 8000],
-            'Appliance'    => [1000, 6000],
-            'Pest Control' => [600,  2500],
+            'Plumbing' => [1500, 8000],
+            'Electrical' => [2500, 8000],
+            'Structural' => [3000, 8000],
+            'Appliance' => [1000, 6000],
+            'Pest Control' => [600, 2500],
         ];
 
-        $seasonalFactors = [
-            'Plumbing'     => [12 => 1.4, 1 => 1.4, 2 => 1.3, 6 => 0.8, 7 => 0.7, 8 => 0.8],
-            'Electrical'   => [6 => 1.3, 7 => 1.5, 8 => 1.4, 12 => 0.8, 1 => 0.7, 2 => 0.8],
-            'Structural'   => [3 => 1.2, 4 => 1.1, 9 => 1.2, 10 => 1.1],
-            'Appliance'    => [],
+        $seasonal = [
+            'Plumbing' => [12 => 1.4, 1 => 1.4, 2 => 1.3, 6 => 0.8, 7 => 0.7, 8 => 0.8],
+            'Electrical' => [6 => 1.3, 7 => 1.5, 8 => 1.4, 12 => 0.8, 1 => 0.7, 2 => 0.8],
+            'Structural' => [3 => 1.2, 4 => 1.1, 9 => 1.2, 10 => 1.1],
+            'Appliance' => [],
             'Pest Control' => [3 => 1.2, 6 => 1.2, 9 => 1.2, 12 => 1.2],
         ];
 
-        [$min, $max]    = $ranges[$category];
-        $seasonalFactor = $seasonalFactors[$category][$month] ?? 1.0;
-        $baseCost       = rand($min * 100, $max * 100) / 100;
+        [$min, $max] = $ranges[$category];
+        $factor = $seasonal[$category][$month] ?? 1.0;
+        $base = rand($min * 100, $max * 100) / 100;
 
-        return round($baseCost * $seasonalFactor * (0.8 + rand(0, 40) / 100), 2);
+        return round($base * $factor * (0.8 + rand(0, 40) / 100), 2);
     }
 
     private function getWeightedUrgency(string $category): string
     {
         $weights = [
-            'Plumbing'     => ['Level 1' => 0.4, 'Level 2' => 0.3, 'Level 3' => 0.2, 'Level 4' => 0.1],
-            'Electrical'   => ['Level 1' => 0.5, 'Level 2' => 0.3, 'Level 3' => 0.15, 'Level 4' => 0.05],
-            'Structural'   => ['Level 1' => 0.3, 'Level 2' => 0.4, 'Level 3' => 0.2, 'Level 4' => 0.1],
-            'Appliance'    => ['Level 1' => 0.2, 'Level 2' => 0.4, 'Level 3' => 0.3, 'Level 4' => 0.1],
+            'Plumbing' => ['Level 1' => 0.4, 'Level 2' => 0.3, 'Level 3' => 0.2, 'Level 4' => 0.1],
+            'Electrical' => ['Level 1' => 0.5, 'Level 2' => 0.3, 'Level 3' => 0.15, 'Level 4' => 0.05],
+            'Structural' => ['Level 1' => 0.3, 'Level 2' => 0.4, 'Level 3' => 0.2, 'Level 4' => 0.1],
+            'Appliance' => ['Level 1' => 0.2, 'Level 2' => 0.4, 'Level 3' => 0.3, 'Level 4' => 0.1],
             'Pest Control' => ['Level 1' => 0.1, 'Level 2' => 0.3, 'Level 3' => 0.4, 'Level 4' => 0.2],
         ];
 
@@ -242,12 +207,12 @@ class MaintenanceSeeder extends Seeder
 
     private function getWeightedRandom(array $weights): string
     {
-        $random     = rand(1, 100) / 100;
+        $rand = rand(1, 100) / 100;
         $cumulative = 0;
 
         foreach ($weights as $item => $weight) {
             $cumulative += $weight;
-            if ($random <= $cumulative) {
+            if ($rand <= $cumulative) {
                 return $item;
             }
         }
@@ -257,24 +222,19 @@ class MaintenanceSeeder extends Seeder
 
     private function getCompletionDays(string $category, string $urgency): int
     {
-        $baseRanges = [
-            'Plumbing'     => [1, 7],
-            'Electrical'   => [1, 5],
-            'Structural'   => [5, 20],
-            'Appliance'    => [1, 7],
+        $base = [
+            'Plumbing' => [1, 7],
+            'Electrical' => [1, 5],
+            'Structural' => [5, 20],
+            'Appliance' => [1, 7],
             'Pest Control' => [1, 4],
         ];
 
-        $urgencyMultipliers = [
-            'Level 1' => 0.3,
-            'Level 2' => 0.6,
-            'Level 3' => 0.8,
-            'Level 4' => 1.0,
-        ];
+        $multipliers = ['Level 1' => 0.3, 'Level 2' => 0.6, 'Level 3' => 0.8, 'Level 4' => 1.0];
 
-        [$min, $max] = $baseRanges[$category];
-        $multiplier  = $urgencyMultipliers[$urgency];
+        [$min, $max] = $base[$category];
+        $multiplier = $multipliers[$urgency];
 
-        return rand(max(1, (int) ($min * $multiplier)), max(1, (int) ($max * $multiplier)));
+        return rand(max(1, (int)($min * $multiplier)), max(1, (int)($max * $multiplier)));
     }
 }

@@ -6,7 +6,7 @@
     {{-- Image Container --}}
     <div class="relative h-48 overflow-hidden flex items-center justify-center bg-gray-100">
         <img
-            src="{{ $property->thumbnail ?? asset('office-building.png') }}"
+            src="{{ $property->thumbnail ? asset('storage/' . $property->thumbnail) : asset('office-building.png') }}"
             alt="{{ $property->building_name }}"
             class="{{ $property->thumbnail ? 'w-full h-full object-cover' : 'max-h-full max-w-full object-contain' }} transition-transform hover:scale-110 duration-300">
 

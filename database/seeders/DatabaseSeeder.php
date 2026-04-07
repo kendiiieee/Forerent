@@ -22,10 +22,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             PropertySeeder::class,
+            PropertyDocumentSeeder::class,
             UnitSeeder::class,
             LeaseSeeder::class,
-            BillingSeeder::class,
             UtilityBillSeeder::class,
+            BillingSeeder::class,
             TransactionSeeder::class,
             MaintenanceSeeder::class,
             TransactionSeeder::class,

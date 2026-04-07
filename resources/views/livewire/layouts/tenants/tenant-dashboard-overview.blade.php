@@ -40,12 +40,12 @@
         $utilityTotal = $electricityShare + $waterShare;
         $utilityMax = max($electricityShare, $waterShare, 1);
     @endphp
-    <div class="space-y-4">
-        <div class="rounded-2xl overflow-hidden shadow-lg shadow-blue-900/10">@include('partials.tenant-payment-banner')</div>
+    <div class="space-y-3 sm:space-y-4">
+        <div class="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-blue-900/10">@include('partials.tenant-payment-banner')</div>
 
         {{-- Overdue warning --}}
         @if($daysUntilDue < 0 && $paymentStatus !== 'Paid')
-            <div class="px-3.5 py-2.5 rounded-xl bg-red-50 flex items-center justify-between gap-2.5">
+            <div class="px-3.5 py-2.5 rounded-xl bg-red-50 flex max-sm:flex-col items-start sm:items-center justify-between gap-2.5">
                 <div class="flex items-center gap-2.5">
                     <svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                     <p class="text-[13px] font-medium text-red-600">Your payment is {{ abs($daysUntilDue) }} {{ abs($daysUntilDue) === 1 ? 'day' : 'days' }} overdue.</p>
@@ -62,34 +62,34 @@
             </div>
         @endif
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Due Date</p><p class="text-xl font-extrabold text-gray-900 mt-1">{{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}</p>@if($daysUntilDue > 0 && $paymentStatus !== 'Paid')<p class="text-xs font-semibold mt-1" style="color:#2563eb">{{ $daysUntilDue }}d left</p>@elseif($daysUntilDue < 0 && $paymentStatus !== 'Paid')<p class="text-xs font-bold text-red-500 mt-1">{{ abs($daysUntilDue) }}d overdue</p>@elseif($paymentStatus === 'Paid')<p class="text-xs font-semibold mt-1" style="color:#2563eb">Settled</p>@endif</div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Outstanding</p><p class="text-xl font-extrabold text-gray-900 mt-1">&#8369;{{ number_format($outstandingBalance, 2) }}</p>@if($outstandingBalance > 0)<p class="text-xs font-semibold text-red-500 mt-1">Previous months</p>@else<p class="text-xs font-semibold mt-1" style="color:#2563eb">All clear</p>@endif</div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0l8.955 8.955M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Monthly Rate</p><p class="text-xl font-extrabold text-gray-900 mt-1">&#8369;{{ number_format($contractRate, 2) }}</p><p class="text-xs font-semibold mt-1" style="color:#2563eb">{{ $isShortTerm ? 'Short-term' : 'Long-term' }}</p></div>
-            <div class="bg-white rounded-2xl border border-gray-100 p-4 text-left"><div class="flex items-center mb-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div></div><p class="text-xs font-bold uppercase tracking-wider" style="color:#070589">Lease</p><p class="text-xl font-extrabold text-gray-900 mt-1">{{ $leaseStatus }}</p>@if($lease)<p class="text-xs font-semibold mt-1" style="color:#2563eb">{{ max($daysUntilExpiry, 0) }}d remaining</p>@endif</div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-2.5 sm:p-4 text-left"><div class="flex items-center mb-2 sm:mb-3"><div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-4 h-4 sm:w-5 sm:h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div></div><p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:#070589">Due Date</p><p class="text-lg sm:text-xl font-extrabold text-gray-900 mt-1">{{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}</p>@if($daysUntilDue > 0 && $paymentStatus !== 'Paid')<p class="text-[10px] sm:text-xs font-semibold mt-1" style="color:#2563eb">{{ $daysUntilDue }}d left</p>@elseif($daysUntilDue < 0 && $paymentStatus !== 'Paid')<p class="text-[10px] sm:text-xs font-bold text-red-500 mt-1">{{ abs($daysUntilDue) }}d overdue</p>@elseif($paymentStatus === 'Paid')<p class="text-[10px] sm:text-xs font-semibold mt-1" style="color:#2563eb">Settled</p>@endif</div>
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-2.5 sm:p-4 text-left"><div class="flex items-center mb-2 sm:mb-3"><div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-4 h-4 sm:w-5 sm:h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div><p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:#070589">Outstanding</p><p class="text-lg sm:text-xl font-extrabold text-gray-900 mt-1 truncate">&#8369;{{ number_format($outstandingBalance, 2) }}</p>@if($outstandingBalance > 0)<p class="text-[10px] sm:text-xs font-semibold text-red-500 mt-1">Previous months</p>@else<p class="text-[10px] sm:text-xs font-semibold mt-1" style="color:#2563eb">All clear</p>@endif</div>
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-2.5 sm:p-4 text-left"><div class="flex items-center mb-2 sm:mb-3"><div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-4 h-4 sm:w-5 sm:h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0l8.955 8.955M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></div></div><p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:#070589">Monthly Rate</p><p class="text-lg sm:text-xl font-extrabold text-gray-900 mt-1 truncate">&#8369;{{ number_format($contractRate, 2) }}</p><p class="text-[10px] sm:text-xs font-semibold mt-1" style="color:#2563eb">{{ $isShortTerm ? 'Short-term' : 'Long-term' }}</p></div>
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-2.5 sm:p-4 text-left"><div class="flex items-center mb-2 sm:mb-3"><div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-4 h-4 sm:w-5 sm:h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div></div><p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style="color:#070589">Lease</p><p class="text-lg sm:text-xl font-extrabold text-gray-900 mt-1">{{ $leaseStatus }}</p>@if($lease)<p class="text-[10px] sm:text-xs font-semibold mt-1" style="color:#2563eb">{{ max($daysUntilExpiry, 0) }}d remaining</p>@endif</div>
         </div>
 
         {{-- ══ Lease Ring + Billing Cycle ════════════════════════════ --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
             @if($lease)
-            <div class="rounded-2xl overflow-hidden relative text-left" style="background: linear-gradient(160deg, #020147 0%, #070589 45%, #1e3fae 100%)">
+            <div class="rounded-xl sm:rounded-2xl overflow-hidden relative text-left" style="background: linear-gradient(160deg, #020147 0%, #070589 45%, #1e3fae 100%)">
                 <div class="absolute -right-10 -top-10 w-36 h-36 rounded-full" style="background: radial-gradient(circle, rgba(96,165,250,0.08) 0%, transparent 70%)"></div>
                 <div class="absolute -left-6 bottom-4 w-24 h-24 rounded-full" style="background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)"></div>
-                <div class="relative z-10 p-6 h-full flex flex-col">
-                    <div class="flex items-center justify-between mb-1">
+                <div class="relative z-10 p-4 sm:p-6 h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-1 gap-2">
                         <p class="text-xs font-bold text-blue-200 uppercase tracking-[0.2em]">Lease Expiry</p>
                         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[13px] font-bold uppercase bg-white/10 text-blue-200 ring-1 ring-white/10"><span class="w-1.5 h-1.5 rounded-full {{ $leaseStatus === 'Active' ? 'bg-blue-300' : 'bg-red-400' }}"></span>{{ $leaseStatus }}</span>
                     </div>
                     <p class="text-xs text-white/70 mb-4">{{ \Carbon\Carbon::parse($lease->start_date)->format('M d, Y') }} — {{ \Carbon\Carbon::parse($leaseEndDate)->format('M d, Y') }}</p>
-                    <div class="flex items-center justify-center py-4">
+                    <div class="flex items-center justify-center py-3 sm:py-4">
                         <div class="relative">
-                            <svg class="w-32 h-32 -rotate-90" viewBox="0 0 100 100">
+                            <svg class="w-24 h-24 sm:w-32 sm:h-32 -rotate-90" viewBox="0 0 100 100">
                                 <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
                                 <circle cx="50" cy="50" r="42" fill="none" stroke="{{ $daysUntilExpiry <= 30 ? '#f87171' : '#60a5fa' }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ 2 * 3.14159 * 42 }}" stroke-dashoffset="{{ 2 * 3.14159 * 42 * (1 - $leaseProgress / 100) }}" class="transition-all duration-1000"/>
                             </svg>
                             <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <p class="text-4xl font-extrabold text-white leading-none">{{ max($daysUntilExpiry, 0) }}</p>
-                                <p class="text-xs font-medium text-white/70 mt-1">days left</p>
+                                <p class="text-3xl sm:text-4xl font-extrabold text-white leading-none">{{ max($daysUntilExpiry, 0) }}</p>
+                                <p class="text-[10px] sm:text-xs font-medium text-white/70 mt-1">days left</p>
                             </div>
                         </div>
                     </div>
@@ -104,16 +104,16 @@
             </div>
             @endif
 
-            <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5">
-                <div class="flex items-center gap-2.5 mb-5">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff"><svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
-                    <div><p class="text-sm font-bold text-gray-900">Billing Cycle</p><p class="text-xs text-gray-400">{{ $billingStartDate ? \Carbon\Carbon::parse($billingStartDate)->format('M d') : '—' }} — {{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d, Y') : '—' }}</p></div>
+            <div class="lg:col-span-2 bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5">
+                <div class="flex items-center gap-2 sm:gap-2.5 mb-3 sm:mb-5">
+                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0" style="background:#eef2ff"><svg class="w-3.5 h-3.5 sm:w-5 sm:h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
+                    <div><p class="text-xs sm:text-sm font-bold text-gray-900">Billing Cycle</p><p class="text-[10px] sm:text-xs text-gray-400">{{ $billingStartDate ? \Carbon\Carbon::parse($billingStartDate)->format('M d') : '—' }} — {{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d, Y') : '—' }}</p></div>
                 </div>
                 <div class="relative">
                     <div class="w-full rounded-full h-3 overflow-hidden" style="background:#eef2ff"><div class="h-full rounded-full transition-all duration-500 relative" style="width:{{ $billingProgress }}%; background: linear-gradient(90deg, #070589, #2563eb)"><div class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-[2.5px] shadow-md" style="border-color:#070589"></div></div></div>
                     <div class="flex items-center justify-between mt-2.5"><span class="text-xs font-medium text-gray-400">{{ $billingProgress }}% through cycle</span><span class="text-xs font-bold" style="color:#070589">Due: {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d') : 'N/A' }}</span></div>
                 </div>
-                <div class="grid grid-cols-3 gap-3 mt-5">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
                     <div class="text-center p-3 rounded-xl" style="background:#f8f9ff"><p class="text-[13px] font-bold uppercase tracking-wider" style="color:#070589">Due In</p><p class="text-base font-extrabold text-gray-900 mt-1">@if($paymentStatus === 'Paid') Paid @elseif($daysUntilDue < 0) {{ abs($daysUntilDue) }}d @else {{ $daysUntilDue }}d @endif</p></div>
                     <div class="text-center p-3 rounded-xl" style="background:#f8f9ff"><p class="text-[13px] font-bold uppercase tracking-wider" style="color:#070589">Overdue</p><p class="text-base font-extrabold {{ $outstandingBalance > 0 ? 'text-red-600' : 'text-gray-900' }} mt-1">{{ $outstandingBalance > 0 ? '₱' . number_format($outstandingBalance, 0) : 'None' }}</p></div>
                     <div class="text-center p-3 rounded-xl" style="background:#f8f9ff"><p class="text-[13px] font-bold uppercase tracking-wider" style="color:#070589">Next Bill</p><p class="text-base font-extrabold text-gray-900 mt-1">{{ $nextPaymentDate ? \Carbon\Carbon::parse($nextPaymentDate)->format('M d') : 'N/A' }}</p></div>
@@ -122,8 +122,8 @@
         </div>
 
         {{-- Maintenance + Utilities + Contract --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
                 <a href="{{ route('tenant.maintenance') }}" class="block overflow-hidden group relative" style="background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%)">
                     <div class="px-5 py-4 relative z-10">
                         <div class="flex items-center justify-between mb-2">
@@ -163,8 +163,8 @@
             </div>
 
             {{-- Utilities --}}
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 text-left">
-                <div class="flex items-center justify-between mb-5">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5 text-left">
+                <div class="flex items-center justify-between mb-3 sm:mb-5">
                     <div class="flex items-center gap-2.5">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
                             <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
@@ -205,8 +205,8 @@
             </div>
 
             {{-- Contract Status --}}
-            <div class="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col">
-                <div class="flex items-center justify-between mb-4">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5 flex flex-col">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
                     <div class="flex items-center gap-2.5">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
                             <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
@@ -222,7 +222,7 @@
                     @endif
                 </div>
                 {{-- 3-step signing pipeline: Owner → Manager/Witness → You --}}
-                <div class="flex items-center gap-1.5 mb-5">
+                <div class="flex max-sm:flex-col items-center max-sm:items-stretch gap-1.5 mb-5">
                     {{-- Step 1: Owner --}}
                     <div class="flex items-center gap-1.5 flex-1 p-2 rounded-xl" style="background:{{ $ownerSignature ? '#eef2ff' : '#f9fafb' }}">
                         <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background:{{ $ownerSignature ? '#070589' : '#e5e7eb' }}">
@@ -234,7 +234,7 @@
                         </div>
                         <div><p class="text-[11px] font-bold" style="color:{{ $ownerSignature ? '#070589' : '#9ca3af' }}">Owner</p><p class="text-[11px]" style="color:{{ $ownerSignature ? '#2563eb' : '#d1d5db' }}">{{ $ownerSignature ? 'Signed' : 'Waiting' }}</p></div>
                     </div>
-                    <div class="w-3 h-px" style="background:{{ $ownerSignature ? '#070589' : '#e5e7eb' }}"></div>
+                    <div class="w-3 h-px max-sm:w-px max-sm:h-3 max-sm:self-center" style="background:{{ $ownerSignature ? '#070589' : '#e5e7eb' }}"></div>
                     {{-- Step 2: Manager/Witness --}}
                     <div class="flex items-center gap-1.5 flex-1 p-2 rounded-xl" style="background:{{ $managerSignature ? '#eef2ff' : ($ownerSignature ? '#eff6ff' : '#f9fafb') }}">
                         <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background:{{ $managerSignature ? '#070589' : ($ownerSignature ? '#d97706' : '#e5e7eb') }}">
@@ -246,7 +246,7 @@
                         </div>
                         <div><p class="text-[11px] font-bold" style="color:{{ $managerSignature ? '#070589' : ($ownerSignature ? '#d97706' : '#9ca3af') }}">Witness</p><p class="text-[11px]" style="color:{{ $managerSignature ? '#2563eb' : ($ownerSignature ? '#f59e0b' : '#d1d5db') }}">{{ $managerSignature ? 'Signed' : 'Waiting' }}</p></div>
                     </div>
-                    <div class="w-3 h-px" style="background:{{ $managerSignature ? '#070589' : '#e5e7eb' }}"></div>
+                    <div class="w-3 h-px max-sm:w-px max-sm:h-3 max-sm:self-center" style="background:{{ $managerSignature ? '#070589' : '#e5e7eb' }}"></div>
                     {{-- Step 3: Tenant (You) --}}
                     <div class="flex items-center gap-1.5 flex-1 p-2 rounded-xl" style="background:{{ $tenantSignature ? '#eef2ff' : ($managerSignature ? '#eff6ff' : '#f9fafb') }}">
                         <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background:{{ $tenantSignature ? '#070589' : ($managerSignature ? '#2563eb' : '#e5e7eb') }}">
@@ -276,14 +276,14 @@
         </div>
 
         {{-- Violation Records + Move Dates (bento row) --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
 
             {{-- Violation Records (70% = col-span-2) --}}
             @if($violationCounts['total'] > 0)
-            <div class="lg:col-span-2 bg-white rounded-2xl border border-blue-100 p-5">
-                <div class="flex items-center justify-between mb-4">
+            <div class="lg:col-span-2 bg-white rounded-xl sm:rounded-2xl border border-blue-100 p-3 sm:p-5">
+                <div class="flex max-sm:flex-col sm:items-center justify-between mb-4 gap-2.5">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eef2ff">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#eef2ff">
                             <svg class="w-5 h-5" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                         </div>
                         <div>
@@ -291,7 +291,7 @@
                             <p class="text-xs text-gray-400">{{ $violationCounts['total'] }} total &middot; {{ $violationCounts['issued'] }} unacknowledged</p>
                         </div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-1.5 sm:gap-2">
                         @if($violationCounts['issued'] > 0)
                             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold" style="background:#eef2ff;color:#070589">{{ $violationCounts['issued'] }} Issued</span>
                         @endif
@@ -336,21 +336,21 @@
                             };
                         @endphp
                         <div class="rounded-xl p-4 border {{ $vio['status'] === 'Issued' ? 'border-blue-100 bg-[#f8f9ff]' : 'border-gray-100 bg-gray-50/50' }}">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2">
+                            <div class="flex max-sm:flex-col items-start sm:items-center justify-between mb-2 gap-1.5">
+                                <div class="flex items-center flex-wrap gap-1.5 sm:gap-2">
                                     <span class="text-xs font-bold text-[#070589]">{{ $vio['violation_number'] }}</span>
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vStatusStyles }}" @if($vio['status'] === 'Issued') style="background:#eef2ff" @endif>{{ $vio['status'] }}</span>
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $vSeverityStyles }}">{{ ucfirst($vio['severity']) }}</span>
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">{{ $vOffenseLabel }} Offense</span>
                                 </div>
-                                <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($vio['violation_date'])->format('M d, Y') }}</span>
+                                <span class="text-[10px] text-gray-400 flex-shrink-0">{{ \Carbon\Carbon::parse($vio['violation_date'])->format('M d, Y') }}</span>
                             </div>
 
                             <p class="text-sm font-semibold text-gray-800 mb-1">{{ $vio['category'] }}</p>
                             <p class="text-xs text-gray-500 mb-2 line-clamp-2">{{ $vio['description'] }}</p>
 
                             {{-- Penalty Badge --}}
-                            <div class="flex items-center justify-between">
+                            <div class="flex max-sm:flex-col items-start sm:items-center justify-between gap-2">
                                 <span class="inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ $vPenaltyStyles }}">{{ $vPenaltyLabel }}</span>
 
                                 @if($vio['status'] === 'Issued')
@@ -376,7 +376,7 @@
                 {{-- Penalty Schedule Reference --}}
                 <div class="mt-4 rounded-xl p-3.5 border border-blue-100" style="background:#f8f9ff">
                     <p class="text-[10px] font-bold uppercase tracking-wide mb-1.5" style="color:#070589">Penalty Schedule (Per Contract)</p>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-600">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-600">
                         <p><span class="font-semibold">1st Offense:</span> Written Warning</p>
                         <p><span class="font-semibold">2nd Offense:</span> Fine of PHP 500.00</p>
                         <p><span class="font-semibold">3rd Offense:</span> Lease Termination</p>
@@ -387,7 +387,7 @@
             @endif
 
             {{-- Move Dates --}}
-            <div class="{{ $violationCounts['total'] > 0 ? '' : 'lg:col-span-1' }} bg-white rounded-2xl border border-gray-100 p-5">
+            <div class="{{ $violationCounts['total'] > 0 ? '' : 'lg:col-span-1' }} bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-5">
                 <div class="flex items-center gap-2.5 mb-4">
                     <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#eef2ff">
                         <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -419,8 +419,8 @@
 
         {{-- Payment Requests --}}
         @if(count($pendingPaymentRequests) > 0 || count($rejectedPaymentRequests) > 0)
-            <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+            <div class="bg-white rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden">
+                <div class="px-3 sm:px-5 py-3 sm:py-4 border-b border-gray-50 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                         <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#eef2ff">
                             <svg class="w-4 h-4" style="color:#070589" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -428,7 +428,7 @@
                         <h3 class="text-sm font-bold text-gray-900">Payment Requests</h3>
                     </div>
                 </div>
-                <div class="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="px-3 sm:px-5 py-3 sm:py-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     @foreach($pendingPaymentRequests as $pr)
                         <div class="p-3.5 rounded-xl border" style="background:#f8f9ff;border-color:#e0e7ff">
                             <div class="flex items-center justify-between mb-2">
@@ -466,27 +466,27 @@
     <div class="space-y-5">
 
         @if($lease)
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden" x-data="{ activeTab: 'movein' }" wire:ignore.self>
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden" x-data="{ activeTab: 'movein' }" wire:ignore.self>
 
-            <div class="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+            <div class="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
                         <svg class="w-[18px] h-[18px] text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                     </div>
                     <h3 class="text-[15px] font-bold text-gray-900">Inspection & Contract</h3>
                 </div>
 
                 {{-- Tab Pills --}}
-                <div class="flex items-center gap-1 bg-[#F4F7FC] rounded-xl p-1">
+                <div class="flex items-center gap-1 bg-[#F4F7FC] rounded-xl p-1 max-sm:w-full">
                     <button @click="activeTab = 'movein'"
                             :class="activeTab === 'movein' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
-                            class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200">
+                            class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200 max-sm:flex-1 max-sm:text-center">
                         Move-In
                     </button>
                     @php $moveOutAvailable = $moveOutDate || $moveOutInitiated; @endphp
                     <button @click="{{ $moveOutAvailable ? "activeTab = 'moveout'" : '' }}"
                             :class="activeTab === 'moveout' ? 'bg-white text-gray-900 shadow-sm' : '{{ $moveOutAvailable ? 'text-gray-400 hover:text-gray-600' : 'text-gray-300 cursor-not-allowed' }}'"
-                            class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200"
+                            class="px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all duration-200 max-sm:flex-1 max-sm:text-center"
                             {{ !$moveOutAvailable ? 'disabled' : '' }}>
                         Move-Out
                         @if(!$moveOutAvailable)
@@ -540,7 +540,7 @@
             <div x-show="activeTab === 'movein'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 <div class="grid grid-cols-1 lg:grid-cols-2 border-t border-gray-50">
 
-                    <div class="p-5 lg:border-r border-gray-50">
+                    <div class="p-4 sm:p-5 lg:border-r border-gray-50">
                         <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4">Contract & Signature</h4>
 
                         <div class="rounded-xl bg-[#F4F7FC] p-3.5 mb-4 space-y-2">
@@ -636,7 +636,7 @@
                         @endif
                     </div>
 
-                    <div class="p-5">
+                    <div class="p-4 sm:p-5">
                         <x-inspection.items-confirmation-card
                             title="Items Received"
                             subtitle="Confirm the items you received at move-in"
@@ -747,7 +747,7 @@
                         @endif
                     </div>
 
-                    <div class="p-5">
+                    <div class="p-4 sm:p-5">
                         <x-inspection.items-confirmation-card
                             title="Items Returned"
                             subtitle="Confirm the items you've returned at move-out"
@@ -770,8 +770,8 @@
 
         {{-- Clearance Checklist Card --}}
         @if($moveOutDate || $moveOutInitiated)
-        <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div class="px-5 py-4">
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div class="px-3 sm:px-5 py-3 sm:py-4">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
                         <svg class="w-[18px] h-[18px] text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
@@ -809,7 +809,7 @@
         @endif
 
         @else
-            <div class="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-10 text-center">
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-6 sm:p-10 text-center">
                 <p class="text-sm text-gray-400">No active lease found</p>
             </div>
         @endif
@@ -833,6 +833,8 @@
             wireCloseMethod="toggleMoveOutContract"
             contractId="move-out-contract-tenant"
             :hasSignatures="(bool) ($moveOutOwnerSignature || $moveOutManagerSignature || $moveOutTenantSignature)"
+            :contractAgreed="(bool) $moveOutContractAgreed"
+            :statusText="$moveOutContractAgreed ? 'Contract fully signed' : (!$moveOutTenantSignature && $moveOutOwnerSignature && $moveOutManagerSignature ? 'Sign this contract as tenant' : 'Waiting for other parties to sign')"
         >
             @include('partials.move-out-contract-body', [
                 't' => $t,
@@ -853,19 +855,16 @@
             ])
 
             <x-slot:footer>
-                @if($moveOutContractAgreed)
-                    <button wire:click="downloadMoveOutSignedContract" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
-                        Download Signed PDF
-                    </button>
-                @endif
+                <button wire:click="downloadMoveOutSignedContract" class="bg-[#070589] hover:bg-[#050467] text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    Download PDF
+                </button>
                 @if(!$moveOutTenantSignature && $moveOutOwnerSignature && $moveOutManagerSignature)
-                    <button wire:click="openMoveOutSignatureModal" class="bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
-                        Sign Move-Out Contract
+                    <button wire:click="openMoveOutSignatureModal" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                        Sign Contract
                     </button>
                 @endif
-                <button @click="{{ ($moveOutOwnerSignature || $moveOutManagerSignature || $moveOutTenantSignature) ? "\$el.closest('.fixed').style.display='none'; \$wire.toggleMoveOutContract()" : 'showLeaveConfirm = true' }}" class="px-5 py-2.5 text-sm font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl">Close</button>
             </x-slot:footer>
         </x-inspection.contract-viewer-modal>
     @endif
@@ -887,6 +886,8 @@
             wireCloseMethod="toggleContract"
             contractId="move-in-contract-tenant"
             :hasSignatures="(bool) ($ownerSignature || $managerSignature || $tenantSignature)"
+            :contractAgreed="(bool) $contractAgreed"
+            :statusText="$contractAgreed ? 'Contract fully signed' : (!$tenantSignature && $ownerSignature && $managerSignature ? 'Sign this contract as tenant' : 'Waiting for other parties to sign')"
         >
             @include('partials.move-in-contract-body', [
                 't' => $t,
@@ -909,13 +910,16 @@
             ])
 
             <x-slot:footer>
+                <button wire:click="downloadSignedContract" class="bg-[#070589] hover:bg-[#050467] text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    Download PDF
+                </button>
                 @if(!$tenantSignature && $ownerSignature && $managerSignature)
-                    <button wire:click="openSignatureModal" class="bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
-                        Read & Sign Contract
+                    <button wire:click="openSignatureModal" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 sm:py-2.5 px-4 sm:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-colors flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                        Sign Contract
                     </button>
                 @endif
-                <button @click="{{ ($ownerSignature || $managerSignature || $tenantSignature) ? "\$el.closest('.fixed').style.display='none'; \$wire.toggleContract()" : 'showLeaveConfirm = true' }}" class="bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-6 rounded-xl text-sm">Close</button>
             </x-slot:footer>
         </x-inspection.contract-viewer-modal>
     @endif

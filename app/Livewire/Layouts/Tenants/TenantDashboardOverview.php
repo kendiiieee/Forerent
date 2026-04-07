@@ -18,6 +18,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -1026,24 +1028,138 @@ class TenantDashboardOverview extends Component
 
     // ===== CONTRACT DOWNLOAD FOR TENANT =====
 
+    private function resolveSignatureBase64(?string $relativePath): ?string
+    {
+        if (!$relativePath) return null;
+
+        if (Storage::disk('local')->exists($relativePath)) {
+            return 'data:image/png;base64,' . base64_encode(Storage::disk('local')->get($relativePath));
+        }
+        if (Storage::disk('public')->exists($relativePath)) {
+            return 'data:image/png;base64,' . base64_encode(Storage::disk('public')->get($relativePath));
+        }
+
+        return null;
+    }
+
     public function downloadSignedContract()
     {
-        if (!$this->lease?->signed_contract_path) return;
+        if (!$this->lease) return;
 
-        return Storage::disk('public')->download(
-            $this->lease->signed_contract_path,
-            'Move-In-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf'
-        );
+        // If a pre-generated signed PDF exists, download it directly
+        if ($this->lease->signed_contract_path && Storage::disk('public')->exists($this->lease->signed_contract_path)) {
+            return Storage::disk('public')->download(
+                $this->lease->signed_contract_path,
+                'Move-In-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf'
+            );
+        }
+
+        // Generate PDF on-the-fly from contract data
+        $this->lease->load(['tenant', 'bed.unit.property']);
+        $t = $this->tenantContractData;
+        $rate = (float) ($t['move_in_details']['monthly_rate'] ?? 0);
+        $deposit = (float) ($t['move_in_details']['security_deposit'] ?? 0);
+        $premium = (float) ($t['move_in_details']['short_term_premium'] ?? 0);
+        $dueDay = $t['move_in_details']['monthly_due_date'] ?? null;
+        $dueSfx = match ((int) $dueDay) { 1, 21, 31 => 'st', 2, 22 => 'nd', 3, 23 => 'rd', default => 'th' };
+
+        $property = $this->lease->bed?->unit?->property;
+        $contractSettings = $property?->contract_settings ?? [];
+
+        $managerId = $this->findManagerIdForLease($this->lease);
+        $manager = $managerId ? User::find($managerId) : null;
+
+        // Resolve government ID image
+        $govIdImage = $this->lease->tenant?->government_id_image;
+        $govIdBase64 = null;
+        if ($govIdImage) {
+            if (Storage::disk('local')->exists($govIdImage)) {
+                $govIdBase64 = 'data:image/png;base64,' . base64_encode(Storage::disk('local')->get($govIdImage));
+            } elseif (Storage::disk('public')->exists($govIdImage)) {
+                $govIdBase64 = 'data:image/png;base64,' . base64_encode(Storage::disk('public')->get($govIdImage));
+            }
+        }
+
+        $data = [
+            'tenant'                 => $t,
+            'lessor'                 => $t['lessor_info'],
+            't'                      => $t,
+            'tenantSignatureBase64'  => $this->resolveSignatureBase64($this->lease->tenant_signature),
+            'ownerSignatureBase64'   => $this->resolveSignatureBase64($this->lease->owner_signature),
+            'managerSignatureBase64' => $this->resolveSignatureBase64($this->lease->manager_signature),
+            'tenantSignedAt'         => $this->lease->tenant_signed_at?->format('M d, Y'),
+            'ownerSignedAt'          => $this->lease->owner_signed_at?->format('M d, Y'),
+            'managerSignedAt'        => $this->lease->manager_signed_at?->format('M d, Y'),
+            'managerName'            => $manager ? ($manager->first_name . ' ' . $manager->last_name) : 'Unit Manager',
+            'contractSettings'       => $contractSettings,
+            'inspectionChecklist'    => [],
+            'itemsReceived'          => $this->itemsReceived ?? [],
+            'rate'                   => $rate,
+            'deposit'                => $deposit,
+            'premium'                => $premium,
+            'dueDay'                 => $dueDay,
+            'dueSfx'                 => $dueSfx,
+            'govIdBase64'            => $govIdBase64,
+        ];
+
+        $pdf = Pdf::loadView('pdf.move-in-contract', $data)
+            ->setPaper('a4')
+            ->setOption('isRemoteEnabled', true);
+
+        $filename = 'Move-In-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf';
+
+        return response()->streamDownload(fn () => print($pdf->output()), $filename, ['Content-Type' => 'application/pdf']);
     }
 
     public function downloadMoveOutSignedContract()
     {
-        if (!$this->lease?->moveout_signed_contract_path) return;
+        if (!$this->lease) return;
 
-        return Storage::disk('public')->download(
-            $this->lease->moveout_signed_contract_path,
-            'Move-Out-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf'
-        );
+        // If a pre-generated signed PDF exists, download it directly
+        if ($this->lease->moveout_signed_contract_path && Storage::disk('public')->exists($this->lease->moveout_signed_contract_path)) {
+            return Storage::disk('public')->download(
+                $this->lease->moveout_signed_contract_path,
+                'Move-Out-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf'
+            );
+        }
+
+        // Generate PDF on-the-fly from contract data
+        $this->lease->load(['tenant', 'bed.unit.property']);
+        $t = $this->tenantContractData;
+        $deposit = (float) ($t['move_in_details']['security_deposit'] ?? 0);
+
+        $property = $this->lease->bed?->unit?->property;
+        $contractSettings = $property?->contract_settings ?? [];
+
+        $managerId = $this->findManagerIdForLease($this->lease);
+        $manager = $managerId ? User::find($managerId) : null;
+
+        $data = [
+            'tenant'                 => $t,
+            't'                      => $t,
+            'deposit'                => $deposit,
+            'moveOutChecklist'       => $this->moveOutChecklist ?? [],
+            'itemsReturned'          => $this->itemsReturned ?? [],
+            'inspectionChecklist'    => $this->moveOutInspectionChecklist ?? [],
+            'tenantSignatureBase64'  => $this->resolveSignatureBase64($this->lease->moveout_tenant_signature),
+            'ownerSignatureBase64'   => $this->resolveSignatureBase64($this->lease->moveout_owner_signature),
+            'managerSignatureBase64' => $this->resolveSignatureBase64($this->lease->moveout_manager_signature),
+            'tenantSignedAt'         => $this->lease->moveout_tenant_signed_at?->format('M d, Y'),
+            'ownerSignedAt'          => $this->lease->moveout_owner_signed_at?->format('M d, Y'),
+            'managerSignedAt'        => $this->lease->moveout_manager_signed_at?->format('M d, Y'),
+            'managerName'            => $manager ? ($manager->first_name . ' ' . $manager->last_name) : 'Unit Manager',
+            'contractSettings'       => $contractSettings,
+            'outstandingBalances'    => $t['outstanding_balances'] ?? [],
+            'depositRefund'          => $t['deposit_refund'] ?? [],
+        ];
+
+        $pdf = Pdf::loadView('pdf.move-out-contract', $data)
+            ->setPaper('a4')
+            ->setOption('isRemoteEnabled', true);
+
+        $filename = 'Move-Out-Contract_' . Auth::user()->first_name . '-' . Auth::user()->last_name . '_Unit-' . ($this->lease->bed->unit->unit_number ?? 'N-A') . '.pdf';
+
+        return response()->streamDownload(fn () => print($pdf->output()), $filename, ['Content-Type' => 'application/pdf']);
     }
 
     public function render()
