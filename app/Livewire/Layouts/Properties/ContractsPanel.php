@@ -93,7 +93,10 @@ class ContractsPanel extends Component
         // Tab counts (after search/month/building filters)
         $counts = [
             'all' => (clone $baseQuery)->count(),
-            'pending' => (clone $baseQuery)->where(fn($q) => $q->whereNull('contract_status')->orWhere('contract_status', '!=', 'executed'))->count(),
+            'pending' => (clone $baseQuery)->where(fn($q) => $q->where('contract_status', 'pending_signatures')
+                ->orWhere('contract_status', 'pending_tenant')
+                ->orWhere('contract_status', 'pending_owner')
+                ->orWhere('contract_status', 'pending_manager'))->count(),
             'signed' => (clone $baseQuery)->where('contract_status', 'executed')->count(),
             'draft' => (clone $baseQuery)->where(fn($q) => $q->whereNull('contract_status')->orWhere('contract_status', 'draft'))->count(),
         ];

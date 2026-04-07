@@ -189,11 +189,11 @@
                             class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0"
                         >
                             <option value="">Select ID Type</option>
-                            <option value="Passport">Passport</option>
-                            <option value="Driver's License">Driver's License</option>
-                            <option value="UMID">UMID</option>
-                            <option value="National ID">National ID</option>
-                            <option value="Postal ID">Postal ID</option>
+                            <option value="Passport" @selected($governmentIdType === 'Passport')>Passport</option>
+                            <option value="Driver's License" @selected($governmentIdType === "Driver's License")>Driver's License</option>
+                            <option value="UMID" @selected($governmentIdType === 'UMID')>UMID</option>
+                            <option value="National ID" @selected($governmentIdType === 'National ID')>National ID</option>
+                            <option value="Postal ID" @selected($governmentIdType === 'Postal ID')>Postal ID</option>
                         </select>
                     </div>
                     @error('governmentIdType') <p class="ml-1 mt-1.5 text-xs text-red-500">{{ $message }}</p> @enderror
@@ -206,6 +206,7 @@
                             type="text"
                             id="government_id_number"
                             wire:model.live="governmentIdNumber"
+                            value="{{ $governmentIdNumber }}"
                             placeholder="Enter ID number"
                             class="w-full border-0 bg-transparent text-sm text-gray-700 outline-none ring-0 placeholder:text-gray-300 focus:border-0 focus:outline-none focus:ring-0"
                         >

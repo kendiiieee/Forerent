@@ -6,11 +6,11 @@
     <div class="absolute left-1/4 -bottom-16 w-44 h-44 rounded-full" style="background: radial-gradient(circle, rgba(37,99,235,0.12) 0%, transparent 70%)"></div>
     <div class="absolute left-0 top-0 w-24 h-24 rounded-full" style="background: radial-gradient(circle, rgba(147,197,253,0.06) 0%, transparent 70%)"></div>
 
-    <div class="relative z-10 px-5 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="relative z-10 px-4 sm:px-6 py-3 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-            <p class="text-xs font-bold text-blue-300/80 uppercase tracking-[0.2em] mb-2">Amount Due This Month</p>
-            <p class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                <span class="text-lg font-bold text-white/70 mr-0.5">&#8369;</span>{{ number_format($amountDue, 2) }}
+            <p class="text-[10px] sm:text-xs font-bold text-blue-300/80 uppercase tracking-[0.2em] mb-1 sm:mb-2">Amount Due This Month</p>
+            <p class="text-xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
+                <span class="text-sm sm:text-lg font-bold text-white/70 mr-0.5">&#8369;</span>{{ number_format($amountDue, 2) }}
             </p>
             <div class="mt-2.5">
                 @if($paymentStatus === 'Paid')

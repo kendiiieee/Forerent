@@ -1,6 +1,6 @@
-<div id="announcement-card" class="bg-white rounded-xl shadow-md overflow-hidden w-full flex flex-col">
-    <div class="bg-blue-800 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-        <h3 class="text-white text-base sm:text-lg font-semibold">Announcement</h3>
+<div id="announcement-card" class="bg-white rounded-lg sm:rounded-xl shadow-md overflow-hidden w-full flex flex-col">
+    <div class="bg-blue-800 px-3 sm:px-6 py-2 sm:py-4 flex justify-between items-center">
+        <h3 class="text-white text-sm sm:text-lg font-semibold">Announcement</h3>
 
        {{-- Show Add button for Landlord and Manager only --}}
         @if(in_array($role, ['landlord', 'manager'], true))
@@ -17,13 +17,13 @@
             </flux:tooltip>
         @endif
     </div>
-    <div class="p-4 sm:p-6 space-y-4 overflow-y-auto" style="max-height: 300px;">
+    <div class="p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto" style="max-height: 200px;">
         @forelse($announcements as $announcement)
         <div class="border-b border-gray-200 pb-4 last:border-0 last:pb-0 flex justify-between items-start group">
             <div class="flex-1">
-                <div class="text-sm text-blue-700 font-semibold mb-1">{{ $announcement->notification_date ? $announcement->notification_date->format('M d, Y') : $announcement->created_at->format('M d, Y') }}</div>
-                <h4 class="text-base font-bold text-gray-900 mb-1">{{ $announcement['headline'] }}</h4>
-                <p class="text-sm text-gray-600">{{ $announcement['details'] }}</p>
+                <div class="text-xs sm:text-sm text-blue-700 font-semibold mb-0.5 sm:mb-1">{{ $announcement->notification_date ? $announcement->notification_date->format('M d, Y') : $announcement->created_at->format('M d, Y') }}</div>
+                <h4 class="text-sm sm:text-base font-bold text-gray-900 mb-0.5 sm:mb-1">{{ $announcement['headline'] }}</h4>
+                <p class="text-xs sm:text-sm text-gray-600">{{ $announcement['details'] }}</p>
             </div>
 
             {{-- Edit button (show only for owners/managers) --}}
@@ -42,7 +42,7 @@
             @endif
         </div>
         @empty
-        <p class="text-gray-500 text-center py-4">No announcements yet</p>
+        <p class="text-gray-500 text-center text-sm py-2 sm:py-4">No announcements yet</p>
         @endforelse
     </div>
 </div>

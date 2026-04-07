@@ -26,24 +26,24 @@
         <section class="flex-1 flex flex-col h-full overflow-hidden relative">
 
             {{-- Top bar with notification bell --}}
-            <div class="flex-shrink-0 h-20 bg-white flex items-center justify-end px-8 max-sm:px-4">
+            <div class="flex-shrink-0 h-14 sm:h-20 bg-white flex items-center justify-end px-4 sm:px-8">
                 @auth
                     <livewire:navbars.notification-bell />
                 @endauth
             </div>
 
-            <main class="flex-1 overflow-y-auto ml-8 max-sm:ml-0 bg-[#F4F7FC] rounded-tl-4xl scrollbar-color-[#ACD5FF] scrollbar-thin">
+            <main class="flex-1 overflow-y-auto ml-8 max-sm:ml-0 bg-[#F4F7FC] rounded-tl-2xl sm:rounded-tl-4xl scrollbar-color-[#ACD5FF] scrollbar-thin">
 
-                <div class="w-full min-h-full flex flex-col px-4 md:px-8 lg:px-18 pb-16 gap-6">
+                <div class="w-full min-h-full flex flex-col px-3 sm:px-4 md:px-8 lg:px-18 pb-8 sm:pb-16 gap-3 sm:gap-6">
 
                     @hasSection('header-title')
-                        <div class="sticky top-0 z-20 bg-[#F4F7FC] pb-1 pt-5">
-                            <div class="flex flex-col gap-1">
-                                <h1 class="font-sans font-bold text-4xl max-sm:text-2xl tracking-[-0.04em] text-blue-900">
+                        <div class="sticky top-0 z-20 bg-[#F4F7FC] pb-1 pt-3 sm:pt-5">
+                            <div class="flex flex-col gap-0.5 sm:gap-1">
+                                <h1 class="font-sans font-bold text-lg sm:text-2xl lg:text-4xl tracking-[-0.04em] text-blue-900">
                                     @yield('header-title')
                                 </h1>
                                 @hasSection('header-subtitle')
-                                    <p class="font-sans font-medium text-xl max-sm:text-base tracking-tighter text-[#0C0C0C]">
+                                    <p class="font-sans font-medium text-xs sm:text-sm lg:text-xl tracking-tighter text-[#0C0C0C]">
                                         @yield('header-subtitle')
                                     </p>
                                 @endif

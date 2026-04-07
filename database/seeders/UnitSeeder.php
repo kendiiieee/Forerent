@@ -12,12 +12,17 @@ class UnitSeeder extends Seeder
 {
     protected Generator $faker;
 
+    private const MAX_UNITS_PER_MANAGER = 10;
+
     public function run(): void
     {
         $this->faker = app(Generator::class);
 
         $properties = Property::all();
         $managers = User::where('role', 'manager')->pluck('user_id')->toArray();
+
+        // Track how many units each manager has been assigned
+        $managerUnitCounts = array_fill_keys($managers, 0);
 
         foreach ($properties as $property) {
 
@@ -32,7 +37,16 @@ class UnitSeeder extends Seeder
                     $unitNumber = $floorFormatted . $unitFormatted; // e.g., "0101"
 
                     // 30% chance of having no manager
-                    $managerId = (mt_rand(1, 100) <= 30) ? null : ($managers[array_rand($managers)] ?? null);
+                    $managerId = null;
+                    if (mt_rand(1, 100) > 30 && !empty($managers)) {
+                        // Only pick from managers who haven't hit the 10-unit cap
+                        $eligible = array_filter($managers, fn($id) => $managerUnitCounts[$id] < self::MAX_UNITS_PER_MANAGER);
+
+                        if (!empty($eligible)) {
+                            $managerId = $eligible[array_rand($eligible)];
+                            $managerUnitCounts[$managerId]++;
+                        }
+                    }
 
                     Unit::factory()
                         ->create([
