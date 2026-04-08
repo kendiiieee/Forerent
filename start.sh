@@ -47,14 +47,18 @@ fi
 
 # php artisan migrate --force
 # Run database migration and seeding asynchronously
-php artisan migrate:fresh --seed &
+# Run migrations first (must complete before app starts)
+php artisan migrate:fresh
 
+# Cache/clear tasks (fast, run synchronously)
 php artisan config:cache
 php artisan storage:link
 php artisan config:clear
 php artisan view:clear
 php artisan cache:clear
 
+# Seed in background — logs will still stream to stdout/render
+php artisan db:seed &
 
-# Start nginx and php-fpm immediately (migrate:fresh --seed runs in background)
+# Start supervisor (app is available with empty DB during seed)
 /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

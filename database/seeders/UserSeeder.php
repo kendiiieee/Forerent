@@ -22,16 +22,11 @@ class UserSeeder extends Seeder
         Storage::disk('public')->makeDirectory('government-ids');
         $this->generatePlaceholderIds();
 
-        User::factory()->create([
-            'first_name' => 'Tricia',
-            'last_name' => 'Tenant',
-            'email' => 'tenant@example.com',
-            'role' => 'tenant',
-            'password' => Hash::make('password'),
-            'government_id_type' => 'National ID',
-            'government_id_number' => 'PSN-20241234567',
-            'government_id_image' => 'government-ids/sample-id-tricia.jpg',
-        ]);
+        // Seed named users (including landlord, tenants, managers)
+        $this->seedNamedUsers();
+
+        // Seed bulk additional users
+        $this->seedBulkUsers();
     }
     private function seedNamedUsers(): void
     {
