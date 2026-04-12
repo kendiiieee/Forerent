@@ -27,6 +27,14 @@ class NewAnnouncement extends Notification
      */
     public function via(object $notifiable): array
     {
+        if (config('mail.default') === 'smtp') {
+            $smtpHost = strtolower((string) config('mail.mailers.smtp.host', ''));
+
+            if (str_contains($smtpHost, 'gmail.com')) {
+                return ['mail'];
+            }
+        }
+
         return [SendGridChannel::class];
     }
 

@@ -4,30 +4,30 @@ namespace App\Livewire\Layouts\Tenants;
 
 use App\Livewire\Concerns\WithNotifications;
 use App\Mail\NewAccountSmtpMail;
-use Illuminate\Support\Facades\Mail;
+use App\Models\Bed;
 use App\Models\Billing;
 use App\Models\BillingItem;
-use App\Models\Transaction;
-use App\Notifications\NewAccount;
-use App\Services\PasswordGenerator;
-use Illuminate\Validation\ValidationException;
-use Livewire\Component;
-use Livewire\WithFileUploads;
-use Livewire\Attributes\Validate;
-use Livewire\Attributes\On;
-use App\Models\User;
-use App\Models\Property;
-use App\Models\Unit;
-use App\Models\Bed;
 use App\Models\Lease;
 use App\Models\Notification as NotificationModel;
+use App\Models\Property;
+use App\Models\Transaction;
+use App\Models\Unit;
+use App\Models\User;
 use App\Models\UtilityBill;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use App\Notifications\NewAccount;
+use App\Services\PasswordGenerator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Validate;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class AddTenantModal extends Component
 {
@@ -260,12 +260,12 @@ class AddTenantModal extends Component
         }
 
         $this->transferFromTenantId = $tenant->user_id;
-        $this->firstName            = $tenant->first_name;
-        $this->lastName             = $tenant->last_name;
-        $this->gender               = $tenant->gender ?? '';
-        $this->phoneNumber          = substr(preg_replace('/\D/', '', $tenant->contact ?? ''), 1);
-        $this->email                = $tenant->email;
-        $this->existingProfileImg   = $tenant->profile_img;
+        $this->firstName = $tenant->first_name;
+        $this->lastName = $tenant->last_name;
+        $this->gender = $tenant->gender ?? '';
+        $this->phoneNumber = substr(preg_replace('/\D/', '', $tenant->contact ?? ''), 1);
+        $this->email = $tenant->email;
+        $this->existingProfileImg = $tenant->profile_img;
 
         $this->currentLeaseId = $lease?->lease_id;
         $this->currentBedId = $lease?->bed_id;
@@ -316,11 +316,11 @@ class AddTenantModal extends Component
         $this->editTenantId = $tenant->user_id;
         $this->editLeaseId = $lease?->lease_id;
 
-        $this->firstName          = $tenant->first_name;
-        $this->lastName           = $tenant->last_name;
-        $this->gender             = $tenant->gender ?? '';
-        $this->phoneNumber        = substr(preg_replace('/\D/', '', $tenant->contact ?? ''), 1);
-        $this->email              = $tenant->email;
+        $this->firstName = $tenant->first_name;
+        $this->lastName = $tenant->last_name;
+        $this->gender = $tenant->gender ?? '';
+        $this->phoneNumber = substr(preg_replace('/\D/', '', $tenant->contact ?? ''), 1);
+        $this->email = $tenant->email;
         $this->existingProfileImg = $tenant->profile_img;
 
         $this->permanentAddress = $tenant->permanent_address ?? '';
@@ -335,10 +335,10 @@ class AddTenantModal extends Component
             $this->governmentIdType = $storedIdType;
         }
 
-        $this->governmentIdNumber     = $tenant->government_id_number ?? '';
-        $this->companySchool          = $tenant->company_school ?? '';
-        $this->positionCourse         = $tenant->position_course ?? '';
-        $this->emergencyContactName   = $tenant->emergency_contact_name ?? '';
+        $this->governmentIdNumber = $tenant->government_id_number ?? '';
+        $this->companySchool = $tenant->company_school ?? '';
+        $this->positionCourse = $tenant->position_course ?? '';
+        $this->emergencyContactName = $tenant->emergency_contact_name ?? '';
         $emergencyNum = $tenant->emergency_contact_number ?? '';
         $this->emergencyContactNumber = (strlen($emergencyNum) === 10 && str_starts_with($emergencyNum, '9')) ? substr($emergencyNum, 1) : $emergencyNum;
 
@@ -398,7 +398,7 @@ class AddTenantModal extends Component
         $ownerIds = Property::whereHas('units', function ($query) {
             $query->where('manager_id', Auth::id());
 
-            if (!$this->isEdit()) {
+            if (! $this->isEdit()) {
                 $query->whereHas('beds', function ($bedQuery) {
                     $bedQuery->where('status', 'Vacant');
                 });
@@ -433,7 +433,7 @@ class AddTenantModal extends Component
                 ->where('manager_id', Auth::id())
                 ->orderBy('unit_number');
 
-            if (!$this->isEdit()) {
+            if (! $this->isEdit()) {
                 $unitQuery->whereHas('beds', function ($query) {
                     $query->where('status', 'Vacant');
                 });
@@ -459,13 +459,13 @@ class AddTenantModal extends Component
     {
         // Reset rent details when gender changes since available units depend on gender
         $this->selectedBuilding = '';
-        $this->selectedUnit     = '';
-        $this->selectedBed      = '';
-        $this->units            = [];
-        $this->beds             = [];
-        $this->dormType         = '';
-        $this->monthlyRate      = '';
-        $this->securityDeposit  = '';
+        $this->selectedUnit = '';
+        $this->selectedBed = '';
+        $this->units = [];
+        $this->beds = [];
+        $this->dormType = '';
+        $this->monthlyRate = '';
+        $this->securityDeposit = '';
 
         $this->loadBuildings();
     }
@@ -480,8 +480,9 @@ class AddTenantModal extends Component
         if ($unitId) {
             $unit = Unit::find($unitId);
 
-            if ($this->gender && $unit && !in_array($unit->occupants, ['Co-ed', $this->gender])) {
+            if ($this->gender && $unit && ! in_array($unit->occupants, ['Co-ed', $this->gender])) {
                 $this->beds = collect();
+
                 return;
             }
 
@@ -572,7 +573,7 @@ class AddTenantModal extends Component
             ->get(['utility_type', 'per_tenant_amount']);
 
         $electricity = $bills->firstWhere('utility_type', 'electricity')?->per_tenant_amount ?? 0;
-        $water       = $bills->firstWhere('utility_type', 'water')?->per_tenant_amount ?? 0;
+        $water = $bills->firstWhere('utility_type', 'water')?->per_tenant_amount ?? 0;
 
         return compact('electricity', 'water');
     }
@@ -582,7 +583,7 @@ class AddTenantModal extends Component
      */
     private function generateReference(string $prefix, int $transactionId): string
     {
-        return $prefix . now()->format('Ymd') . '-' . str_pad($transactionId, 6, '0', STR_PAD_LEFT);
+        return $prefix.now()->format('Ymd').'-'.str_pad($transactionId, 6, '0', STR_PAD_LEFT);
     }
 
     private function saveNewTenant(): void
@@ -603,90 +604,90 @@ class AddTenantModal extends Component
 
             DB::transaction(function () use ($photoPath, $idImagePath, $password, &$createdUser) {
                 $createdUser = User::create([
-                    'first_name'                     => $this->firstName,
-                    'last_name'                      => $this->lastName,
-                    'gender'                         => $this->gender,
-                    'email'                          => $this->email,
-                    'contact'                        => '9' . $this->phoneNumber,
-                    'role'                           => 'tenant',
-                    'password'                       => Hash::make($password),
-                    'profile_img'                    => $photoPath,
-                    'permanent_address'              => $this->permanentAddress,
-                    'government_id_type'             => $this->resolvedIdType(),
-                    'government_id_number'           => $this->governmentIdNumber,
-                    'government_id_image'            => $idImagePath,
-                    'company_school'                 => $this->companySchool,
-                    'position_course'                => $this->positionCourse,
-                    'emergency_contact_name'         => $this->emergencyContactName,
+                    'first_name' => $this->firstName,
+                    'last_name' => $this->lastName,
+                    'gender' => $this->gender,
+                    'email' => $this->email,
+                    'contact' => '9'.$this->phoneNumber,
+                    'role' => 'tenant',
+                    'password' => Hash::make($password),
+                    'profile_img' => $photoPath,
+                    'permanent_address' => $this->permanentAddress,
+                    'government_id_type' => $this->resolvedIdType(),
+                    'government_id_number' => $this->governmentIdNumber,
+                    'government_id_image' => $idImagePath,
+                    'company_school' => $this->companySchool,
+                    'position_course' => $this->positionCourse,
+                    'emergency_contact_name' => $this->emergencyContactName,
                     'emergency_contact_relationship' => $this->resolvedRelationship(),
-                    'emergency_contact_number'       => '9' . $this->emergencyContactNumber,
+                    'emergency_contact_number' => '9'.$this->emergencyContactNumber,
                 ]);
 
                 $endDate = Carbon::parse($this->startDate)->addMonths((int) $this->term ?: 6);
 
                 $lease = Lease::create([
-                    'tenant_id'             => $createdUser->user_id,
-                    'bed_id'                => $this->selectedBed,
-                    'status'                => 'Active',
-                    'contract_status'       => 'draft',
-                    'term'                  => $this->term,
-                    'auto_renew'            => $this->autoRenew,
-                    'start_date'            => $this->startDate,
-                    'end_date'              => $endDate,
-                    'contract_rate'         => $this->monthlyRate,
-                    'advance_amount'        => $this->monthlyRate,
-                    'security_deposit'      => $this->securityDeposit,
-                    'move_in'               => $this->startDate,
-                    'shift'                 => $this->shift,
-                    'monthly_due_date'      => $this->monthlyDueDate,
-                    'late_payment_penalty'  => 1,
-                    'short_term_premium'    => $this->shortTermPremium,
-                    'reservation_fee_paid'  => 0,
+                    'tenant_id' => $createdUser->user_id,
+                    'bed_id' => $this->selectedBed,
+                    'status' => 'Active',
+                    'contract_status' => 'draft',
+                    'term' => $this->term,
+                    'auto_renew' => $this->autoRenew,
+                    'start_date' => $this->startDate,
+                    'end_date' => $endDate,
+                    'contract_rate' => $this->monthlyRate,
+                    'advance_amount' => $this->monthlyRate,
+                    'security_deposit' => $this->securityDeposit,
+                    'move_in' => $this->startDate,
+                    'shift' => $this->shift,
+                    'monthly_due_date' => $this->monthlyDueDate,
+                    'late_payment_penalty' => 1,
+                    'short_term_premium' => $this->shortTermPremium,
+                    'reservation_fee_paid' => 0,
                     'early_termination_fee' => 0,
                 ]);
 
-                $isPaid      = $this->paymentStatus === 'Paid';
-                $moveInDate  = Carbon::parse($this->startDate);
+                $isPaid = $this->paymentStatus === 'Paid';
+                $moveInDate = Carbon::parse($this->startDate);
                 $totalMoveIn = (float) $this->monthlyRate + (float) $this->securityDeposit;
 
                 // ── Move-In Billing ──────────────────────────────────────────
                 $moveInBilling = Billing::create([
-                    'lease_id'     => $lease->lease_id,
+                    'lease_id' => $lease->lease_id,
                     'billing_type' => 'move_in',
                     'billing_date' => $moveInDate->format('Y-m-d'),
                     'next_billing' => $moveInDate->copy()->addMonth()->format('Y-m-d'),
-                    'due_date'     => $moveInDate->format('Y-m-d'),
-                    'to_pay'       => $totalMoveIn,
-                    'amount'       => $totalMoveIn,
-                    'status'       => $isPaid ? 'Paid' : 'Unpaid',
+                    'due_date' => $moveInDate->format('Y-m-d'),
+                    'to_pay' => $totalMoveIn,
+                    'amount' => $totalMoveIn,
+                    'status' => $isPaid ? 'Paid' : 'Unpaid',
                 ]);
 
                 // Advance item
                 BillingItem::create([
-                    'billing_id'      => $moveInBilling->billing_id,
+                    'billing_id' => $moveInBilling->billing_id,
                     'charge_category' => 'move_in',
-                    'charge_type'     => 'advance',
-                    'description'     => '1 Month Advance — First Month Rent',
-                    'amount'          => (float) $this->monthlyRate,
+                    'charge_type' => 'advance',
+                    'description' => '1 Month Advance — First Month Rent',
+                    'amount' => (float) $this->monthlyRate,
                 ]);
 
                 // Security deposit item
                 BillingItem::create([
-                    'billing_id'      => $moveInBilling->billing_id,
+                    'billing_id' => $moveInBilling->billing_id,
                     'charge_category' => 'move_in',
-                    'charge_type'     => 'security_deposit',
-                    'description'     => '1 Month Security Deposit',
-                    'amount'          => (float) $this->securityDeposit,
+                    'charge_type' => 'security_deposit',
+                    'description' => '1 Month Security Deposit',
+                    'amount' => (float) $this->securityDeposit,
                 ]);
 
                 // Short-term premium item (if applicable)
                 if ($this->shortTermPremium > 0) {
                     BillingItem::create([
-                        'billing_id'      => $moveInBilling->billing_id,
+                        'billing_id' => $moveInBilling->billing_id,
                         'charge_category' => 'move_in',
-                        'charge_type'     => 'short_term_premium',
-                        'description'     => 'Short-Term Premium (contract under 6 months)',
-                        'amount'          => (float) $this->shortTermPremium,
+                        'charge_type' => 'short_term_premium',
+                        'description' => 'Short-Term Premium (contract under 6 months)',
+                        'amount' => (float) $this->shortTermPremium,
                     ]);
 
                     $moveInBilling->increment('to_pay', $this->shortTermPremium);
@@ -696,12 +697,12 @@ class AddTenantModal extends Component
                 // ── Move-In Transaction (if paid) ────────────────────────────
                 if ($isPaid) {
                     $txn = Transaction::create([
-                        'billing_id'       => $moveInBilling->billing_id,
+                        'billing_id' => $moveInBilling->billing_id,
                         'reference_number' => 'placeholder',
                         'transaction_type' => 'Debit',
-                        'category'         => 'Rent Payment',
+                        'category' => 'Rent Payment',
                         'transaction_date' => today(),
-                        'amount'           => $moveInBilling->amount,
+                        'amount' => $moveInBilling->amount,
                     ]);
                     $txn->update([
                         'reference_number' => $this->generateReference('MOVEIN-', $txn->transaction_id),
@@ -729,13 +730,13 @@ class AddTenantModal extends Component
 
         if ($createdUser) {
             // Notify tenant to upload valid ID if missing
-            if (!$createdUser->government_id_type || !$createdUser->government_id_number || !$createdUser->government_id_image) {
+            if (! $createdUser->government_id_type || ! $createdUser->government_id_number || ! $createdUser->government_id_image) {
                 NotificationModel::create([
                     'user_id' => $createdUser->user_id,
-                    'type'    => 'valid_id_required',
-                    'title'   => 'Valid ID Required',
+                    'type' => 'valid_id_required',
+                    'title' => 'Valid ID Required',
                     'message' => 'Please upload your valid government ID in Settings to complete your profile.',
-                    'link'    => '/settings',
+                    'link' => '/settings',
                 ]);
             }
 
@@ -753,8 +754,7 @@ class AddTenantModal extends Component
     private function attemptWelcomeEmailDelivery(User $createdUser, string $password): void
     {
         try {
-            // Laravel will now automatically use SendGrid from your .env settings
-            Mail::to($createdUser->email)->send(new NewAccountSmtpMail(
+            Mail::mailer('smtp')->to($createdUser->email)->send(new NewAccountSmtpMail(
                 email: $createdUser->email,
                 password: $password,
                 role: $createdUser->role,
@@ -807,7 +807,7 @@ class AddTenantModal extends Component
     private function saveTransfer(): void
     {
         DB::transaction(function () {
-            $oldLease           = Lease::find($this->currentLeaseId);
+            $oldLease = Lease::find($this->currentLeaseId);
             $oldSecurityDeposit = $oldLease?->security_deposit ?? 0;
             $newSecurityDeposit = (float) $this->securityDeposit;
 
@@ -831,61 +831,61 @@ class AddTenantModal extends Component
             $endDate = Carbon::parse($this->startDate)->addMonths((int) $this->term ?: 6);
 
             $lease = Lease::create([
-                'tenant_id'             => $this->transferFromTenantId,
-                'bed_id'                => $this->selectedBed,
-                'status'                => 'Active',
-                'contract_status'       => 'draft',
-                'term'                  => $this->term,
-                'auto_renew'            => $this->autoRenew,
-                'start_date'            => $this->startDate,
-                'end_date'              => $endDate,
-                'contract_rate'         => $this->monthlyRate,
-                'advance_amount'        => $this->monthlyRate,
-                'security_deposit'      => $carryOverDeposit,
-                'move_in'               => $this->startDate,
-                'shift'                 => $this->shift,
-                'monthly_due_date'      => $this->monthlyDueDate,
-                'late_payment_penalty'  => 1,
-                'short_term_premium'    => $this->shortTermPremium,
-                'reservation_fee_paid'  => 0,
+                'tenant_id' => $this->transferFromTenantId,
+                'bed_id' => $this->selectedBed,
+                'status' => 'Active',
+                'contract_status' => 'draft',
+                'term' => $this->term,
+                'auto_renew' => $this->autoRenew,
+                'start_date' => $this->startDate,
+                'end_date' => $endDate,
+                'contract_rate' => $this->monthlyRate,
+                'advance_amount' => $this->monthlyRate,
+                'security_deposit' => $carryOverDeposit,
+                'move_in' => $this->startDate,
+                'shift' => $this->shift,
+                'monthly_due_date' => $this->monthlyDueDate,
+                'late_payment_penalty' => 1,
+                'short_term_premium' => $this->shortTermPremium,
+                'reservation_fee_paid' => 0,
                 'early_termination_fee' => 0,
             ]);
 
-            $isPaid      = $this->paymentStatus === 'Paid';
+            $isPaid = $this->paymentStatus === 'Paid';
             $billingDate = Carbon::parse($this->startDate)->startOfMonth();
 
             // ── Monthly Billing for transfer ─────────────────────────────────
             $totalCharges = 0;
 
             $billing = Billing::create([
-                'lease_id'     => $lease->lease_id,
+                'lease_id' => $lease->lease_id,
                 'billing_type' => 'monthly',
                 'billing_date' => $billingDate->format('Y-m-d'),
                 'next_billing' => $billingDate->copy()->addMonth()->format('Y-m-d'),
-                'due_date'     => $billingDate->copy()->addDays(5)->format('Y-m-d'),
-                'to_pay'       => 0, // updated after items
-                'amount'       => 0,
-                'status'       => $this->paymentStatus,
+                'due_date' => $billingDate->copy()->addDays(5)->format('Y-m-d'),
+                'to_pay' => 0, // updated after items
+                'amount' => 0,
+                'status' => $this->paymentStatus,
             ]);
 
             // Rent
             BillingItem::create([
-                'billing_id'      => $billing->billing_id,
+                'billing_id' => $billing->billing_id,
                 'charge_category' => 'recurring',
-                'charge_type'     => 'rent',
-                'description'     => 'Monthly Rent',
-                'amount'          => (float) $this->monthlyRate,
+                'charge_type' => 'rent',
+                'description' => 'Monthly Rent',
+                'amount' => (float) $this->monthlyRate,
             ]);
             $totalCharges += (float) $this->monthlyRate;
 
             // Short-term premium
             if ($this->shortTermPremium > 0) {
                 BillingItem::create([
-                    'billing_id'      => $billing->billing_id,
+                    'billing_id' => $billing->billing_id,
                     'charge_category' => 'conditional',
-                    'charge_type'     => 'short_term_premium',
-                    'description'     => 'Short-Term Premium (contract under 6 months)',
-                    'amount'          => (float) $this->shortTermPremium,
+                    'charge_type' => 'short_term_premium',
+                    'description' => 'Short-Term Premium (contract under 6 months)',
+                    'amount' => (float) $this->shortTermPremium,
                 ]);
                 $totalCharges += (float) $this->shortTermPremium;
             }
@@ -893,11 +893,11 @@ class AddTenantModal extends Component
             // Deposit shortfall item (if tenant needs to top up deposit)
             if ($depositShortfall > 0) {
                 BillingItem::create([
-                    'billing_id'      => $billing->billing_id,
+                    'billing_id' => $billing->billing_id,
                     'charge_category' => 'conditional',
-                    'charge_type'     => 'security_deposit',
-                    'description'     => 'Security Deposit Top-Up (transfer)',
-                    'amount'          => $depositShortfall,
+                    'charge_type' => 'security_deposit',
+                    'description' => 'Security Deposit Top-Up (transfer)',
+                    'amount' => $depositShortfall,
                 ]);
                 $totalCharges += $depositShortfall;
             }
@@ -910,12 +910,12 @@ class AddTenantModal extends Component
             // ── Transaction (if paid) ────────────────────────────────────────
             if ($isPaid) {
                 $txn = Transaction::create([
-                    'billing_id'       => $billing->billing_id,
+                    'billing_id' => $billing->billing_id,
                     'reference_number' => 'placeholder',
                     'transaction_type' => 'Debit',
-                    'category'         => 'Rent Payment',
+                    'category' => 'Rent Payment',
                     'transaction_date' => today(),
-                    'amount'           => $totalCharges,
+                    'amount' => $totalCharges,
                 ]);
                 $txn->update([
                     'reference_number' => $this->generateReference('TRF-', $txn->transaction_id),
@@ -943,7 +943,7 @@ class AddTenantModal extends Component
                 return;
             }
 
-            $oldProfileImg        = $tenant->profile_img;
+            $oldProfileImg = $tenant->profile_img;
             $oldGovernmentIdImage = $tenant->government_id_image;
 
             $photoPath = $this->profilePicture
@@ -955,21 +955,21 @@ class AddTenantModal extends Component
                 : $tenant->government_id_image;
 
             $tenant->update([
-                'first_name'                     => $this->firstName,
-                'last_name'                      => $this->lastName,
-                'gender'                         => $this->gender,
-                'email'                          => $this->email,
-                'contact'                        => '9' . $this->phoneNumber,
-                'profile_img'                    => $photoPath,
-                'permanent_address'              => $this->permanentAddress,
-                'government_id_type'             => $this->resolvedIdType(),
-                'government_id_number'           => $this->governmentIdNumber,
-                'government_id_image'            => $idImagePath,
-                'company_school'                 => $this->companySchool,
-                'position_course'                => $this->positionCourse,
-                'emergency_contact_name'         => $this->emergencyContactName,
+                'first_name' => $this->firstName,
+                'last_name' => $this->lastName,
+                'gender' => $this->gender,
+                'email' => $this->email,
+                'contact' => '9'.$this->phoneNumber,
+                'profile_img' => $photoPath,
+                'permanent_address' => $this->permanentAddress,
+                'government_id_type' => $this->resolvedIdType(),
+                'government_id_number' => $this->governmentIdNumber,
+                'government_id_image' => $idImagePath,
+                'company_school' => $this->companySchool,
+                'position_course' => $this->positionCourse,
+                'emergency_contact_name' => $this->emergencyContactName,
                 'emergency_contact_relationship' => $this->resolvedRelationship(),
-                'emergency_contact_number'       => '9' . $this->emergencyContactNumber,
+                'emergency_contact_number' => '9'.$this->emergencyContactNumber,
             ]);
 
             $endDate = Carbon::parse($this->startDate)->addMonths((int) $this->term ?: 6);
@@ -983,20 +983,20 @@ class AddTenantModal extends Component
                     }
 
                     $lease->update([
-                        'bed_id'                => $this->selectedBed,
-                        'term'                  => $this->term,
-                        'auto_renew'            => $this->autoRenew,
-                        'start_date'            => $this->startDate,
-                        'end_date'              => $endDate,
-                        'contract_rate'         => $this->monthlyRate,
-                        'advance_amount'        => $this->monthlyRate,
-                        'security_deposit'      => $this->securityDeposit,
-                        'move_in'               => $this->startDate,
-                        'shift'                 => $this->shift,
-                        'monthly_due_date'      => $this->monthlyDueDate,
-                        'late_payment_penalty'  => 1,
-                        'short_term_premium'    => $this->shortTermPremium,
-                        'reservation_fee_paid'  => 0,
+                        'bed_id' => $this->selectedBed,
+                        'term' => $this->term,
+                        'auto_renew' => $this->autoRenew,
+                        'start_date' => $this->startDate,
+                        'end_date' => $endDate,
+                        'contract_rate' => $this->monthlyRate,
+                        'advance_amount' => $this->monthlyRate,
+                        'security_deposit' => $this->securityDeposit,
+                        'move_in' => $this->startDate,
+                        'shift' => $this->shift,
+                        'monthly_due_date' => $this->monthlyDueDate,
+                        'late_payment_penalty' => 1,
+                        'short_term_premium' => $this->shortTermPremium,
+                        'reservation_fee_paid' => 0,
                         'early_termination_fee' => 0,
                     ]);
                 }
@@ -1058,37 +1058,41 @@ class AddTenantModal extends Component
         return match ($step) {
             1 => array_merge([
                 'firstName' => 'required|min:2',
-                'lastName'  => 'required|min:2',
-                'gender'    => 'required',
-            ], (!$this->profilePicture && !$this->existingProfileImg) ? [
+                'lastName' => 'required|min:2',
+                'gender' => 'required',
+            ], (! $this->profilePicture && ! $this->existingProfileImg) ? [
                 'profilePicture' => 'required|image|max:10240',
             ] : [
                 'profilePicture' => 'nullable|image|max:10240',
             ]),
             2 => array_merge([
-                'permanentAddress'             => 'required|min:5',
-                'governmentIdType'             => 'nullable',
-                'governmentIdNumber'           => 'nullable|min:3',
-                'companySchool'                => 'required|min:2',
-                'positionCourse'               => 'required|min:2',
-                'emergencyContactName'         => 'required|min:2',
+                'permanentAddress' => 'required|min:5',
+                'governmentIdType' => 'nullable',
+                'governmentIdNumber' => 'nullable|min:3',
+                'companySchool' => 'required|min:2',
+                'positionCourse' => 'required|min:2',
+                'emergencyContactName' => 'required|min:2',
                 'emergencyContactRelationship' => 'required',
-                'emergencyContactNumber'       => 'required|numeric|digits:9',
+                'emergencyContactNumber' => 'required|numeric|digits:9',
             ],
                 $this->governmentIdType === 'Other' ? ['governmentIdTypeOther' => 'required|min:2'] : [],
                 $this->emergencyContactRelationship === 'Other' ? ['emergencyContactRelationshipOther' => 'required|min:2'] : [],
                 $this->isEdit() ? [
                     'phoneNumber' => ['required', 'numeric', 'digits:9', function ($attribute, $value, $fail) {
-                        $exists = \App\Models\User::where('contact', '9' . $value)->where('user_id', '!=', $this->editTenantId)->exists();
-                        if ($exists) $fail('This phone number is already registered.');
+                        $exists = User::where('contact', '9'.$value)->where('user_id', '!=', $this->editTenantId)->exists();
+                        if ($exists) {
+                            $fail('This phone number is already registered.');
+                        }
                     }],
-                    'email'       => 'required|email|unique:users,email,' . $this->editTenantId . ',user_id',
+                    'email' => 'required|email|unique:users,email,'.$this->editTenantId.',user_id',
                 ] : [
                     'phoneNumber' => ['required', 'numeric', 'digits:9', function ($attribute, $value, $fail) {
-                        $exists = \App\Models\User::where('contact', '9' . $value)->exists();
-                        if ($exists) $fail('This phone number is already registered.');
+                        $exists = User::where('contact', '9'.$value)->exists();
+                        if ($exists) {
+                            $fail('This phone number is already registered.');
+                        }
                     }],
-                    'email'       => 'required|email|unique:users,email|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
+                    'email' => 'required|email|unique:users,email|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/',
                 ]),
             3 => [
                 'selectedBuilding' => 'required',
@@ -1125,19 +1129,19 @@ class AddTenantModal extends Component
             'monthlyDueDate' => 'required',
         ];
 
-        if (!$this->isTransfer()) {
-            $rules['firstName']                    = 'required|min:2';
-            $rules['lastName']                     = 'required|min:2';
-            $rules['gender']                       = 'required';
-            $rules['profilePicture']               = (!$this->profilePicture && !$this->existingProfileImg) ? 'required|image|max:10240' : 'nullable|image|max:10240';
-            $rules['permanentAddress']             = 'required|min:5';
-            $rules['governmentIdType']             = 'nullable';
-            $rules['governmentIdNumber']           = 'nullable|min:3';
-            $rules['companySchool']                = 'required|min:2';
-            $rules['positionCourse']               = 'required|min:2';
-            $rules['emergencyContactName']         = 'required|min:2';
+        if (! $this->isTransfer()) {
+            $rules['firstName'] = 'required|min:2';
+            $rules['lastName'] = 'required|min:2';
+            $rules['gender'] = 'required';
+            $rules['profilePicture'] = (! $this->profilePicture && ! $this->existingProfileImg) ? 'required|image|max:10240' : 'nullable|image|max:10240';
+            $rules['permanentAddress'] = 'required|min:5';
+            $rules['governmentIdType'] = 'nullable';
+            $rules['governmentIdNumber'] = 'nullable|min:3';
+            $rules['companySchool'] = 'required|min:2';
+            $rules['positionCourse'] = 'required|min:2';
+            $rules['emergencyContactName'] = 'required|min:2';
             $rules['emergencyContactRelationship'] = 'required';
-            $rules['emergencyContactNumber']       = 'required|numeric|digits:9';
+            $rules['emergencyContactNumber'] = 'required|numeric|digits:9';
 
             if ($this->governmentIdType === 'Other') {
                 $rules['governmentIdTypeOther'] = 'required|min:2';
@@ -1148,16 +1152,20 @@ class AddTenantModal extends Component
 
             if ($this->isEdit()) {
                 $rules['phoneNumber'] = ['required', 'numeric', 'digits:9', function ($attribute, $value, $fail) {
-                    $exists = \App\Models\User::where('contact', '9' . $value)->where('user_id', '!=', $this->editTenantId)->exists();
-                    if ($exists) $fail('This phone number is already registered.');
+                    $exists = User::where('contact', '9'.$value)->where('user_id', '!=', $this->editTenantId)->exists();
+                    if ($exists) {
+                        $fail('This phone number is already registered.');
+                    }
                 }];
-                $rules['email']       = 'required|email|unique:users,email,' . $this->editTenantId . ',user_id';
+                $rules['email'] = 'required|email|unique:users,email,'.$this->editTenantId.',user_id';
             } else {
                 $rules['phoneNumber'] = ['required', 'numeric', 'digits:9', function ($attribute, $value, $fail) {
-                    $exists = \App\Models\User::where('contact', '9' . $value)->exists();
-                    if ($exists) $fail('This phone number is already registered.');
+                    $exists = User::where('contact', '9'.$value)->exists();
+                    if ($exists) {
+                        $fail('This phone number is already registered.');
+                    }
                 }];
-                $rules['email']       = 'required|email|unique:users,email|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/';
+                $rules['email'] = 'required|email|unique:users,email|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/';
             }
         }
 

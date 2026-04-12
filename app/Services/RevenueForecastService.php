@@ -3,22 +3,26 @@
 namespace App\Services;
 
 use App\Models\Transaction;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Http\Client\Response;
 use Carbon\Carbon;
-use Throwable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RevenueForecastService
 {
     private $fastApiUrl;
+
     private int $timeoutSeconds;
+
     private int $retryAttempts;
+
     private int $retryBaseDelayMs;
+
     private int $forecastCacheTtlSeconds;
 
     public function __construct()
@@ -32,7 +36,7 @@ class RevenueForecastService
 
     public function generateMonthlyForecast($year = null)
     {
-        if (!$year) {
+        if (! $year) {
             $year = Carbon::now()->year;
         }
 
@@ -56,23 +60,23 @@ class RevenueForecastService
         $fallbackReason = 'Forecast service unavailable';
 
         try {
-            // Export transaction data to CSV string
-            $csvData = $this->exportTransactionDataAsCsv();
+            // Export monthly aggregated inflow data to CSV string to reduce payload size.
+            $csvData = $this->exportMonthlyInflowDataAsCsv();
 
-            Log::info("Transaction data exported, CSV length: " . strlen($csvData));
+            Log::info('Transaction data exported, CSV length: '.strlen($csvData));
 
             // Call FastAPI endpoint
             /** @var Response $response */
             $response = $this->postWithRetry('/api/forecast/revenue', [
-                    'csv_data' => $csvData,
-                    'year' => $year
-                ]);
+                'csv_data' => $csvData,
+                'year' => $year,
+            ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 $fallbackReason = $this->formatApiError($response->status(), $response->body());
                 Log::error('FastAPI forecast request failed', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
                 $fallbackForecast = $this->buildFallbackForecast($year, $fallbackReason);
                 $this->cacheForecast($cacheKey, $fallbackForecast, true);
@@ -82,7 +86,7 @@ class RevenueForecastService
 
             $forecastData = $response->json();
 
-            if (!isset($forecastData['success']) || !$forecastData['success']) {
+            if (! isset($forecastData['success']) || ! $forecastData['success']) {
                 $error = $forecastData['detail'] ?? $forecastData['error'] ?? 'Forecast failed';
                 $fallbackForecast = $this->buildFallbackForecast($year, (string) $error);
                 $this->cacheForecast($cacheKey, $fallbackForecast, true);
@@ -90,10 +94,10 @@ class RevenueForecastService
                 return $fallbackForecast;
             }
 
-            Log::info("Forecast generated successfully", [
+            Log::info('Forecast generated successfully', [
                 'forecast_year' => $forecastData['forecast_year'],
                 'total_annual' => $forecastData['total_annual_revenue'],
-                'data_points' => $forecastData['data_points_used'] ?? 0
+                'data_points' => $forecastData['data_points_used'] ?? 0,
             ]);
 
             $this->cacheForecast($cacheKey, $forecastData);
@@ -102,7 +106,7 @@ class RevenueForecastService
         } catch (\Exception $e) {
             Log::error('Revenue forecast generation failed', [
                 'error' => $e->getMessage(),
-                'year' => $year
+                'year' => $year,
             ]);
 
             $fallbackReason = $e->getMessage() ?: $fallbackReason;
@@ -151,7 +155,7 @@ class RevenueForecastService
 
     private function postWithRetry(string $endpoint, array $payload): Response
     {
-        $url = rtrim($this->fastApiUrl, '/') . '/' . ltrim($endpoint, '/');
+        $url = rtrim($this->fastApiUrl, '/').'/'.ltrim($endpoint, '/');
         $lastException = null;
 
         for ($attempt = 1; $attempt <= $this->retryAttempts; $attempt++) {
@@ -165,7 +169,7 @@ class RevenueForecastService
                     return $response;
                 }
 
-                if (!$this->shouldRetryStatus($response->status()) || $attempt === $this->retryAttempts) {
+                if (! $this->shouldRetryStatus($response->status()) || $attempt === $this->retryAttempts) {
                     return $response;
                 }
 
@@ -184,7 +188,7 @@ class RevenueForecastService
                     throw $exception;
                 }
 
-                if (!$this->shouldRetryException($exception) || $attempt === $this->retryAttempts) {
+                if (! $this->shouldRetryException($exception) || $attempt === $this->retryAttempts) {
                     throw $exception;
                 }
 
@@ -314,7 +318,7 @@ class RevenueForecastService
         $buckets = [];
         foreach ($rows as $row) {
             $month = (int) $row->month;
-            if (!isset($buckets[$month])) {
+            if (! isset($buckets[$month])) {
                 $buckets[$month] = [];
             }
 
@@ -330,44 +334,46 @@ class RevenueForecastService
         return $averages;
     }
 
-    private function exportTransactionDataAsCsv()
+    private function exportMonthlyInflowDataAsCsv()
     {
-        $transactionQuery = $this->baseCreditInflowQuery()->select([
-            'transaction_id',
-            'transaction_type',
-            'category',
-            'transaction_date',
-            'amount',
-            'reference_number'
-        ])
-            ->orderBy('transaction_date')
-            ->orderBy('transaction_id');
+        $yearExpr = $this->yearExpression('transaction_date');
+        $monthExpr = $this->monthExpression('transaction_date');
 
-        $transactionCount = (clone $transactionQuery)->count();
+        $monthlyRows = $this->baseCreditInflowQuery()
+            ->selectRaw("{$yearExpr} as year, {$monthExpr} as month, SUM(amount) as amount, COUNT(*) as transaction_count")
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
 
-        Log::info("Exporting {$transactionCount} credit inflow transactions for forecasting");
+        Log::info('Exporting monthly inflow aggregates for forecasting', [
+            'months' => $monthlyRows->count(),
+        ]);
 
         $output = fopen('php://temp', 'r+');
 
-        // Write header
+        // Keep column names compatible with Python preprocessing logic.
         fputcsv($output, [
             'transaction_id',
             'transaction_type',
             'category',
             'transaction_date',
             'amount',
-            'reference_number'
+            'reference_number',
         ]);
 
-        // Write data
-        foreach ($transactionQuery->cursor() as $transaction) {
+        $rowId = 1;
+
+        foreach ($monthlyRows as $row) {
+            $monthStart = Carbon::createFromDate((int) $row->year, (int) $row->month, 1)->format('Y-m-d');
+
             fputcsv($output, [
-                $transaction->transaction_id,
-                $transaction->transaction_type,
-                $transaction->category,
-                $transaction->transaction_date->format('Y-m-d'),
-                $transaction->amount,
-                $transaction->reference_number
+                $rowId++,
+                'CREDIT',
+                'Revenue Aggregate',
+                $monthStart,
+                (float) $row->amount,
+                null,
             ]);
         }
 

@@ -1,22 +1,29 @@
 <?php
+
 // app/Services/MaintenanceForecast.php
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Client\Response;
-use Throwable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class MaintenanceForecast
 {
     protected $apiBaseUrl;
+
     private int $timeoutSeconds;
+
     private int $retryAttempts;
+
     private int $retryBaseDelayMs;
+
+    private int $forecastCacheTtlSeconds;
 
     public function __construct()
     {
@@ -25,12 +32,27 @@ class MaintenanceForecast
         $this->timeoutSeconds = (int) env('FORECAST_API_TIMEOUT_SECONDS', 120);
         $this->retryAttempts = max(1, (int) env('FORECAST_API_RETRY_ATTEMPTS', 3));
         $this->retryBaseDelayMs = max(100, (int) env('FORECAST_API_RETRY_BASE_DELAY_MS', 400));
-        Log::info('API Base URL: ' . $this->apiBaseUrl);
+        $this->forecastCacheTtlSeconds = max(60, (int) env('FORECAST_CACHE_TTL_SECONDS', 900));
+        Log::info('API Base URL: '.$this->apiBaseUrl);
     }
 
     public function generateForecast($year, $maintenanceData)
     {
         try {
+            $year = (int) $year;
+            $dataSignature = $this->getTrainingDataSignature();
+            $cacheKey = $this->buildForecastCacheKey($year, $dataSignature);
+            $cachedForecast = Cache::get($cacheKey);
+
+            if (is_array($cachedForecast)) {
+                Log::info('Maintenance forecast cache hit', [
+                    'year' => $year,
+                    'cache_key' => $cacheKey,
+                ]);
+
+                return $cachedForecast;
+            }
+
             $csvData = $this->convertToCsv($maintenanceData);
 
             Log::info("Sending maintenance forecast request for year: {$year}");
@@ -38,13 +60,15 @@ class MaintenanceForecast
             /** @var Response $response */
             $response = $this->postWithRetry('/api/forecast/maintenance', [
                 'csv_data' => $csvData,
-                'year' => $year
+                'year' => $year,
             ]);
 
             if ($response->successful()) {
                 $result = $response->json();
                 $result = $this->attachActualsToMonthlyForecasts((array) $result, (int) $year);
-                Log::info("Maintenance forecast API response received", $result);
+                $this->cacheForecast($cacheKey, $result);
+                Log::info('Maintenance forecast API response received', $result);
+
                 return $result;
             } else {
                 $error = $this->formatApiError($response->status(), $response->body());
@@ -52,16 +76,59 @@ class MaintenanceForecast
                 throw new \Exception($error);
             }
         } catch (\Exception $e) {
-            Log::error('Maintenance forecast service error: ' . $e->getMessage());
+            Log::error('Maintenance forecast service error: '.$e->getMessage());
 
             // Return a fallback response so the UI remains usable during API outages.
-            return $this->buildFallbackForecast((int)$year, (array)$maintenanceData, $e->getMessage());
+            $fallbackForecast = $this->buildFallbackForecast((int) $year, (array) $maintenanceData, $e->getMessage());
+            $this->cacheForecast($this->buildForecastCacheKey((int) $year, $this->getTrainingDataSignature()), $fallbackForecast, true);
+
+            return $fallbackForecast;
+        }
+    }
+
+    private function buildForecastCacheKey(int $year, string $signature): string
+    {
+        return "maintenance_forecast:v1:year:{$year}:sig:{$signature}";
+    }
+
+    private function getTrainingDataSignature(): string
+    {
+        $summary = DB::table('maintenance_requests as mr')
+            ->join('maintenance_logs as ml', 'mr.request_id', '=', 'ml.request_id')
+            ->where('mr.status', 'Completed')
+            ->whereNotNull('ml.completion_date')
+            ->whereNotNull('ml.cost')
+            ->selectRaw('COUNT(*) as row_count, COALESCE(MAX(ml.updated_at), MAX(ml.created_at), MAX(mr.updated_at), MAX(mr.created_at)) as latest_change, COALESCE(SUM(ml.cost), 0) as total_cost, MIN(ml.completion_date) as min_date, MAX(ml.completion_date) as max_date')
+            ->first();
+
+        $rowCount = (int) ($summary->row_count ?? 0);
+        $latestChange = (string) ($summary->latest_change ?? 'none');
+        $totalCost = number_format((float) ($summary->total_cost ?? 0), 2, '.', '');
+        $minDate = (string) ($summary->min_date ?? 'none');
+        $maxDate = (string) ($summary->max_date ?? 'none');
+
+        return sha1("{$rowCount}|{$latestChange}|{$totalCost}|{$minDate}|{$maxDate}");
+    }
+
+    private function cacheForecast(string $cacheKey, array $forecast, bool $isFallback = false): void
+    {
+        try {
+            $ttlSeconds = $isFallback
+                ? max(60, (int) floor($this->forecastCacheTtlSeconds / 4))
+                : $this->forecastCacheTtlSeconds;
+
+            Cache::put($cacheKey, $forecast, now()->addSeconds($ttlSeconds));
+        } catch (Throwable $exception) {
+            Log::warning('Failed to cache maintenance forecast result', [
+                'cache_key' => $cacheKey,
+                'error' => $exception->getMessage(),
+            ]);
         }
     }
 
     private function postWithRetry(string $endpoint, array $payload): Response
     {
-        $url = rtrim($this->apiBaseUrl, '/') . '/' . ltrim($endpoint, '/');
+        $url = rtrim($this->apiBaseUrl, '/').'/'.ltrim($endpoint, '/');
         $lastException = null;
 
         for ($attempt = 1; $attempt <= $this->retryAttempts; $attempt++) {
@@ -75,7 +142,7 @@ class MaintenanceForecast
                     return $response;
                 }
 
-                if (!$this->shouldRetryStatus($response->status()) || $attempt === $this->retryAttempts) {
+                if (! $this->shouldRetryStatus($response->status()) || $attempt === $this->retryAttempts) {
                     return $response;
                 }
 
@@ -89,7 +156,7 @@ class MaintenanceForecast
             } catch (Throwable $exception) {
                 $lastException = $exception;
 
-                if (!$this->shouldRetryException($exception) || $attempt === $this->retryAttempts) {
+                if (! $this->shouldRetryException($exception) || $attempt === $this->retryAttempts) {
                     throw $exception;
                 }
 
@@ -145,11 +212,11 @@ class MaintenanceForecast
         $monthlyAgg = [];
 
         foreach ($maintenanceData as $row) {
-            $date = isset($row['date']) ? (string)$row['date'] : null;
-            $cost = isset($row['cost']) ? (float)$row['cost'] : 0.0;
-            $urgency = isset($row['urgency']) ? (string)$row['urgency'] : null;
+            $date = isset($row['date']) ? (string) $row['date'] : null;
+            $cost = isset($row['cost']) ? (float) $row['cost'] : 0.0;
+            $urgency = isset($row['urgency']) ? (string) $row['urgency'] : null;
 
-            if (!$date) {
+            if (! $date) {
                 continue;
             }
 
@@ -160,7 +227,7 @@ class MaintenanceForecast
 
             $monthKey = date('Y-m', $timestamp);
 
-            if (!isset($monthlyAgg[$monthKey])) {
+            if (! isset($monthlyAgg[$monthKey])) {
                 $monthlyAgg[$monthKey] = [
                     'cost' => 0.0,
                     'count' => 0,
@@ -190,7 +257,7 @@ class MaintenanceForecast
                 'month' => $month,
                 'month_name' => date('F', mktime(0, 0, 0, $month, 1, $year)),
                 'forecasted_cost' => round($avgMonthlyCost, 2),
-                'maintenance_count_estimate' => (int)max(0, round($avgMonthlyJobs)),
+                'maintenance_count_estimate' => (int) max(0, round($avgMonthlyJobs)),
                 'urgency_estimate' => round($avgUrgency, 2),
                 'seasonal_factor' => 1.0,
             ];
@@ -207,7 +274,7 @@ class MaintenanceForecast
             'total_annual_cost' => round($avgMonthlyCost * 12, 2),
             'total_remaining_cost' => round($avgMonthlyCost * 12, 2),
             'average_monthly_cost' => round($avgMonthlyCost, 2),
-            'data_points_used' => (int)count($maintenanceData),
+            'data_points_used' => (int) count($maintenanceData),
             'model_performance' => [
                 'r2_score' => 0,
                 'mae' => 0,
@@ -221,7 +288,7 @@ class MaintenanceForecast
 
     private function attachActualsToMonthlyForecasts(array $result, int $year): array
     {
-        if (!isset($result['monthly_forecasts']) || !is_array($result['monthly_forecasts'])) {
+        if (! isset($result['monthly_forecasts']) || ! is_array($result['monthly_forecasts'])) {
             return $result;
         }
 
@@ -282,7 +349,7 @@ class MaintenanceForecast
 
     private function urgencyToScore(?string $urgency): float
     {
-        $level = strtoupper((string)$urgency);
+        $level = strtoupper((string) $urgency);
 
         if ($level === 'HIGH') {
             return 3.0;
@@ -330,7 +397,7 @@ class MaintenanceForecast
                     $row['month'] ?? '',
                     $row['monthly_maintenance_cost'] ?? '',
                     $row['maintenance_count'] ?? '',
-                    $row['urgency_score'] ?? ''
+                    $row['urgency_score'] ?? '',
                 ]);
             } else {
                 // Write all fields (original format)
@@ -345,7 +412,7 @@ class MaintenanceForecast
         Log::info('CSV data prepared', [
             'rows' => count($data),
             'csv_length' => strlen($csv),
-            'format' => isset($firstRow['monthly_maintenance_cost']) ? 'monthly' : 'individual'
+            'format' => isset($firstRow['monthly_maintenance_cost']) ? 'monthly' : 'individual',
         ]);
 
         return $csv;
@@ -353,32 +420,44 @@ class MaintenanceForecast
 
     public function getMaintenanceDataForForecast()
     {
-        // Fetch ALL raw, individual completed logs from all time.
-        // The Python API needs the full history to do the aggregation itself.
-        $rawData = DB::table('maintenance_requests as mr')
+        $driver = DB::connection()->getDriverName();
+        $yearExpr = $driver === 'pgsql'
+            ? 'EXTRACT(YEAR FROM ml.completion_date)::int'
+            : 'YEAR(ml.completion_date)';
+        $monthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM ml.completion_date)::int'
+            : 'MONTH(ml.completion_date)';
+
+        // Aggregate by month to reduce payload while preserving trend signal.
+        $monthlyRows = DB::table('maintenance_requests as mr')
             ->join('maintenance_logs as ml', 'mr.request_id', '=', 'ml.request_id')
-            ->select(
-                'ml.log_id',
-                'ml.completion_date as date', // Python will use this for the date
-                'ml.cost',                    // Python will use this for cost
-                'mr.urgency',                  // Python will use this
-                'mr.category'
-            )
             ->where('mr.status', 'Completed')
             ->whereNotNull('ml.completion_date')
             ->whereNotNull('ml.cost')
-            ->orderBy('ml.completion_date')
+            ->selectRaw("{$yearExpr} as year, {$monthExpr} as month, SUM(ml.cost) as cost, COUNT(*) as item_count")
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
             ->get()
             ->map(function ($item) {
-                // Convert stdClass to array
-                return (array)$item;
+                $year = (int) ($item->year ?? 0);
+                $month = (int) ($item->month ?? 1);
+
+                return [
+                    'date' => sprintf('%04d-%02d-01', $year, $month),
+                    'cost' => (float) ($item->cost ?? 0),
+                    'urgency' => 'MEDIUM',
+                    'category' => 'General',
+                    'item_count' => (int) ($item->item_count ?? 0),
+                ];
             })
             ->toArray();
 
-        Log::info('Sending ' . count($rawData) . ' total raw records to API for training.');
+        Log::info('Sending '.count($monthlyRows).' monthly aggregated maintenance records to API for training.');
 
-        return $rawData;
+        return $monthlyRows;
     }
+
     private function getMonthlyDateRange($monthlyData)
     {
         if (empty($monthlyData)) {
@@ -388,7 +467,7 @@ class MaintenanceForecast
         $first = $monthlyData[0];
         $last = $monthlyData[count($monthlyData) - 1];
 
-        return $first['year'] . '-' . $first['month'] . ' to ' . $last['year'] . '-' . $last['month'];
+        return $first['year'].'-'.$first['month'].' to '.$last['year'].'-'.$last['month'];
     }
 
     public function getMaintenanceStats()
@@ -407,9 +486,9 @@ class MaintenanceForecast
 
         return [
             'total_records' => $stats->total_records ?? 0,
-            'date_range' => ($stats->earliest_date ?? 'N/A') . ' to ' . ($stats->latest_date ?? 'N/A'),
+            'date_range' => ($stats->earliest_date ?? 'N/A').' to '.($stats->latest_date ?? 'N/A'),
             'total_cost' => $stats->total_cost ?? 0,
-            'avg_monthly_cost' => $stats->avg_cost ?? 0
+            'avg_monthly_cost' => $stats->avg_cost ?? 0,
         ];
     }
 
@@ -417,6 +496,7 @@ class MaintenanceForecast
     {
         // Temporary solution - you should add a 'category' column to maintenance_request table
         $categories = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'Pest Control'];
+
         return $categories[array_rand($categories)];
     }
 }

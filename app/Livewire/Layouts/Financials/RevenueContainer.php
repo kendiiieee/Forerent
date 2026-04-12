@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Livewire\Layouts\Financials;
+
 use Livewire\Component;
 
 class RevenueContainer extends Component
