@@ -27,11 +27,21 @@ class RevenueForecastService
 
     public function __construct()
     {
-        $this->fastApiUrl = env('FASTAPI_URL', env('PYTHON_API_URL', 'http://localhost:8000'));
+        $this->fastApiUrl = $this->resolveApiBaseUrl();
         $this->timeoutSeconds = (int) env('FORECAST_API_TIMEOUT_SECONDS', 120);
         $this->retryAttempts = max(1, (int) env('FORECAST_API_RETRY_ATTEMPTS', 3));
         $this->retryBaseDelayMs = max(100, (int) env('FORECAST_API_RETRY_BASE_DELAY_MS', 400));
         $this->forecastCacheTtlSeconds = max(60, (int) env('FORECAST_CACHE_TTL_SECONDS', 900));
+    }
+
+    private function resolveApiBaseUrl(): string
+    {
+        return (string) (
+            env('FASTAPI_URL')
+            ?: env('PYTHON_API_URL')
+            ?: env('PRICE_API_URL')
+            ?: 'http://localhost:8000'
+        );
     }
 
     public function generateMonthlyForecast($year = null)

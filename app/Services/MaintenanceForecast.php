@@ -27,13 +27,22 @@ class MaintenanceForecast
 
     public function __construct()
     {
-        // Use FASTAPI_URL instead of PYTHON_API_URL
-        $this->apiBaseUrl = env('FASTAPI_URL', env('PYTHON_API_URL', 'http://localhost:8000'));
+        $this->apiBaseUrl = $this->resolveApiBaseUrl();
         $this->timeoutSeconds = (int) env('FORECAST_API_TIMEOUT_SECONDS', 120);
         $this->retryAttempts = max(1, (int) env('FORECAST_API_RETRY_ATTEMPTS', 3));
         $this->retryBaseDelayMs = max(100, (int) env('FORECAST_API_RETRY_BASE_DELAY_MS', 400));
         $this->forecastCacheTtlSeconds = max(60, (int) env('FORECAST_CACHE_TTL_SECONDS', 900));
         Log::info('API Base URL: '.$this->apiBaseUrl);
+    }
+
+    private function resolveApiBaseUrl(): string
+    {
+        return (string) (
+            env('FASTAPI_URL')
+            ?: env('PYTHON_API_URL')
+            ?: env('PRICE_API_URL')
+            ?: 'http://localhost:8000'
+        );
     }
 
     public function generateForecast($year, $maintenanceData)
