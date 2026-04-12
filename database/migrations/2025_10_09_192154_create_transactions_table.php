@@ -22,7 +22,7 @@ return new class extends Migration
             $table->enum('transaction_type', ['Debit', 'Credit'])->default('Credit');
             $table->enum('category', ['Rent Payment', 'Deposit', 'Advance', 'Maintenance', 'Vendor Payment']);
             $table->date('transaction_date');
-            $table->decimal('amount', 8, 2)->unsigned();
+            $table->decimal('amount', 12, 2);
             $table->boolean('is_recurring')->default(false);
             $table->timestamps();
             $table->softDeletes();
