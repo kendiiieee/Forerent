@@ -1,6 +1,5 @@
 # 🚀 Project Overview
 
-## CHAPTER I  
 ## INTRODUCTION
 
 The rental property management system plays a vital role in handling the day-to-day operations of apartments, boarding houses, and other rental units. Traditionally, property managers are responsible for collecting rent, keeping track of tenants, addressing maintenance requests, and ensuring accurate financial records. However, most of these processes are still done manually, relying on memory, notebooks, or simple digital tools like Excel to track records.
