@@ -77,6 +77,43 @@
                 "
             >
 
+                {{-- Rental Eligibility Block Banner --}}
+                @if(!empty($currentTenant['eligibility']['is_blocked']))
+                    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h5 class="font-bold text-sm text-red-700 uppercase tracking-wide">Blocked From New Rentals</h5>
+                                    @if(!empty($currentTenant['eligibility']['changed_at']))
+                                        <span class="text-[11px] text-red-500">as of {{ $currentTenant['eligibility']['changed_at'] }}</span>
+                                    @endif
+                                </div>
+                                <p class="text-xs text-red-700 whitespace-pre-line">{{ $currentTenant['eligibility']['notes'] ?? 'This tenant cannot be placed on a new lease.' }}</p>
+                                @if(auth()->user()?->role === 'landlord')
+                                    <button
+                                        type="button"
+                                        x-data
+                                        @click="$dispatch('open-modal', 'reinstate-tenant-confirmation')"
+                                        class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                        </svg>
+                                        Reinstate Tenant
+                                    </button>
+                                @else
+                                    <p class="mt-2 text-[11px] text-red-500 italic">Only the landlord can reinstate this tenant.</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Contact Details --}}
                 <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex items-center gap-2.5 mb-4">
@@ -1370,6 +1407,36 @@
             </div>
         </div>
     </div>
+
+    {{-- Reinstate Tenant Confirmation Modal (landlord only) --}}
+    @if(auth()->user()?->role === 'landlord')
+        <x-ui.modal-confirm
+            name="reinstate-tenant-confirmation"
+            title="Reinstate Tenant"
+            description="Lift the rental block and allow this tenant to be placed on a new lease. This action is logged."
+            confirmText="Reinstate Tenant"
+            cancelText="Cancel"
+            confirmAction="reinstateTenant"
+        >
+            <div class="space-y-3 text-left">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="text-xs text-amber-800 leading-relaxed">
+                        <strong>Reminder:</strong> Reinstating does not erase the original termination. Future owners can still see the history.
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Reason for reinstating <span class="text-red-500">*</span></label>
+                    <textarea
+                        wire:model="reinstateReason"
+                        rows="3"
+                        placeholder="e.g. Tenant settled the outstanding balance on 2026-04-22 (receipt #12345)."
+                        class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('reinstateReason') ? 'border-red-400' : 'border-gray-200' }}"
+                    ></textarea>
+                    @error('reinstateReason') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </x-ui.modal-confirm>
+    @endif
 
     {{-- Initiate Move-Out Form Modal --}}
     <x-ui.modal-confirm

@@ -240,6 +240,14 @@ class AddTenantModal extends Component
             return;
         }
 
+        if ($tenant->isBlockedFromRenting()) {
+            $this->notifyError(
+                'Transfer Not Allowed',
+                'This tenant is blocked from new rentals. ' . ($tenant->eligibility_notes ?: 'Contact the landlord to reinstate before transferring.')
+            );
+            return;
+        }
+
         $this->transferFromTenantId = $tenant->user_id;
         $this->firstName            = $tenant->first_name;
         $this->lastName             = $tenant->last_name;
@@ -515,6 +523,17 @@ class AddTenantModal extends Component
     public function save()
     {
         $this->validate($this->validationRules());
+
+        if ($this->mode === 'add') {
+            $existing = User::where('email', $this->email)->first();
+            if ($existing && $existing->isBlockedFromRenting()) {
+                $this->notifyError(
+                    'Tenant Blocked',
+                    'This email belongs to a tenant blocked from new rentals. ' . ($existing->eligibility_notes ?: 'Contact the landlord to reinstate before creating a new lease.')
+                );
+                return;
+            }
+        }
 
         match ($this->mode) {
             'transfer' => $this->saveTransfer(),
@@ -837,6 +856,15 @@ class AddTenantModal extends Component
 
     private function saveTransfer(): void
     {
+        $transferTenant = User::find($this->transferFromTenantId);
+        if ($transferTenant && $transferTenant->isBlockedFromRenting()) {
+            $this->notifyError(
+                'Transfer Blocked',
+                'This tenant is blocked from new rentals. ' . ($transferTenant->eligibility_notes ?: 'Contact the landlord to reinstate.')
+            );
+            return;
+        }
+
         DB::transaction(function () {
             $oldLease           = Lease::find($this->currentLeaseId);
             $oldSecurityDeposit = $oldLease?->security_deposit ?? 0;

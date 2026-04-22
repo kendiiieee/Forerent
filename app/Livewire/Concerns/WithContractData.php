@@ -119,6 +119,13 @@ trait WithContractData
                 'interest_earned' => $lease?->deposit_interest_amount,
             ],
             'outstanding_balances' => $this->buildOutstandingBalances($lease),
+            'eligibility' => [
+                'status'              => $tenant->rental_eligibility ?? 'eligible',
+                'notes'                => $tenant->eligibility_notes,
+                'changed_at'           => $tenant->eligibility_changed_at?->format('M d, Y'),
+                'is_blocked'           => $tenant->isBlockedFromRenting(),
+                'termination_reason'   => $lease?->termination_reason,
+            ],
         ];
     }
 

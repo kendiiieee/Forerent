@@ -83,6 +83,9 @@ class TenantDetail extends Component
     public $violations = [];
     public $violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
 
+    // Rental eligibility (reinstate flow — landlord only)
+    public string $reinstateReason = '';
+
     public function mount(?int $initialTenantId = null): void
     {
         if ($initialTenantId) {
@@ -782,10 +785,23 @@ class TenantDetail extends Component
                 // Capture original end_date BEFORE overwriting for early termination check
                 $originalEndDate = $lease->end_date;
 
+                // Unpaid balance at move-out (excludes deposit refund, which is computed separately)
+                $unpaidTotal = (float) $lease->billings()
+                    ->whereIn('status', ['Unpaid', 'Overdue'])
+                    ->sum('amount');
+
+                $isEarly = $originalEndDate && $today->lt($originalEndDate);
+                $terminationReason = match (true) {
+                    $unpaidTotal > 0 => 'non_payment',
+                    $isEarly         => 'early_termination',
+                    default          => 'normal_expiry',
+                };
+
                 $lease->update([
-                    'status'   => 'Expired',
-                    'move_out' => $today,
-                    'end_date' => $today,
+                    'status'              => 'Expired',
+                    'move_out'            => $today,
+                    'end_date'            => $today,
+                    'termination_reason'  => $terminationReason,
                 ]);
 
                 // Auto-compute deposit interest (RA 9653 IRR §7b)
@@ -800,12 +816,24 @@ class TenantDetail extends Component
                     'deposit_refund_deadline' => $today->copy()->addDays(30),
                 ]);
 
+                // Hard-block tenant from renting again if they left with an unpaid balance
+                if ($terminationReason === 'non_payment' && $lease->tenant) {
+                    $lease->tenant->block(
+                        'Lease #' . $lease->lease_id . ' ended with outstanding balance of PHP '
+                            . number_format($unpaidTotal, 2) . ' deducted from the security deposit.',
+                        $lease->lease_id,
+                        Auth::id()
+                    );
+                }
+
                 ContractAuditLog::log($lease->lease_id, 'move_out_completed', [
                     'metadata' => [
                         'deposit_refund' => $refundData['refund_amount'],
                         'total_deductions' => $refundData['total_deductions'],
                         'deductions' => $refundData['deductions'],
                         'original_end_date' => $originalEndDate?->format('Y-m-d'),
+                        'termination_reason' => $terminationReason,
+                        'unpaid_total' => $unpaidTotal,
                     ],
                 ]);
 
@@ -873,6 +901,44 @@ class TenantDetail extends Component
 
         $this->depositRefundReference = '';
         $this->loadTenantData($this->currentTenantId);
+    }
+
+    public function reinstateTenant(): void
+    {
+        if (!$this->currentTenantId) return;
+
+        $actor = Auth::user();
+        if (!$actor || $actor->role !== 'landlord') {
+            $this->dispatch('notify',
+                type: 'error',
+                title: 'Not Allowed',
+                description: 'Only the landlord can reinstate a blocked tenant.'
+            );
+            return;
+        }
+
+        $reason = trim($this->reinstateReason);
+        if ($reason === '') {
+            $this->addError('reinstateReason', 'Please provide a reason for reinstating this tenant.');
+            return;
+        }
+
+        $tenant = User::find($this->currentTenantId);
+        if (!$tenant || !$tenant->isBlockedFromRenting()) {
+            $this->dispatch('close-modal', 'reinstate-tenant-confirmation');
+            return;
+        }
+
+        $tenant->reinstate($reason, $actor);
+
+        $this->reinstateReason = '';
+        $this->dispatch('close-modal', 'reinstate-tenant-confirmation');
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
+        $this->dispatch('notify',
+            type: 'success',
+            title: 'Tenant Reinstated',
+            description: 'This tenant is now eligible to rent again.'
+        );
     }
 
     public function openMoveInContract(): void

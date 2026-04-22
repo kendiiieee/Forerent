@@ -20,6 +20,7 @@ class Lease extends Model
         'security_deposit', 'move_in',
         'shift',
         'move_out',
+        'termination_reason',
         'move_out_initiated_at',
         'monthly_due_date',
         'late_payment_penalty',

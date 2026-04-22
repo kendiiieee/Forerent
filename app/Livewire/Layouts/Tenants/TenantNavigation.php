@@ -191,6 +191,7 @@ class TenantNavigation extends Component
                     'payment_status' => $latestBilling?->status ?? 'No billing',
                     'next_billing'   => $latestBilling?->billing_date ?? null,
                     'created_at'     => $lease->created_at,
+                    'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
                 ];
             })
             ->values()
@@ -233,6 +234,7 @@ class TenantNavigation extends Component
                     'payment_status' => 'Moving Out',
                     'next_billing'   => $lease->move_out_initiated_at,
                     'created_at'     => $lease->created_at,
+                    'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
                 ];
             })
             ->values()
@@ -316,6 +318,7 @@ class TenantNavigation extends Component
                 'payment_status' => $isTransferred ? 'Transferred' : 'Moved Out',
                 'next_billing'   => $lease->end_date,
                 'created_at'     => $lease->created_at,
+                'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
             ];
 
             if ($isTransferred) {
