@@ -18,6 +18,7 @@ class LoginForm extends Component
     public bool $showTermsStep = false;
     public bool $hasReadTerms = false;
     public bool $hasReadPrivacy = false;
+    public bool $hasReadDataCollection = false;
     public bool $termsAccepted = false;
 
     protected $rules = [
@@ -47,6 +48,7 @@ class LoginForm extends Component
             $this->remember = session('terms_pending_remember', false);
             $this->hasReadTerms = session('terms_has_read_terms', false);
             $this->hasReadPrivacy = session('terms_has_read_privacy', false);
+            $this->hasReadDataCollection = session('terms_has_read_data_collection', false);
         }
     }
 
@@ -78,6 +80,7 @@ class LoginForm extends Component
                     'terms_pending_remember' => $this->remember,
                     'terms_has_read_terms' => false,
                     'terms_has_read_privacy' => false,
+                    'terms_has_read_data_collection' => false,
                 ]);
 
                 Auth::logout();
@@ -100,8 +103,8 @@ class LoginForm extends Component
 
     public function acceptTerms()
     {
-        if (!$this->hasReadTerms || !$this->hasReadPrivacy) {
-            $this->addError('terms', 'Please read both the Terms of Service and Privacy Policy first.');
+        if (!$this->hasReadTerms || !$this->hasReadPrivacy || !$this->hasReadDataCollection) {
+            $this->addError('terms', 'Please read the Terms of Service, Privacy Policy, and Data Collection Policy first.');
             return;
         }
 
@@ -123,6 +126,7 @@ class LoginForm extends Component
                 'terms_pending_remember',
                 'terms_has_read_terms',
                 'terms_has_read_privacy',
+                'terms_has_read_data_collection',
             ]);
 
             session()->flash('success', 'Login successful!');
@@ -147,6 +151,7 @@ class LoginForm extends Component
         $this->showTermsStep = false;
         $this->hasReadTerms = false;
         $this->hasReadPrivacy = false;
+        $this->hasReadDataCollection = false;
         $this->termsAccepted = false;
     }
 

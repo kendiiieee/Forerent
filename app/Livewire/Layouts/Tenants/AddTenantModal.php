@@ -2,18 +2,15 @@
 
 namespace App\Livewire\Layouts\Tenants;
 
-use App\Broadcasting\SendGridChannel;
-use App\Mail\NewAccountSmtpMail;
+use App\Livewire\Concerns\CreatesMoveInBilling;
+use App\Livewire\Concerns\SendsTenantWelcomeEmail;
+use App\Livewire\Concerns\WithNotifications;
+use App\Livewire\Concerns\WithPsgcAddress;
 use App\Models\Billing;
 use App\Models\BillingItem;
 use App\Models\Transaction;
-use App\Notifications\NewAccount;
 use App\Services\PasswordGenerator;
-use App\Livewire\Concerns\WithNotifications;
-use Illuminate\Mail\Markdown;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Validate;
@@ -34,7 +31,7 @@ use Illuminate\Support\Carbon;
 
 class AddTenantModal extends Component
 {
-    use WithFileUploads, WithNotifications;
+    use WithFileUploads, WithNotifications, SendsTenantWelcomeEmail, CreatesMoveInBilling, WithPsgcAddress;
 
     public $isOpen = false;
     public $modalId;
@@ -85,8 +82,21 @@ class AddTenantModal extends Component
     #[Validate('required|email')]
     public $email = '';
 
-    #[Validate('required|min:5')]
+    // Legacy concatenated text — kept in sync automatically by the User model's
+    // saving event from the four PSGC fields below.
     public $permanentAddress = '';
+
+    #[Validate('required')]
+    public $permanentProvinceId = '';
+
+    #[Validate('required')]
+    public $permanentCityId = '';
+
+    #[Validate('required')]
+    public $permanentBarangayId = '';
+
+    #[Validate('required|min:3')]
+    public $permanentStreet = '';
 
     #[Validate('nullable')]
     public $governmentIdType = '';
@@ -212,6 +222,8 @@ class AddTenantModal extends Component
     #[On('open-transfer-tenant-modal')]
     public function openTransfer(int $tenantId)
     {
+        if ($this->isLandlord()) return; // Transfers are manager-only.
+
         $this->resetForm();
         $this->mode = 'transfer';
         $this->currentStep = 1;
@@ -283,6 +295,8 @@ class AddTenantModal extends Component
     #[On('open-edit-tenant-modal')]
     public function openEdit(int $tenantId)
     {
+        if ($this->isLandlord()) return; // Edits are manager-only.
+
         $this->resetForm();
         $this->mode = 'edit';
         $this->currentStep = 1;
@@ -313,6 +327,10 @@ class AddTenantModal extends Component
         $this->existingProfileImg = $tenant->profile_img;
 
         $this->permanentAddress          = $tenant->permanent_address ?? '';
+        $this->permanentProvinceId       = $tenant->permanent_province_id ?? '';
+        $this->permanentCityId           = $tenant->permanent_city_id ?? '';
+        $this->permanentBarangayId       = $tenant->permanent_barangay_id ?? '';
+        $this->permanentStreet           = $tenant->permanent_street ?? '';
         $this->existingGovernmentIdImage = $tenant->government_id_image ?? null;
 
         $knownIdTypes = ['Passport', "Driver's License", 'UMID', 'National ID', 'Postal ID'];
@@ -342,9 +360,9 @@ class AddTenantModal extends Component
 
         if ($unit) {
             $this->selectedBuilding = $unit->property_id;
-            $this->units = Unit::where('property_id', $unit->property_id)
-                ->where('manager_id', Auth::id())
-                ->get(['unit_id', 'unit_number']);
+            $unitQuery = Unit::where('property_id', $unit->property_id);
+            $this->applyUnitOwnership($unitQuery);
+            $this->units = $unitQuery->get(['unit_id', 'unit_number']);
 
             $this->selectedUnit = $unit->unit_id;
             $this->dormType     = $unit->occupants ?? '';
@@ -382,8 +400,45 @@ class AddTenantModal extends Component
         $this->isOpen = false;
     }
 
+    protected function isLandlord(): bool
+    {
+        return Auth::user()?->role === 'landlord';
+    }
+
+    /**
+     * Apply role-based ownership filter to a Unit query.
+     * Landlord sees units in properties they own; manager sees units they manage.
+     */
+    protected function applyUnitOwnership($query)
+    {
+        if ($this->isLandlord()) {
+            $query->whereIn('property_id', function ($q) {
+                $q->select('property_id')->from('properties')->where('owner_id', Auth::id());
+            });
+        } else {
+            $query->where('manager_id', Auth::id());
+        }
+        return $query;
+    }
+
     protected function loadBuildings()
     {
+        if ($this->isLandlord()) {
+            // Landlord sees only properties they own.
+            $query = Property::where('owner_id', Auth::id())
+                ->when(!$this->isEdit(), function ($q) {
+                    $q->whereHas('units.beds', fn($b) => $b->where('status', 'Vacant'));
+
+                    if ($this->gender) {
+                        $q->whereHas('units', fn($u) => $u->whereIn('occupants', [$this->gender, 'Co-ed']));
+                    }
+                });
+
+            $this->buildings = $query->get(['property_id', 'building_name']);
+            return;
+        }
+
+        // Manager flow: properties whose units this manager handles.
         $ownerIds = Property::whereHas('units', function ($query) {
             $query->where('manager_id', Auth::id());
 
@@ -410,6 +465,17 @@ class AddTenantModal extends Component
             ->get(['property_id', 'building_name']);
     }
 
+    public function updatedPermanentProvinceId(): void
+    {
+        $this->permanentCityId = '';
+        $this->permanentBarangayId = '';
+    }
+
+    public function updatedPermanentCityId(): void
+    {
+        $this->permanentBarangayId = '';
+    }
+
     public function updatedSelectedBuilding($propertyId)
     {
         $this->selectedUnit = '';
@@ -418,9 +484,8 @@ class AddTenantModal extends Component
         $this->beds         = [];
 
         if ($propertyId) {
-            $unitQuery = Unit::where('property_id', $propertyId)
-                ->where('manager_id', Auth::id())
-                ->orderBy('unit_number');
+            $unitQuery = Unit::where('property_id', $propertyId)->orderBy('unit_number');
+            $this->applyUnitOwnership($unitQuery);
 
             if (!$this->isEdit()) {
                 $unitQuery->whereHas('beds', function ($query) {
@@ -587,10 +652,12 @@ class AddTenantModal extends Component
 
     private function saveNewTenant(): void
     {
-        $password = PasswordGenerator::generate();
+        $isLandlord = $this->isLandlord();
+        $password = $isLandlord ? PasswordGenerator::generate() : null;
         $photoPath = null;
         $idImagePath = null;
         $createdUser = null;
+        $createdLease = null;
 
         try {
             $photoPath = $this->profilePicture
@@ -601,7 +668,10 @@ class AddTenantModal extends Component
                 ? $this->governmentIdImage->store('government-ids', 'public')
                 : null;
 
-            DB::transaction(function () use ($photoPath, $idImagePath, $password, &$createdUser) {
+            DB::transaction(function () use ($photoPath, $idImagePath, $isLandlord, $password, &$createdUser, &$createdLease) {
+                // For manager flow, password is a placeholder and gets regenerated at approval time.
+                $hashedPassword = Hash::make($isLandlord ? $password : Str::random(40));
+
                 $createdUser = User::create([
                     'first_name'                     => $this->firstName,
                     'last_name'                      => $this->lastName,
@@ -609,9 +679,12 @@ class AddTenantModal extends Component
                     'email'                          => $this->email,
                     'contact'                        => '9' . $this->phoneNumber,
                     'role'                           => 'tenant',
-                    'password'                       => Hash::make($password),
+                    'password'                       => $hashedPassword,
                     'profile_img'                    => $photoPath,
-                    'permanent_address'              => $this->permanentAddress,
+                    'permanent_province_id'          => $this->permanentProvinceId ?: null,
+                    'permanent_city_id'              => $this->permanentCityId ?: null,
+                    'permanent_barangay_id'          => $this->permanentBarangayId ?: null,
+                    'permanent_street'               => $this->permanentStreet,
                     'government_id_type'             => $this->resolvedIdType(),
                     'government_id_number'           => $this->governmentIdNumber,
                     'government_id_image'            => $idImagePath,
@@ -624,10 +697,13 @@ class AddTenantModal extends Component
 
                 $endDate = Carbon::parse($this->startDate)->addMonths((int) $this->term ?: 6);
 
-                $lease = Lease::create([
+                $createdLease = Lease::create([
                     'tenant_id'             => $createdUser->user_id,
                     'bed_id'                => $this->selectedBed,
                     'status'                => 'Active',
+                    'approval_status'       => $isLandlord ? 'approved' : 'pending',
+                    'approved_by'           => $isLandlord ? Auth::id() : null,
+                    'approved_at'           => $isLandlord ? now() : null,
                     'contract_status'       => 'draft',
                     'term'                  => $this->term,
                     'auto_renew'            => $this->autoRenew,
@@ -645,69 +721,12 @@ class AddTenantModal extends Component
                     'early_termination_fee' => 0,
                 ]);
 
-                $isPaid      = $this->paymentStatus === 'Paid';
-                $moveInDate  = Carbon::parse($this->startDate);
-                $totalMoveIn = (float) $this->monthlyRate + (float) $this->securityDeposit;
-
-                // ── Move-In Billing ──────────────────────────────────────────
-                $moveInBilling = Billing::create([
-                    'lease_id'     => $lease->lease_id,
-                    'billing_type' => 'move_in',
-                    'billing_date' => $moveInDate->format('Y-m-d'),
-                    'next_billing' => $moveInDate->copy()->addMonth()->format('Y-m-d'),
-                    'due_date'     => $moveInDate->format('Y-m-d'),
-                    'to_pay'       => $totalMoveIn,
-                    'amount'       => $totalMoveIn,
-                    'status'       => $isPaid ? 'Paid' : 'Unpaid',
-                ]);
-
-                // Advance item
-                BillingItem::create([
-                    'billing_id'      => $moveInBilling->billing_id,
-                    'charge_category' => 'move_in',
-                    'charge_type'     => 'advance',
-                    'description'     => '1 Month Advance — First Month Rent',
-                    'amount'          => (float) $this->monthlyRate,
-                ]);
-
-                // Security deposit item
-                BillingItem::create([
-                    'billing_id'      => $moveInBilling->billing_id,
-                    'charge_category' => 'move_in',
-                    'charge_type'     => 'security_deposit',
-                    'description'     => '1 Month Security Deposit',
-                    'amount'          => (float) $this->securityDeposit,
-                ]);
-
-                // Short-term premium item (if applicable)
-                if ($this->shortTermPremium > 0) {
-                    BillingItem::create([
-                        'billing_id'      => $moveInBilling->billing_id,
-                        'charge_category' => 'move_in',
-                        'charge_type'     => 'short_term_premium',
-                        'description'     => 'Short-Term Premium (contract under 6 months)',
-                        'amount'          => (float) $this->shortTermPremium,
-                    ]);
-
-                    $moveInBilling->increment('to_pay', $this->shortTermPremium);
-                    $moveInBilling->increment('amount', $this->shortTermPremium);
+                if ($isLandlord) {
+                    // Landlord adds tenant directly → billing fires now, honoring the form's payment status.
+                    $this->createMoveInBilling($createdLease, $this->paymentStatus);
                 }
 
-                // ── Move-In Transaction (if paid) ────────────────────────────
-                if ($isPaid) {
-                    $txn = Transaction::create([
-                        'billing_id'       => $moveInBilling->billing_id,
-                        'reference_number' => 'placeholder',
-                        'transaction_type' => 'Debit',
-                        'category'         => 'Rent Payment',
-                        'transaction_date' => today(),
-                        'amount'           => $moveInBilling->amount,
-                    ]);
-                    $txn->update([
-                        'reference_number' => $this->generateReference('MOVEIN-', $txn->transaction_id),
-                    ]);
-                }
-
+                // Reserve the bed so another manager cannot double-book.
                 Bed::where('bed_id', $this->selectedBed)->update(['status' => 'Occupied']);
             });
         } catch (\Throwable $exception) {
@@ -727,131 +746,78 @@ class AddTenantModal extends Component
             throw $exception;
         }
 
-        if ($createdUser) {
-            // Notify tenant to upload valid ID if missing
-            if (!$createdUser->government_id_type || !$createdUser->government_id_number || !$createdUser->government_id_image) {
-                NotificationModel::create([
-                    'user_id' => $createdUser->user_id,
-                    'type'    => 'valid_id_required',
-                    'title'   => 'Valid ID Required',
-                    'message' => 'Please upload your valid government ID in Settings to complete your profile.',
-                    'link'    => '/settings',
-                ]);
+        if ($createdUser && $createdLease) {
+            if ($isLandlord) {
+                // Notify the assigned manager of the unit (if any) that a tenant was placed.
+                $this->notifyManagerOfDirectPlacement($createdLease, $createdUser);
+
+                // Notify tenant to upload valid ID if missing
+                if (!$createdUser->government_id_type || !$createdUser->government_id_number || !$createdUser->government_id_image) {
+                    NotificationModel::create([
+                        'user_id' => $createdUser->user_id,
+                        'type'    => 'valid_id_required',
+                        'title'   => 'Valid ID Required',
+                        'message' => 'Please upload your valid government ID in Settings to complete your profile.',
+                        'link'    => '/settings',
+                    ]);
+                }
+
+                $this->attemptWelcomeEmailDelivery($createdUser, $password);
+            } else {
+                $this->notifyLandlordOfPendingTenant($createdLease, $createdUser);
             }
-
-            $this->attemptWelcomeEmailDelivery($createdUser, $password);
         }
 
-        $this->notifySuccess(
-            'Tenant Added Successfully!',
-            $this->firstName . ' ' . $this->lastName . ' has been added to ' . $this->selectedBed . '.'
-        );
-
-        session()->flash('success', 'Tenant added successfully!');
-    }
-
-    private function attemptWelcomeEmailDelivery(User $createdUser, string $password): void
-    {
-        $notification = new NewAccount($createdUser->email, $password, $createdUser->role);
-
-        $this->logWelcomeEmailPreview($notification, $createdUser);
-
-        $sendGridAttempt = [
-            'ok' => false,
-            'status' => null,
-            'error' => 'No SendGrid attempt data.',
-        ];
-
-        try {
-            SendGridChannel::resetLastAttempt();
-            Notification::send($createdUser, $notification);
-
-            $sendGridAttempt = SendGridChannel::lastAttempt() ?? $sendGridAttempt;
-        } catch (\Throwable $exception) {
-            $sendGridAttempt = [
-                'ok' => false,
-                'status' => null,
-                'error' => $exception->getMessage(),
-            ];
-
-            Log::warning('SendGrid call failed for tenant welcome email.', [
-                'tenant_id' => $createdUser->user_id,
-                'tenant_email' => $createdUser->email,
-                'error' => $exception->getMessage(),
-            ]);
-        }
-
-        if (($sendGridAttempt['ok'] ?? false) === true) {
-            Log::info('Tenant welcome email sent via SendGrid.', [
-                'tenant_id' => $createdUser->user_id,
-                'tenant_email' => $createdUser->email,
-                'status' => $sendGridAttempt['status'] ?? null,
-            ]);
-
-            return;
-        }
-
-        Log::warning('Tenant welcome email SendGrid failed; trying SMTPS fallback.', [
-            'tenant_id' => $createdUser->user_id,
-            'tenant_email' => $createdUser->email,
-            'sendgrid_status' => $sendGridAttempt['status'] ?? null,
-            'sendgrid_error' => $sendGridAttempt['error'] ?? null,
-        ]);
-
-        try {
-            Mail::mailer('smtp')
-                ->to($createdUser->email)
-                ->send(new NewAccountSmtpMail(
-                    email: $createdUser->email,
-                    password: $password,
-                    role: $createdUser->role,
-                    firstName: (string) ($createdUser->first_name ?? ''),
-                    lastName: (string) ($createdUser->last_name ?? ''),
-                ));
-
-            Log::info('Tenant welcome email sent via SMTPS fallback.', [
-                'tenant_id' => $createdUser->user_id,
-                'tenant_email' => $createdUser->email,
-                'mailer' => 'smtp',
-            ]);
-        } catch (\Throwable $exception) {
-            Log::warning('SMTPS fallback failed for tenant welcome email.', [
-                'tenant_id' => $createdUser->user_id,
-                'tenant_email' => $createdUser->email,
-                'error' => $exception->getMessage(),
-            ]);
-
-            $this->notifyWarning(
-                'Tenant saved, email retry failed',
-                'Email delivery failed due to provider limits. Tenant record was saved successfully.'
+        if ($isLandlord) {
+            $this->notifySuccess(
+                'Tenant Added Successfully!',
+                $this->firstName . ' ' . $this->lastName . ' has been added and notified by email.'
             );
+            session()->flash('success', 'Tenant added successfully!');
+        } else {
+            $this->notifySuccess(
+                'Tenant Submitted for Approval',
+                $this->firstName . ' ' . $this->lastName . ' is awaiting landlord approval before billing and account access are activated.'
+            );
+            session()->flash('success', 'Tenant submitted for landlord approval.');
         }
     }
 
-    private function logWelcomeEmailPreview(NewAccount $notification, User $createdUser): void
+    private function notifyLandlordOfPendingTenant(Lease $lease, User $tenant): void
     {
-        if (!config('services.sendgrid.preview_logging', false)) {
-            return;
-        }
+        $ownerId = Property::whereHas('units.beds', fn($q) => $q->where('bed_id', $lease->bed_id))
+            ->value('owner_id');
 
-        try {
-            $mailMessage = $notification->toMail($createdUser);
-            
-            // Only log if there's an issue rendering the email
-            // Don't log the massive HTML/text content - just verify it renders
-            if (empty($mailMessage->subject)) {
-                Log::warning('Tenant welcome email missing subject.', [
-                    'tenant_id' => $createdUser->user_id,
-                    'tenant_email' => $createdUser->email,
-                ]);
-            }
-        } catch (\Throwable $exception) {
-            Log::warning('Error rendering tenant welcome email.', [
-                'tenant_id' => $createdUser->user_id,
-                'tenant_email' => $createdUser->email,
-                'error' => $exception->getMessage(),
-            ]);
-        }
+        if (!$ownerId) return;
+
+        $tenantName = trim(($tenant->first_name ?? '') . ' ' . ($tenant->last_name ?? '')) ?: 'a new tenant';
+
+        NotificationModel::create([
+            'user_id' => $ownerId,
+            'type'    => 'tenant_pending_approval',
+            'title'   => 'New Tenant Awaiting Approval',
+            'message' => "Manager has submitted {$tenantName} for your approval. Review the details and approve or reject the application.",
+            'link'    => '/landlord/tenant',
+        ]);
+    }
+
+    private function notifyManagerOfDirectPlacement(Lease $lease, User $tenant): void
+    {
+        $managerId = Bed::where('bed_id', $lease->bed_id)
+            ->join('units', 'units.unit_id', '=', 'beds.unit_id')
+            ->value('units.manager_id');
+
+        if (!$managerId) return;
+
+        $tenantName = trim(($tenant->first_name ?? '') . ' ' . ($tenant->last_name ?? '')) ?: 'a new tenant';
+
+        NotificationModel::create([
+            'user_id' => $managerId,
+            'type'    => 'tenant_added_by_landlord',
+            'title'   => 'New Tenant Placed',
+            'message' => "The landlord has placed {$tenantName} in one of your units. Coordinate the move-in inspection and contract signing.",
+            'link'    => '/manager/tenant',
+        ]);
     }
 
     private function saveTransfer(): void
@@ -1018,7 +984,10 @@ class AddTenantModal extends Component
                 'email'                          => $this->email,
                 'contact'                        => '9' . $this->phoneNumber,
                 'profile_img'                    => $photoPath,
-                'permanent_address'              => $this->permanentAddress,
+                'permanent_province_id'          => $this->permanentProvinceId ?: null,
+                'permanent_city_id'              => $this->permanentCityId ?: null,
+                'permanent_barangay_id'          => $this->permanentBarangayId ?: null,
+                'permanent_street'               => $this->permanentStreet,
                 'government_id_type'             => $this->resolvedIdType(),
                 'government_id_number'           => $this->governmentIdNumber,
                 'government_id_image'            => $idImagePath,
@@ -1123,7 +1092,10 @@ class AddTenantModal extends Component
                 'profilePicture' => 'nullable|image|max:10240',
             ]),
             2 => array_merge([
-                'permanentAddress'             => 'required|min:5',
+                'permanentProvinceId'          => 'required|exists:provinces,id',
+                'permanentCityId'              => 'required|exists:cities,id',
+                'permanentBarangayId'          => 'required|exists:barangays,id',
+                'permanentStreet'              => 'required|min:3',
                 'governmentIdType'             => 'nullable',
                 'governmentIdNumber'           => 'nullable|min:3',
                 'companySchool'                => 'required|min:2',
@@ -1187,7 +1159,10 @@ class AddTenantModal extends Component
             $rules['lastName']                     = 'required|min:2';
             $rules['gender']                       = 'required';
             $rules['profilePicture']               = (!$this->profilePicture && !$this->existingProfileImg) ? 'required|image|max:10240' : 'nullable|image|max:10240';
-            $rules['permanentAddress']             = 'required|min:5';
+            $rules['permanentProvinceId']          = 'required|exists:provinces,id';
+            $rules['permanentCityId']              = 'required|exists:cities,id';
+            $rules['permanentBarangayId']          = 'required|exists:barangays,id';
+            $rules['permanentStreet']              = 'required|min:3';
             $rules['governmentIdType']             = 'nullable';
             $rules['governmentIdNumber']           = 'nullable|min:3';
             $rules['companySchool']                = 'required|min:2';
@@ -1274,6 +1249,10 @@ class AddTenantModal extends Component
             'phoneNumber',
             'email',
             'permanentAddress',
+            'permanentProvinceId',
+            'permanentCityId',
+            'permanentBarangayId',
+            'permanentStreet',
             'governmentIdType',
             'governmentIdTypeOther',
             'governmentIdNumber',

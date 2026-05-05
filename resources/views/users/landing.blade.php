@@ -78,7 +78,7 @@
                       after:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.3),transparent)]
                       after:-skew-x-[20deg] after:transition-[left] after:duration-500
                       hover:after:left-[130%] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(26,63,191,0.52)]">
-                Log In
+                Sign In
             </a>
         </div>
     </nav>

@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
 
 
         $this->call([
+            PsgcSeeder::class,
             UserSeeder::class,
             PropertySeeder::class,
             UnitSeeder::class,

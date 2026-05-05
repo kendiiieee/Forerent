@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Properties;
 
 use App\Livewire\Concerns\WithNotifications;
+use App\Livewire\Concerns\WithPsgcAddress;
 use App\Models\Property;
 use App\Models\PropertyDocument;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ use Livewire\WithFileUploads;
 
 class AddPropertyModal extends Component
 {
-    use WithNotifications, WithFileUploads;
+    use WithNotifications, WithFileUploads, WithPsgcAddress;
 
     /** Modal visibility */
     public $isOpen = false;
@@ -29,8 +30,20 @@ class AddPropertyModal extends Component
     #[Validate('required|string|max:255')]
     public $buildingName = '';
 
-    #[Validate('required|string')]
+    /** Legacy concatenated address — auto-synced from FK fields by Property model. */
     public $address = '';
+
+    #[Validate('required|exists:provinces,id')]
+    public $provinceId = '';
+
+    #[Validate('required|exists:cities,id')]
+    public $cityId = '';
+
+    #[Validate('required|exists:barangays,id')]
+    public $barangayId = '';
+
+    #[Validate('required|min:3')]
+    public $street = '';
 
     #[Validate('required|string')]
     public $description = '';
@@ -87,7 +100,10 @@ class AddPropertyModal extends Component
 
         $rules = [
             'buildingName' => 'required|string|max:255',
-            'address' => 'required|string',
+            'provinceId' => 'required|exists:provinces,id',
+            'cityId' => 'required|exists:cities,id',
+            'barangayId' => 'required|exists:barangays,id',
+            'street' => 'required|min:3',
             'description' => 'required|string',
             'propertyPhotos' => $hasExistingPhotos ? 'nullable|array' : 'required|array|min:1',
             'propertyPhotos.*' => 'image|max:10240',
@@ -107,7 +123,10 @@ class AddPropertyModal extends Component
     {
         return [
             'buildingName.required' => 'Property name is required.',
-            'address.required' => 'Address is required.',
+            'provinceId.required' => 'Province is required.',
+            'cityId.required' => 'City / Municipality is required.',
+            'barangayId.required' => 'Barangay is required.',
+            'street.required' => 'House #, Street is required.',
             'description.required' => 'Description is required.',
             'propertyPhotos.required' => 'At least one property photo is required.',
             'propertyPhotos.min' => 'At least one property photo is required.',
@@ -156,6 +175,10 @@ class AddPropertyModal extends Component
             $this->editingPropertyId = $property->property_id;
             $this->buildingName = $property->building_name;
             $this->address = $property->address;
+            $this->provinceId = $property->province_id ?? '';
+            $this->cityId = $property->city_id ?? '';
+            $this->barangayId = $property->barangay_id ?? '';
+            $this->street = $property->street ?? '';
             $this->description = $property->prop_description;
             $this->depositInterestRate = $property->getContractSetting('deposit_interest_rate', '');
 
@@ -178,6 +201,17 @@ class AddPropertyModal extends Component
 
             $this->isOpen = true;
         }
+    }
+
+    public function updatedProvinceId(): void
+    {
+        $this->cityId = '';
+        $this->barangayId = '';
+    }
+
+    public function updatedCityId(): void
+    {
+        $this->barangayId = '';
     }
 
     public function updatedBusinessPermit(): void { $this->resetValidation('businessPermit'); }
@@ -262,7 +296,10 @@ class AddPropertyModal extends Component
 
                     $property->update([
                         'building_name' => $this->buildingName,
-                        'address' => $this->address,
+                        'province_id' => $this->provinceId ?: null,
+                        'city_id' => $this->cityId ?: null,
+                        'barangay_id' => $this->barangayId ?: null,
+                        'street' => $this->street,
                         'prop_description' => $this->description,
                         'contract_settings' => !empty($updatedSettings) ? $updatedSettings : null,
                     ]);
@@ -292,7 +329,10 @@ class AddPropertyModal extends Component
                 $property = Property::create([
                     'owner_id' => Auth::id(),
                     'building_name' => $this->buildingName,
-                    'address' => $this->address,
+                    'province_id' => $this->provinceId ?: null,
+                    'city_id' => $this->cityId ?: null,
+                    'barangay_id' => $this->barangayId ?: null,
+                    'street' => $this->street,
                     'prop_description' => $this->description,
                     'contract_settings' => !empty($contractSettings) ? $contractSettings : null,
                 ]);
@@ -377,6 +417,10 @@ class AddPropertyModal extends Component
         $this->reset([
             'buildingName',
             'address',
+            'provinceId',
+            'cityId',
+            'barangayId',
+            'street',
             'description',
             'depositInterestRate',
             'editingPropertyId',

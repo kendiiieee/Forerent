@@ -112,6 +112,11 @@ trait WithContractData
                 'signed_contract_path'  => $lease?->signed_contract_path,
             ],
             'contract_status' => $lease?->contract_status ?? 'draft',
+            'approval' => [
+                'status'           => $lease?->approval_status ?? 'approved',
+                'approved_at'      => $lease?->approved_at?->format('M d, Y h:i A'),
+                'rejection_reason' => $lease?->rejection_reason,
+            ],
             'contract_settings' => $property?->contract_settings ?? [],
             'deposit_refund' => [
                 'amount' => $lease?->deposit_refund_amount,

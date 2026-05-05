@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPsgcAddress;
 use App\Models\Message;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,7 +14,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, HasPsgcAddress;
+
+    protected static array $psgcAddressMap = [
+        'permanent' => ['permanent_address', 'permanent_'],
+    ];
 
     /**
      * The primary key associated with the table.
@@ -32,6 +37,10 @@ class User extends Authenticatable
         'profile_img',
         'role',
         'permanent_address',
+        'permanent_province_id',
+        'permanent_city_id',
+        'permanent_barangay_id',
+        'permanent_street',
         'government_id_type',
         'government_id_number',
         'government_id_image',

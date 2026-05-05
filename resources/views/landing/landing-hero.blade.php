@@ -30,9 +30,9 @@
                     <a href="#" class="hero-nav-link text-gray-700 hover:text-blue-900 font-medium opacity-0">Contact</a>
                 </div>
 
-                <!-- Log In Button -->
+                <!-- Sign In Button -->
                 <button class="hero-login-btn px-6 py-2 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition opacity-0">
-                    Log In
+                    Sign In
                 </button>
             </div>
         </nav>

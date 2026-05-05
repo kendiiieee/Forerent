@@ -38,6 +38,11 @@ Route::prefix('landlord')->middleware(['auth', 'role:landlord'])->group(function
         return view('users.admin.owner.managerdetails');
     })->name('landlord.manager');
 
+    // Tenants (read-only + approval workflow)
+    Route::get('/tenant', function () {
+        return view('users.admin.owner.tenant');
+    })->name('landlord.tenant');
+
     // Payments
     Route::get('/payment', function () {
         return view('users.admin.owner.payment');

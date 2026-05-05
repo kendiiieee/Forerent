@@ -8,6 +8,7 @@
         {{-- Left Side: Tabs --}}
         @php
             $tabs = [
+                'pending'     => 'Pending Approval',
                 'current'     => 'Current',
                 'moving_out'  => 'Moving Out',
                 'transferred' => 'Transferred',
@@ -50,7 +51,7 @@
 
             <x-ui.button-add
                 text="Add Tenant"
-                tooltip="Register a new tenant to a unit"
+                :tooltip="auth()->user()?->role === 'landlord' ? 'Register a new tenant directly to one of your properties' : 'Register a new tenant — requires landlord approval'"
                 x-on:click="$dispatch('open-add-tenant-modal')"
             />
         </div>
@@ -80,24 +81,26 @@
                         $isActive = ($tenant['id'] == $activeTenantId);
 
                         $statusStyles = match($tenant['payment_status']) {
-                            'Paid'        => 'text-emerald-700 bg-emerald-50 border-emerald-200',
-                            'Unpaid'      => 'text-amber-700 bg-amber-50 border-amber-200',
-                            'Pending'     => 'text-amber-700 bg-amber-50 border-amber-200',
-                            'Overdue'     => 'text-red-700 bg-red-50 border-red-200',
-                            'Moving Out'  => 'text-orange-700 bg-orange-50 border-orange-200',
-                            'Transferred' => 'text-blue-700 bg-blue-50 border-blue-200',
-                            'Moved Out'   => 'text-gray-600 bg-gray-50 border-gray-200',
-                            default       => 'text-gray-600 bg-gray-50 border-gray-200'
+                            'Paid'              => 'text-emerald-700 bg-emerald-50 border-emerald-200',
+                            'Unpaid'            => 'text-amber-700 bg-amber-50 border-amber-200',
+                            'Pending'           => 'text-amber-700 bg-amber-50 border-amber-200',
+                            'Pending Approval'  => 'text-amber-700 bg-amber-50 border-amber-200',
+                            'Overdue'           => 'text-red-700 bg-red-50 border-red-200',
+                            'Moving Out'        => 'text-orange-700 bg-orange-50 border-orange-200',
+                            'Transferred'       => 'text-blue-700 bg-blue-50 border-blue-200',
+                            'Moved Out'         => 'text-gray-600 bg-gray-50 border-gray-200',
+                            default             => 'text-gray-600 bg-gray-50 border-gray-200'
                         };
                         $dotStyles = match($tenant['payment_status']) {
-                            'Paid'        => 'bg-emerald-500',
-                            'Unpaid'      => 'bg-amber-500',
-                            'Pending'     => 'bg-amber-500',
-                            'Overdue'     => 'bg-red-500',
-                            'Moving Out'  => 'bg-orange-500',
-                            'Transferred' => 'bg-blue-500',
-                            'Moved Out'   => 'bg-gray-400',
-                            default       => 'bg-gray-400'
+                            'Paid'              => 'bg-emerald-500',
+                            'Unpaid'            => 'bg-amber-500',
+                            'Pending'           => 'bg-amber-500',
+                            'Pending Approval'  => 'bg-amber-500',
+                            'Overdue'           => 'bg-red-500',
+                            'Moving Out'        => 'bg-orange-500',
+                            'Transferred'       => 'bg-blue-500',
+                            'Moved Out'         => 'bg-gray-400',
+                            default             => 'bg-gray-400'
                         };
                     @endphp
 

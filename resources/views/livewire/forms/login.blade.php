@@ -110,6 +110,15 @@
                 Sign In
             </button>
 
+            {{-- Policy Links --}}
+            <div class="text-center text-xs text-gray-500 leading-relaxed">
+                By signing in, you agree to our
+                <a href="{{ route('terms-of-service') }}" target="_blank" class="font-medium text-[var(--color-primary)] hover:text-blue-700 hover:underline">Terms of Service</a>,
+                <a href="{{ route('privacy-policy') }}" target="_blank" class="font-medium text-[var(--color-primary)] hover:text-blue-700 hover:underline">Privacy Policy</a>,
+                and
+                <a href="{{ route('data-collection-policy') }}" target="_blank" class="font-medium text-[var(--color-primary)] hover:text-blue-700 hover:underline">Data Collection Policy</a>.
+            </div>
+
         </form>
 
         {{-- Register link matching Image 1 --}}
@@ -178,6 +187,29 @@
                     </svg>
                 </a>
             @endif
+
+            {{-- Read Data Collection Policy --}}
+            @if($hasReadDataCollection)
+                <div class="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-blue-300 bg-blue-50 opacity-70 cursor-default">
+                    <span class="text-sm font-medium text-blue-700 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Data Collection Policy
+                    </span>
+                </div>
+            @else
+                <a
+                    href="{{ route('data-collection-policy') }}"
+                    class="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-all duration-200 no-underline">
+                    <span class="text-sm font-medium text-[var(--color-primary)]">
+                        Data Collection Policy
+                    </span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                </a>
+            @endif
         </div>
 
         {{-- Checkbox --}}
@@ -187,20 +219,21 @@
                     type="checkbox"
                     wire:model="termsAccepted"
                     wire:change="acceptTerms"
-                    @if(!$hasReadTerms || !$hasReadPrivacy) disabled @endif
+                    @if(!$hasReadTerms || !$hasReadPrivacy || !$hasReadDataCollection) disabled @endif
                     class="h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500
-                        {{ (!$hasReadTerms || !$hasReadPrivacy) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}">
-                <span class="text-xs leading-relaxed {{ (!$hasReadTerms || !$hasReadPrivacy) ? 'text-gray-400' : 'text-gray-600' }}">
+                        {{ (!$hasReadTerms || !$hasReadPrivacy || !$hasReadDataCollection) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }}">
+                <span class="text-xs leading-relaxed {{ (!$hasReadTerms || !$hasReadPrivacy || !$hasReadDataCollection) ? 'text-gray-400' : 'text-gray-600' }}">
                     I have read and agree to the
-                    <span class="font-medium text-[var(--color-primary)]">Terms of Service</span>
+                    <span class="font-medium text-[var(--color-primary)]">Terms of Service</span>,
+                    <span class="font-medium text-[var(--color-primary)]">Privacy Policy</span>,
                     and
-                    <span class="font-medium text-[var(--color-primary)]">Privacy Policy</span>.
+                    <span class="font-medium text-[var(--color-primary)]">Data Collection Policy</span>.
                 </span>
             </label>
 
-            @if(!$hasReadTerms || !$hasReadPrivacy)
+            @if(!$hasReadTerms || !$hasReadPrivacy || !$hasReadDataCollection)
                 <p class="text-xs text-amber-600 mt-2 ml-7">
-                    Please read both documents above before agreeing.
+                    Please read all three documents above before agreeing.
                 </p>
             @endif
 

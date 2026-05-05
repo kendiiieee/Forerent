@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPsgcAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -9,7 +10,11 @@ use Illuminate\Support\Facades\Storage;
 
 class Property extends Model
 {
-    use SoftDeletes, HasFactory;
+    use SoftDeletes, HasFactory, HasPsgcAddress;
+
+    protected static array $psgcAddressMap = [
+        'main' => ['address', ''],
+    ];
 
     protected $primaryKey = 'property_id';
 
@@ -17,6 +22,10 @@ class Property extends Model
         'owner_id',
         'building_name',
         'address',
+        'province_id',
+        'city_id',
+        'barangay_id',
+        'street',
         'prop_description',
         'contract_settings',
     ];

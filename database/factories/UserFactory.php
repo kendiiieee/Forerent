@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Barangay;
 use Faker\Generator;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -22,6 +23,11 @@ class UserFactory extends Factory
         $gender = fake()->randomElement(['Male', 'Female']);
         $idTypes = ['Passport', "Driver's License", 'UMID', 'National ID', 'Postal ID'];
 
+        // Random NCR address from seeded PSGC data — falls back to free-text
+        // if PsgcSeeder hasn't run yet (so factory-only tests still work).
+        $brgy = Barangay::query()->with('city.province')->inRandomOrder()->first();
+        $street = $faker->buildingNumber() . ' ' . $faker->streetName() . ' St.';
+
         return [
             'first_name' => $firstName,
             'last_name'  => $lastName,
@@ -37,7 +43,13 @@ class UserFactory extends Factory
 
             'password' => Hash::make('password'),
 
-            'permanent_address'              => fake()->address(),
+            'permanent_province_id' => $brgy?->city?->province_id,
+            'permanent_city_id'     => $brgy?->city_id,
+            'permanent_barangay_id' => $brgy?->id,
+            'permanent_street'      => $street,
+            'permanent_address'              => $brgy
+                ? "{$street}, {$brgy->name}, {$brgy->city->name}, {$brgy->city->province->name}"
+                : fake()->address(),
             'government_id_type'             => fake()->randomElement($idTypes),
             'government_id_number'           => strtoupper(Str::random(3)) . '-' . fake()->numerify('########'),
             'government_id_image'            => $this->generatePlaceholderId($firstName),

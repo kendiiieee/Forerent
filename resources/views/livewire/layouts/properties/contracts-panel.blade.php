@@ -72,7 +72,7 @@
                 <x-ui.th>Lease</x-ui.th>
                 <x-ui.th>Signatures</x-ui.th>
                 <x-ui.th>Contract</x-ui.th>
-                <x-ui.th class="text-center">Action</x-ui.th>
+                <x-ui.th class="text-center">Documents</x-ui.th>
             </x-slot:head>
 
             <x-slot:body>
@@ -142,15 +142,15 @@
                                 <button wire:click="viewContract({{ $lease->lease_id }}, 'move-in')"
                                         title="View Move-In Contract"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border border-[#0906ae] text-[#0906ae] rounded-md hover:bg-blue-50 transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                    Move In
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                                    Move-In
                                 </button>
                                 @if($cStatus === 'executed')
                                     <button wire:click="viewContract({{ $lease->lease_id }}, 'move-out')"
                                             title="View Move-Out Contract"
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border border-orange-500 text-orange-500 rounded-md hover:bg-orange-50 transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                        Move Out
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+                                        Move-Out
                                     </button>
                                 @endif
                             </div>

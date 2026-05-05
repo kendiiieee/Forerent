@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPsgcAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,12 +11,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lease extends Model
 {
-    use SoftDeletes, HasFactory;
+    use SoftDeletes, HasFactory, HasPsgcAddress;
+
+    protected static array $psgcAddressMap = [
+        'forwarding' => ['forwarding_address', 'forwarding_'],
+    ];
 
     protected $primaryKey = 'lease_id';
 
     protected $fillable = [
-        'tenant_id', 'bed_id', 'status', 'contract_status', 'term', 'auto_renew',
+        'tenant_id', 'bed_id', 'status', 'approval_status', 'approved_by', 'approved_at', 'rejection_reason',
+        'contract_status', 'term', 'auto_renew',
         'start_date', 'end_date', 'contract_rate', 'advance_amount',
         'security_deposit', 'move_in',
         'shift',
@@ -39,6 +45,10 @@ class Lease extends Model
         'signed_contract_path',
         'contract_agreed',
         'forwarding_address',
+        'forwarding_province_id',
+        'forwarding_city_id',
+        'forwarding_barangay_id',
+        'forwarding_street',
         'reason_for_vacating',
         'deposit_refund_method',
         'deposit_refund_account',
@@ -77,6 +87,7 @@ class Lease extends Model
         'reservation_fee_paid' => 'decimal:2',
         'early_termination_fee' => 'decimal:2',
         'monthly_due_date' => 'integer',
+        'approved_at' => 'datetime',
         'tenant_signed_at' => 'datetime',
         'owner_signed_at' => 'datetime',
         'manager_signed_at' => 'datetime',
@@ -92,9 +103,30 @@ class Lease extends Model
         'deposit_refund_completed_at' => 'datetime',
     ];
 
+    /** Visible leases — exclude rejected so they don't pollute tenant lists. */
+    public function scopeNotRejected($query)
+    {
+        return $query->where('approval_status', '!=', 'rejected');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('approval_status', 'pending');
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('approval_status', 'approved');
+    }
+
     public function tenant()
     {
         return $this->belongsTo(User::class, 'tenant_id', 'user_id');
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by', 'user_id');
     }
 
     public function bed()
