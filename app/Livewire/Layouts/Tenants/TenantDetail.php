@@ -2,9 +2,14 @@
 
 namespace App\Livewire\Layouts\Tenants;
 
+use App\Livewire\Concerns\CreatesMoveInBilling;
 use App\Livewire\Concerns\InspectionConfig;
+use App\Livewire\Concerns\SendsTenantWelcomeEmail;
 use App\Livewire\Concerns\WithContractData;
 use App\Livewire\Concerns\WithESignature;
+use App\Livewire\Concerns\WithNotifications;
+use App\Livewire\Concerns\WithPsgcAddress;
+use App\Models\Bed;
 use App\Models\Billing;
 use App\Models\BillingItem;
 use App\Models\ContractAuditLog;
@@ -12,17 +17,24 @@ use App\Models\Lease;
 use App\Models\MoveInInspection;
 use App\Models\MoveOutInspection;
 use App\Models\Notification;
+use App\Models\Property;
+use App\Models\Unit;
 use App\Models\User;
+use App\Services\PasswordGenerator;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\Attributes\On;
 
 class TenantDetail extends Component
 {
-    use WithESignature, WithContractData;
+    use WithESignature, WithContractData, WithNotifications, SendsTenantWelcomeEmail, CreatesMoveInBilling, WithPsgcAddress;
+
+    public string $rejectionReason = '';
 
     public $currentTenantId = null;
     public $currentTenant = null;
@@ -54,8 +66,13 @@ class TenantDetail extends Component
     public $moveOutManagerSignedAt = null;
     public $moveOutContractAgreed = false;
 
-    // Move-out form fields
+    // Move-out form fields — forwardingAddress is the legacy concatenated text
+    // kept in sync by the Lease model's saving event from the four PSGC fields.
     public $forwardingAddress = '';
+    public $forwardingProvinceId = '';
+    public $forwardingCityId = '';
+    public $forwardingBarangayId = '';
+    public $forwardingStreet = '';
     public $reasonForVacating = '';
     public $depositRefundMethod = '';
     public $depositRefundAccount = '';
@@ -82,6 +99,9 @@ class TenantDetail extends Component
     // Violations
     public $violations = [];
     public $violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
+
+    // Rental eligibility (reinstate flow — landlord only)
+    public string $reinstateReason = '';
 
     public function mount(?int $initialTenantId = null): void
     {
@@ -142,6 +162,10 @@ class TenantDetail extends Component
         $this->loadViolations($lease);
         $this->moveOutInitiated = (bool) $lease?->move_out_initiated_at;
         $this->forwardingAddress = $lease?->forwarding_address ?? '';
+        $this->forwardingProvinceId = $lease?->forwarding_province_id ?? '';
+        $this->forwardingCityId = $lease?->forwarding_city_id ?? '';
+        $this->forwardingBarangayId = $lease?->forwarding_barangay_id ?? '';
+        $this->forwardingStreet = $lease?->forwarding_street ?? '';
         $this->reasonForVacating = $lease?->reason_for_vacating ?? '';
         $this->depositRefundMethod = $lease?->deposit_refund_method ?? '';
         $this->depositRefundAccount = $lease?->deposit_refund_account ?? '';
@@ -206,6 +230,11 @@ class TenantDetail extends Component
     public function saveInspection(): void
     {
         if (!$this->currentLeaseId) return;
+
+        if ($this->isLeasePendingApproval()) {
+            $this->dispatch('notify', type: 'warning', title: 'Awaiting Approval', description: 'You cannot run move-in inspection until the landlord approves this tenant.');
+            return;
+        }
 
         $errors = $this->validateInspection(
             $this->inspectionChecklist, 'inspectionChecklist',
@@ -530,8 +559,176 @@ class TenantDetail extends Component
         $this->violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
     }
 
+    private function isManager(): bool
+    {
+        return Auth::user()?->role === 'manager';
+    }
+
+    private function isLandlord(): bool
+    {
+        return Auth::user()?->role === 'landlord';
+    }
+
+    private function isLeasePendingApproval(): bool
+    {
+        if (!$this->currentLeaseId) return false;
+        return Lease::where('lease_id', $this->currentLeaseId)
+            ->where('approval_status', 'pending')
+            ->exists();
+    }
+
+    /**
+     * Verify the authenticated landlord owns the property tied to the current lease.
+     */
+    private function landlordOwnsCurrentLease(): bool
+    {
+        if (!$this->currentLeaseId || !$this->isLandlord()) return false;
+
+        return Property::where('owner_id', Auth::id())
+            ->whereHas('units.beds.leases', fn($q) => $q->where('lease_id', $this->currentLeaseId))
+            ->exists();
+    }
+
+    public function approveTenant(): void
+    {
+        if (!$this->currentLeaseId) return;
+
+        if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) {
+            $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'Only the property landlord can approve a tenant.');
+            return;
+        }
+
+        $lease = Lease::with('tenant', 'bed.unit')->find($this->currentLeaseId);
+        if (!$lease || $lease->approval_status !== 'pending') {
+            $this->dispatch('notify', type: 'warning', title: 'Already Processed', description: 'This tenant has already been reviewed.');
+            return;
+        }
+
+        $tenant = $lease->tenant;
+        if (!$tenant) {
+            $this->dispatch('notify', type: 'error', title: 'Missing Tenant', description: 'Cannot approve — tenant record not found.');
+            return;
+        }
+
+        $password = PasswordGenerator::generate();
+        $managerId = $lease->bed?->unit?->manager_id;
+
+        DB::transaction(function () use ($lease, $tenant, $password) {
+            $tenant->update(['password' => Hash::make($password)]);
+
+            $lease->update([
+                'approval_status' => 'approved',
+                'approved_by'     => Auth::id(),
+                'approved_at'     => now(),
+            ]);
+
+            $this->createMoveInBilling($lease);
+
+            // Notify tenant if government ID is missing
+            if (!$tenant->government_id_type || !$tenant->government_id_number || !$tenant->government_id_image) {
+                Notification::create([
+                    'user_id' => $tenant->user_id,
+                    'type'    => 'valid_id_required',
+                    'title'   => 'Valid ID Required',
+                    'message' => 'Please upload your valid government ID in Settings to complete your profile.',
+                    'link'    => '/settings',
+                ]);
+            }
+
+            ContractAuditLog::log($lease->lease_id, 'tenant_approved', [
+                'metadata' => ['approved_by' => Auth::id()],
+            ]);
+        });
+
+        $this->attemptWelcomeEmailDelivery($tenant->fresh(), $password);
+
+        // Notify the manager who created the request
+        if ($managerId) {
+            $tenantName = trim(($tenant->first_name ?? '') . ' ' . ($tenant->last_name ?? '')) ?: 'Tenant';
+            Notification::create([
+                'user_id' => $managerId,
+                'type'    => 'tenant_approved',
+                'title'   => 'Tenant Approved',
+                'message' => "{$tenantName} has been approved by the landlord. Move-in billing has been generated and the tenant has been emailed login details.",
+                'link'    => '/manager/tenant',
+            ]);
+        }
+
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
+        $this->dispatch('refresh-tenant-list');
+        $this->dispatch('notify', type: 'success', title: 'Tenant Approved', description: 'The tenant has been approved and notified.');
+    }
+
+    public function openRejectModal(): void
+    {
+        if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) return;
+        $this->rejectionReason = '';
+        $this->dispatch('open-modal', 'reject-tenant-confirmation');
+    }
+
+    public function rejectTenant(): void
+    {
+        if (!$this->currentLeaseId) return;
+
+        if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) {
+            $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'Only the property landlord can reject a tenant.');
+            return;
+        }
+
+        $reason = trim($this->rejectionReason);
+        if ($reason === '') {
+            $this->addError('rejectionReason', 'Please provide a reason for rejecting this tenant.');
+            return;
+        }
+
+        $lease = Lease::with('tenant', 'bed.unit')->find($this->currentLeaseId);
+        if (!$lease || $lease->approval_status !== 'pending') {
+            $this->dispatch('notify', type: 'warning', title: 'Already Processed', description: 'This tenant has already been reviewed.');
+            return;
+        }
+
+        $managerId = $lease->bed?->unit?->manager_id;
+        $tenantName = $lease->tenant ? trim($lease->tenant->first_name . ' ' . $lease->tenant->last_name) : 'Tenant';
+
+        DB::transaction(function () use ($lease, $reason) {
+            $lease->update([
+                'approval_status'   => 'rejected',
+                'status'            => 'Expired',
+                'rejection_reason'  => $reason,
+                'approved_by'       => Auth::id(),
+                'approved_at'       => now(),
+                'end_date'          => Carbon::today(),
+            ]);
+
+            if ($lease->bed_id) {
+                Bed::where('bed_id', $lease->bed_id)->update(['status' => 'Vacant']);
+            }
+
+            ContractAuditLog::log($lease->lease_id, 'tenant_rejected', [
+                'metadata' => ['rejected_by' => Auth::id(), 'reason' => $reason],
+            ]);
+        });
+
+        if ($managerId) {
+            Notification::create([
+                'user_id' => $managerId,
+                'type'    => 'tenant_rejected',
+                'title'   => 'Tenant Rejected',
+                'message' => "{$tenantName} was rejected by the landlord. Reason: {$reason}",
+                'link'    => '/manager/tenant',
+            ]);
+        }
+
+        $this->rejectionReason = '';
+        $this->dispatch('close-modal', 'reject-tenant-confirmation');
+        $this->resetTenantData();
+        $this->dispatch('refresh-tenant-list');
+        $this->dispatch('notify', type: 'success', title: 'Tenant Rejected', description: 'The application has been rejected and the bed is vacant again.');
+    }
+
     public function editTenant(): void
     {
+        if ($this->isLandlord()) return;
         if ($this->currentTenantId) {
             $this->dispatch('open-edit-tenant-modal', tenantId: $this->currentTenantId);
         }
@@ -539,6 +736,7 @@ class TenantDetail extends Component
 
     public function transferTenant(): void
     {
+        if ($this->isLandlord()) return;
         if ($this->currentTenantId) {
             $this->dispatch('open-transfer-tenant-modal', tenantId: $this->currentTenantId);
         }
@@ -546,6 +744,7 @@ class TenantDetail extends Component
 
     public function moveOutTenant(): void
     {
+        if ($this->isLandlord()) return;
         if (!$this->currentTenantId) return;
 
         // If already initiated, open the confirmation modal
@@ -568,8 +767,17 @@ class TenantDetail extends Component
 
         // Validate required fields for move-out initiation
         $moveOutErrors = [];
-        if (empty(trim($this->forwardingAddress ?? ''))) {
-            $moveOutErrors['forwardingAddress'] = 'Forwarding address is required for deposit refund correspondence.';
+        if (!$this->forwardingProvinceId) {
+            $moveOutErrors['forwardingProvinceId'] = 'Province is required for the forwarding address.';
+        }
+        if (!$this->forwardingCityId) {
+            $moveOutErrors['forwardingCityId'] = 'City / Municipality is required for the forwarding address.';
+        }
+        if (!$this->forwardingBarangayId) {
+            $moveOutErrors['forwardingBarangayId'] = 'Barangay is required for the forwarding address.';
+        }
+        if (empty(trim($this->forwardingStreet ?? ''))) {
+            $moveOutErrors['forwardingStreet'] = 'House #, Street is required for the forwarding address.';
         }
         if (empty($this->reasonForVacating)) {
             $moveOutErrors['reasonForVacating'] = 'Reason for vacating is required.';
@@ -577,7 +785,7 @@ class TenantDetail extends Component
         if (empty($this->depositRefundMethod)) {
             $moveOutErrors['depositRefundMethod'] = 'Refund method is required.';
         }
-        if (empty(trim($this->depositRefundAccount ?? ''))) {
+        if ($this->depositRefundMethod !== 'Cash' && empty(trim($this->depositRefundAccount ?? ''))) {
             $moveOutErrors['depositRefundAccount'] = 'Account name or number is required for refund processing.';
         }
 
@@ -610,10 +818,13 @@ class TenantDetail extends Component
 
         $lease->update([
             'move_out_initiated_at' => now(),
-            'forwarding_address' => $this->forwardingAddress,
+            'forwarding_province_id' => $this->forwardingProvinceId ?: null,
+            'forwarding_city_id' => $this->forwardingCityId ?: null,
+            'forwarding_barangay_id' => $this->forwardingBarangayId ?: null,
+            'forwarding_street' => $this->forwardingStreet,
             'reason_for_vacating' => $this->reasonForVacating,
             'deposit_refund_method' => $this->depositRefundMethod,
-            'deposit_refund_account' => $this->depositRefundAccount,
+            'deposit_refund_account' => $this->depositRefundMethod === 'Cash' ? null : $this->depositRefundAccount,
         ]);
 
         ContractAuditLog::log($lease->lease_id, 'move_out_initiated', [
@@ -656,14 +867,33 @@ class TenantDetail extends Component
     {
         if (!$this->currentLeaseId) return;
 
-        Lease::where('lease_id', $this->currentLeaseId)->update([
-            'forwarding_address' => $this->forwardingAddress ?: null,
+        // Use instance update (not query-builder bulk update) so the Lease
+        // model's saving event fires and keeps forwarding_address text in sync.
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease) return;
+
+        $lease->update([
+            'forwarding_province_id' => $this->forwardingProvinceId ?: null,
+            'forwarding_city_id' => $this->forwardingCityId ?: null,
+            'forwarding_barangay_id' => $this->forwardingBarangayId ?: null,
+            'forwarding_street' => $this->forwardingStreet ?: null,
             'reason_for_vacating' => $this->reasonForVacating ?: null,
             'deposit_refund_method' => $this->depositRefundMethod ?: null,
             'deposit_refund_account' => $this->depositRefundAccount ?: null,
         ]);
 
         $this->dispatch('notify', type: 'success', title: 'Details Saved', description: 'Move-out details have been updated.');
+    }
+
+    public function updatedForwardingProvinceId(): void
+    {
+        $this->forwardingCityId = '';
+        $this->forwardingBarangayId = '';
+    }
+
+    public function updatedForwardingCityId(): void
+    {
+        $this->forwardingBarangayId = '';
     }
 
     public function computeMoveOutPrerequisites(): void
@@ -782,10 +1012,23 @@ class TenantDetail extends Component
                 // Capture original end_date BEFORE overwriting for early termination check
                 $originalEndDate = $lease->end_date;
 
+                // Unpaid balance at move-out (excludes deposit refund, which is computed separately)
+                $unpaidTotal = (float) $lease->billings()
+                    ->whereIn('status', ['Unpaid', 'Overdue'])
+                    ->sum('amount');
+
+                $isEarly = $originalEndDate && $today->lt($originalEndDate);
+                $terminationReason = match (true) {
+                    $unpaidTotal > 0 => 'non_payment',
+                    $isEarly         => 'early_termination',
+                    default          => 'normal_expiry',
+                };
+
                 $lease->update([
-                    'status'   => 'Expired',
-                    'move_out' => $today,
-                    'end_date' => $today,
+                    'status'              => 'Expired',
+                    'move_out'            => $today,
+                    'end_date'            => $today,
+                    'termination_reason'  => $terminationReason,
                 ]);
 
                 // Auto-compute deposit interest (RA 9653 IRR §7b)
@@ -800,12 +1043,24 @@ class TenantDetail extends Component
                     'deposit_refund_deadline' => $today->copy()->addDays(30),
                 ]);
 
+                // Hard-block tenant from renting again if they left with an unpaid balance
+                if ($terminationReason === 'non_payment' && $lease->tenant) {
+                    $lease->tenant->block(
+                        'Lease #' . $lease->lease_id . ' ended with outstanding balance of PHP '
+                            . number_format($unpaidTotal, 2) . ' deducted from the security deposit.',
+                        $lease->lease_id,
+                        Auth::id()
+                    );
+                }
+
                 ContractAuditLog::log($lease->lease_id, 'move_out_completed', [
                     'metadata' => [
                         'deposit_refund' => $refundData['refund_amount'],
                         'total_deductions' => $refundData['total_deductions'],
                         'deductions' => $refundData['deductions'],
                         'original_end_date' => $originalEndDate?->format('Y-m-d'),
+                        'termination_reason' => $terminationReason,
+                        'unpaid_total' => $unpaidTotal,
                     ],
                 ]);
 
@@ -875,6 +1130,44 @@ class TenantDetail extends Component
         $this->loadTenantData($this->currentTenantId);
     }
 
+    public function reinstateTenant(): void
+    {
+        if (!$this->currentTenantId) return;
+
+        $actor = Auth::user();
+        if (!$actor || $actor->role !== 'landlord') {
+            $this->dispatch('notify',
+                type: 'error',
+                title: 'Not Allowed',
+                description: 'Only the landlord can reinstate a blocked tenant.'
+            );
+            return;
+        }
+
+        $reason = trim($this->reinstateReason);
+        if ($reason === '') {
+            $this->addError('reinstateReason', 'Please provide a reason for reinstating this tenant.');
+            return;
+        }
+
+        $tenant = User::find($this->currentTenantId);
+        if (!$tenant || !$tenant->isBlockedFromRenting()) {
+            $this->dispatch('close-modal', 'reinstate-tenant-confirmation');
+            return;
+        }
+
+        $tenant->reinstate($reason, $actor);
+
+        $this->reinstateReason = '';
+        $this->dispatch('close-modal', 'reinstate-tenant-confirmation');
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
+        $this->dispatch('notify',
+            type: 'success',
+            title: 'Tenant Reinstated',
+            description: 'This tenant is now eligible to rent again.'
+        );
+    }
+
     public function openMoveInContract(): void
     {
         $this->showMoveInContract  = true;
@@ -919,6 +1212,11 @@ class TenantDetail extends Component
     {
         // Manager signs as witness
         if ($role !== 'manager') return;
+
+        if ($this->isLeasePendingApproval()) {
+            $this->dispatch('notify', type: 'warning', title: 'Awaiting Approval', description: 'Cannot sign contract until the landlord approves this tenant.');
+            return;
+        }
 
         if (!$this->authorizedForLease()) {
             $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');

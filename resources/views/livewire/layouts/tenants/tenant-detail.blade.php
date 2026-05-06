@@ -17,7 +17,7 @@
                         </div>
 
                             <div class="flex items-center gap-2">
-                                @if($viewingTab === 'current')
+                                @if($viewingTab === 'current' && auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') !== 'pending')
                                 <flux:tooltip :content="'Update this tenant\'s profile and lease information'" position="bottom">
                                     <button
                                         wire:click="editTenant"
@@ -76,6 +76,110 @@
                     })
                 "
             >
+
+                {{-- Rental Eligibility Block Banner --}}
+                @if(!empty($currentTenant['eligibility']['is_blocked']))
+                    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h5 class="font-bold text-sm text-red-700 uppercase tracking-wide">Blocked From New Rentals</h5>
+                                    @if(!empty($currentTenant['eligibility']['changed_at']))
+                                        <span class="text-[11px] text-red-500">as of {{ $currentTenant['eligibility']['changed_at'] }}</span>
+                                    @endif
+                                </div>
+                                <p class="text-xs text-red-700 whitespace-pre-line">{{ $currentTenant['eligibility']['notes'] ?? 'This tenant cannot be placed on a new lease.' }}</p>
+                                @if(auth()->user()?->role === 'landlord')
+                                    <button
+                                        type="button"
+                                        x-data
+                                        @click="$dispatch('open-modal', 'reinstate-tenant-confirmation')"
+                                        class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                        </svg>
+                                        Reinstate Tenant
+                                    </button>
+                                @else
+                                    <p class="mt-2 text-[11px] text-red-500 italic">Only the landlord can reinstate this tenant.</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Approval Workflow Banner --}}
+                @php $approvalStatus = $currentTenant['approval']['status'] ?? 'approved'; @endphp
+                @if($approvalStatus === 'pending')
+                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h5 class="font-bold text-sm text-amber-700 uppercase tracking-wide mb-1">Awaiting Landlord Approval</h5>
+                                <p class="text-xs text-amber-700">
+                                    @if(auth()->user()?->role === 'landlord')
+                                        Review the tenant details below, then approve or reject this application. The bed has been temporarily reserved.
+                                    @else
+                                        Move-in inspection, contract signing and account access are paused until the landlord reviews and approves this tenant.
+                                    @endif
+                                </p>
+
+                                @if(auth()->user()?->role === 'landlord')
+                                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            wire:click="approveTenant"
+                                            wire:loading.attr="disabled"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-60"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                            <span wire:loading.remove wire:target="approveTenant">Approve Tenant</span>
+                                            <span wire:loading wire:target="approveTenant">Approving...</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            wire:click="openRejectModal"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Reject
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @elseif($approvalStatus === 'rejected')
+                    <div class="bg-red-50 border border-red-200 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h5 class="font-bold text-sm text-red-700 uppercase tracking-wide mb-1">Application Rejected</h5>
+                                @if(!empty($currentTenant['approval']['rejection_reason']))
+                                    <p class="text-xs text-red-700 whitespace-pre-line">{{ $currentTenant['approval']['rejection_reason'] }}</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Contact Details --}}
                 <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -316,8 +420,8 @@
                 </div>
                 @endif
 
-                {{-- Action Buttons --}}
-                @if($viewingTab === 'current')
+                {{-- Action Buttons (manager only — landlord cannot transfer/move-out) --}}
+                @if($viewingTab === 'current' && auth()->user()?->role !== 'landlord' && $approvalStatus === 'approved')
                     <div class="grid grid-cols-2 gap-3 pt-2">
                         <button
                             type="button"
@@ -1371,6 +1475,61 @@
         </div>
     </div>
 
+    {{-- Reject Tenant Confirmation Modal (landlord only) --}}
+    @if(auth()->user()?->role === 'landlord')
+        <x-ui.modal-confirm
+            name="reject-tenant-confirmation"
+            title="Reject Tenant Application"
+            description="The bed will be released and the manager will be notified. This action is logged."
+            confirmText="Reject Tenant"
+            cancelText="Cancel"
+            confirmAction="rejectTenant"
+        >
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Reason for rejecting <span class="text-red-500">*</span></label>
+                    <textarea
+                        wire:model="rejectionReason"
+                        rows="3"
+                        placeholder="e.g. Incomplete documentation, profile mismatch, etc."
+                        class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('rejectionReason') ? 'border-red-400' : 'border-gray-200' }}"
+                    ></textarea>
+                    @error('rejectionReason') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </x-ui.modal-confirm>
+    @endif
+
+    {{-- Reinstate Tenant Confirmation Modal (landlord only) --}}
+    @if(auth()->user()?->role === 'landlord')
+        <x-ui.modal-confirm
+            name="reinstate-tenant-confirmation"
+            title="Reinstate Tenant"
+            description="Lift the rental block and allow this tenant to be placed on a new lease. This action is logged."
+            confirmText="Reinstate Tenant"
+            cancelText="Cancel"
+            confirmAction="reinstateTenant"
+        >
+            <div class="space-y-3 text-left">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="text-xs text-amber-800 leading-relaxed">
+                        <strong>Reminder:</strong> Reinstating does not erase the original termination. Future owners can still see the history.
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Reason for reinstating <span class="text-red-500">*</span></label>
+                    <textarea
+                        wire:model="reinstateReason"
+                        rows="3"
+                        placeholder="e.g. Tenant settled the outstanding balance on 2026-04-22 (receipt #12345)."
+                        class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('reinstateReason') ? 'border-red-400' : 'border-gray-200' }}"
+                    ></textarea>
+                    @error('reinstateReason') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </x-ui.modal-confirm>
+    @endif
+
     {{-- Initiate Move-Out Form Modal --}}
     <x-ui.modal-confirm
         name="initiate-move-out"
@@ -1394,15 +1553,27 @@
                 @error('reasonForVacating') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Forwarding Address <span class="text-red-500">*</span></label>
-                <input type="text" wire:model="forwardingAddress" placeholder="Address for deposit refund / correspondence"
-                       class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('forwardingAddress') ? 'border-red-400' : 'border-gray-200' }}">
-                @error('forwardingAddress') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                <x-forms.address-picker
+                    variant="compact"
+                    label="Forwarding Address"
+                    :required="true"
+                    province-model="forwardingProvinceId"
+                    city-model="forwardingCityId"
+                    barangay-model="forwardingBarangayId"
+                    street-model="forwardingStreet"
+                    :province-id="$forwardingProvinceId"
+                    :city-id="$forwardingCityId"
+                    :barangay-id="$forwardingBarangayId"
+                    :street="$forwardingStreet"
+                    :provinces="$this->psgcProvinces()"
+                    :cities="$this->psgcCities($forwardingProvinceId)"
+                    :barangays="$this->psgcBarangays($forwardingCityId)"
+                />
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Refund Method <span class="text-red-500">*</span></label>
-                    <select wire:model="depositRefundMethod" class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] {{ $errors->has('depositRefundMethod') ? 'border-red-400' : 'border-gray-200' }}">
+                    <select wire:model.live="depositRefundMethod" class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] {{ $errors->has('depositRefundMethod') ? 'border-red-400' : 'border-gray-200' }}">
                         <option value="">Select...</option>
                         <option value="GCash">GCash</option>
                         <option value="Maya">Maya</option>
@@ -1411,10 +1582,19 @@
                     </select>
                     @error('depositRefundMethod') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
+                @php $isCashRefund = $depositRefundMethod === 'Cash'; @endphp
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Account Name / Number <span class="text-red-500">*</span></label>
-                    <input type="text" wire:model="depositRefundAccount" placeholder="e.g. 0917-xxx-xxxx"
-                           class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('depositRefundAccount') ? 'border-red-400' : 'border-gray-200' }}">
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                        Account Name / Number
+                        @if(!$isCashRefund)
+                            <span class="text-red-500">*</span>
+                        @else
+                            <span class="text-gray-400 font-normal">(not required for cash)</span>
+                        @endif
+                    </label>
+                    <input type="text" wire:model="depositRefundAccount" placeholder="{{ $isCashRefund ? 'N/A for cash refund' : 'e.g. 0917-xxx-xxxx' }}"
+                           @disabled($isCashRefund)
+                           class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $isCashRefund ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : '' }} {{ $errors->has('depositRefundAccount') ? 'border-red-400' : 'border-gray-200' }}">
                     @error('depositRefundAccount') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>

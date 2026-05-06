@@ -15,7 +15,7 @@ services:
       - laravel-development
     depends_on:
       php-fpm:
-        condition: service_started # Wait for php-fpm to start
+        condition: service_healthy # Wait for php-fpm to be ready to accept connections
 
   php-fpm:
     # For the php-fpm service, we will create a custom image to install the necessary PHP extensions and setup proper permissions.
@@ -44,6 +44,12 @@ services:
     working_dir: /var/www
     networks:
       - laravel-development
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy # Wait for mysql to be healthy

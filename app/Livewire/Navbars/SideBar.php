@@ -52,6 +52,11 @@ class SideBar extends Component
                         'route' => 'landlord.manager',
                         'icon'  => 'icons.manager',
                     ],
+                    'tenants' => [
+                        'label' => 'Tenants',
+                        'route' => 'landlord.tenant',
+                        'icon'  => 'icons.tenant',
+                    ],
                     'payments' => [
                         'label' => 'Payments',
                         'route' => 'landlord.payment',

@@ -112,6 +112,11 @@ trait WithContractData
                 'signed_contract_path'  => $lease?->signed_contract_path,
             ],
             'contract_status' => $lease?->contract_status ?? 'draft',
+            'approval' => [
+                'status'           => $lease?->approval_status ?? 'approved',
+                'approved_at'      => $lease?->approved_at?->format('M d, Y h:i A'),
+                'rejection_reason' => $lease?->rejection_reason,
+            ],
             'contract_settings' => $property?->contract_settings ?? [],
             'deposit_refund' => [
                 'amount' => $lease?->deposit_refund_amount,
@@ -119,6 +124,13 @@ trait WithContractData
                 'interest_earned' => $lease?->deposit_interest_amount,
             ],
             'outstanding_balances' => $this->buildOutstandingBalances($lease),
+            'eligibility' => [
+                'status'              => $tenant->rental_eligibility ?? 'eligible',
+                'notes'                => $tenant->eligibility_notes,
+                'changed_at'           => $tenant->eligibility_changed_at?->format('M d, Y'),
+                'is_blocked'           => $tenant->isBlockedFromRenting(),
+                'termination_reason'   => $lease?->termination_reason,
+            ],
         ];
     }
 

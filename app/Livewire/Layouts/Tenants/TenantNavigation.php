@@ -23,6 +23,7 @@ class TenantNavigation extends Component
     public $sortOrder = 'newest';
     public $search = '';
     public $counts = [
+        'pending'     => 0,
         'current'     => 0,
         'moving_out'  => 0,
         'transferred' => 0,
@@ -66,11 +67,22 @@ class TenantNavigation extends Component
 
     private function loadBuildingOptions(): void
     {
-        $this->buildingOptions = Property::whereHas('units', function ($q) {
-            $q->where('manager_id', Auth::id());
-        })->orderBy('property_id')
+        $query = Property::query();
+
+        if ($this->isLandlord()) {
+            $query->where('owner_id', Auth::id());
+        } else {
+            $query->whereHas('units', fn($q) => $q->where('manager_id', Auth::id()));
+        }
+
+        $this->buildingOptions = $query->orderBy('property_id')
             ->pluck('building_name', 'property_id')
             ->toArray();
+    }
+
+    public function isLandlord(): bool
+    {
+        return Auth::user()?->role === 'landlord';
     }
 
     public function setTab($tab): void
@@ -121,6 +133,7 @@ class TenantNavigation extends Component
     private function loadTenants(): void
     {
         $raw = match ($this->activeTab) {
+            'pending'     => $this->loadPendingTenants(),
             'moving_out'  => $this->loadMovingOutTenants(),
             'transferred' => $this->loadTransferredTenants(),
             'moved_out'   => $this->loadMovedOutTenants(),
@@ -129,6 +142,37 @@ class TenantNavigation extends Component
 
         $this->allTenants = $raw;
         $this->tenants = $this->applySorting($this->applySearch($raw));
+    }
+
+    private function loadPendingTenants(): array
+    {
+        $unitIds = $this->getUnitIds();
+
+        if ($unitIds->isEmpty()) {
+            return [];
+        }
+
+        $leases = Lease::where('leases.status', 'Active')
+            ->where('leases.approval_status', 'pending')
+            ->join('beds', 'beds.bed_id', '=', 'leases.bed_id')
+            ->whereIn('beds.unit_id', $unitIds)
+            ->with(['tenant' => fn($q) => $q->where('role', 'tenant'), 'bed.unit'])
+            ->select('leases.*')
+            ->orderByDesc('leases.created_at')
+            ->get()
+            ->filter(fn($lease) => $lease->tenant !== null);
+
+        return $leases->unique('tenant_id')->map(fn($lease) => [
+            'id'             => $lease->tenant->user_id,
+            'first_name'     => $lease->tenant->first_name,
+            'last_name'      => $lease->tenant->last_name,
+            'unit'           => $lease->bed->unit->unit_number ?? 'N/A',
+            'bed_number'     => $lease->bed->bed_number ?? 'N/A',
+            'payment_status' => 'Pending Approval',
+            'next_billing'   => $lease->created_at,
+            'created_at'     => $lease->created_at,
+            'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
+        ])->values()->toArray();
     }
 
     private function loadCurrentTenants(): array
@@ -140,6 +184,7 @@ class TenantNavigation extends Component
         }
 
         $leases = Lease::where('leases.status', 'Active')
+            ->where('leases.approval_status', 'approved')
             ->join('beds', 'beds.bed_id', '=', 'leases.bed_id')
             ->whereIn('beds.unit_id', $unitIds)
             ->with([
@@ -191,6 +236,7 @@ class TenantNavigation extends Component
                     'payment_status' => $latestBilling?->status ?? 'No billing',
                     'next_billing'   => $latestBilling?->billing_date ?? null,
                     'created_at'     => $lease->created_at,
+                    'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
                 ];
             })
             ->values()
@@ -206,6 +252,7 @@ class TenantNavigation extends Component
         }
 
         $leases = Lease::where('leases.status', 'Active')
+            ->where('leases.approval_status', 'approved')
             ->whereNotNull('leases.move_out_initiated_at')
             ->join('beds', 'beds.bed_id', '=', 'leases.bed_id')
             ->whereIn('beds.unit_id', $unitIds)
@@ -233,6 +280,7 @@ class TenantNavigation extends Component
                     'payment_status' => 'Moving Out',
                     'next_billing'   => $lease->move_out_initiated_at,
                     'created_at'     => $lease->created_at,
+                    'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
                 ];
             })
             ->values()
@@ -241,7 +289,15 @@ class TenantNavigation extends Component
 
     private function getUnitIds()
     {
-        $query = Unit::where('manager_id', Auth::id());
+        if ($this->isLandlord()) {
+            $query = Unit::whereIn('property_id', function ($q) {
+                $q->select('property_id')
+                    ->from('properties')
+                    ->where('owner_id', Auth::id());
+            });
+        } else {
+            $query = Unit::where('manager_id', Auth::id());
+        }
 
         if ($this->selectedBuildingId !== null) {
             $query->where('property_id', $this->selectedBuildingId);
@@ -271,6 +327,7 @@ class TenantNavigation extends Component
         }
 
         $expiredLeases = Lease::where('leases.status', 'Expired')
+            ->where('leases.approval_status', '!=', 'rejected')
             ->join('beds', 'beds.bed_id', '=', 'leases.bed_id')
             ->whereIn('beds.unit_id', $unitIds)
             ->with([
@@ -316,6 +373,7 @@ class TenantNavigation extends Component
                 'payment_status' => $isTransferred ? 'Transferred' : 'Moved Out',
                 'next_billing'   => $lease->end_date,
                 'created_at'     => $lease->created_at,
+                'is_blocked'     => $lease->tenant->isBlockedFromRenting(),
             ];
 
             if ($isTransferred) {
@@ -333,38 +391,43 @@ class TenantNavigation extends Component
         $unitIds = $this->getUnitIds();
 
         if ($unitIds->isEmpty()) {
-            $this->counts = ['current' => 0, 'moving_out' => 0, 'transferred' => 0, 'moved_out' => 0];
+            $this->counts = ['pending' => 0, 'current' => 0, 'moving_out' => 0, 'transferred' => 0, 'moved_out' => 0];
             return;
         }
 
+        $bedSubquery = function ($q) use ($unitIds) {
+            $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
+        };
+        $tenantUserSubquery = function ($q) {
+            $q->select('user_id')->from('users')->where('role', 'tenant');
+        };
+
+        $pendingCount = Lease::where('leases.status', 'Active')
+            ->where('leases.approval_status', 'pending')
+            ->whereIn('bed_id', $bedSubquery)
+            ->whereIn('tenant_id', $tenantUserSubquery)
+            ->distinct()
+            ->count('tenant_id');
+
         $movingOutCount = Lease::where('leases.status', 'Active')
+            ->where('leases.approval_status', 'approved')
             ->whereNotNull('move_out_initiated_at')
-            ->whereIn('bed_id', function ($q) use ($unitIds) {
-                $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
-            })
-            ->whereIn('tenant_id', function ($q) {
-                $q->select('user_id')->from('users')->where('role', 'tenant');
-            })
+            ->whereIn('bed_id', $bedSubquery)
+            ->whereIn('tenant_id', $tenantUserSubquery)
             ->distinct()
             ->count('tenant_id');
 
         $currentCount = Lease::where('leases.status', 'Active')
-            ->whereIn('bed_id', function ($q) use ($unitIds) {
-                $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
-            })
-            ->whereIn('tenant_id', function ($q) {
-                $q->select('user_id')->from('users')->where('role', 'tenant');
-            })
+            ->where('leases.approval_status', 'approved')
+            ->whereIn('bed_id', $bedSubquery)
+            ->whereIn('tenant_id', $tenantUserSubquery)
             ->distinct()
             ->count('tenant_id');
 
         $expiredTenantIds = Lease::where('leases.status', 'Expired')
-            ->whereIn('bed_id', function ($q) use ($unitIds) {
-                $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
-            })
-            ->whereIn('tenant_id', function ($q) {
-                $q->select('user_id')->from('users')->where('role', 'tenant');
-            })
+            ->where('leases.approval_status', '!=', 'rejected')
+            ->whereIn('bed_id', $bedSubquery)
+            ->whereIn('tenant_id', $tenantUserSubquery)
             ->distinct()
             ->pluck('tenant_id');
 
@@ -378,6 +441,7 @@ class TenantNavigation extends Component
                 ->keyBy('tenant_id');
 
             $expiredLeasesByTenant = Lease::where('leases.status', 'Expired')
+                ->where('leases.approval_status', '!=', 'rejected')
                 ->whereIn('bed_id', function ($q) use ($unitIds) {
                     $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
                 })
@@ -399,6 +463,7 @@ class TenantNavigation extends Component
         }
 
         $this->counts = [
+            'pending'     => $pendingCount,
             'current'     => $currentCount,
             'moving_out'  => $movingOutCount,
             'transferred' => $transferredCount,
