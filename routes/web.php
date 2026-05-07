@@ -78,6 +78,13 @@ Route::get('/data-protection', function () {
     return view('users.data-protection');
 })->name('data-protection');
 
+Route::get('/data-collection-policy', function () {
+    if (session()->has('terms_pending_user_id')) {
+        session(['terms_has_read_data_collection' => true]);
+    }
+    return view('users.data-collection-policy');
+})->name('data-collection-policy');
+
 // ─── HOME (after login, redirects based on role) ────────────────────────────
 Route::get('/home', function () {
     $user = Auth::user();

@@ -401,9 +401,22 @@
                                         @error('email') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                     </div>
                                     <div class="col-span-2">
-                                        <label class="text-xs font-semibold text-gray-700">Permanent Home Address</label>
-                                        <input wire:model="permanentAddress" type="text" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500" placeholder="Full permanent address">
-                                        @error('permanentAddress') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                        <x-forms.address-picker
+                                            variant="default"
+                                            label="Permanent Home Address"
+                                            :required="true"
+                                            province-model="permanentProvinceId"
+                                            city-model="permanentCityId"
+                                            barangay-model="permanentBarangayId"
+                                            street-model="permanentStreet"
+                                            :province-id="$permanentProvinceId"
+                                            :city-id="$permanentCityId"
+                                            :barangay-id="$permanentBarangayId"
+                                            :street="$permanentStreet"
+                                            :provinces="$this->psgcProvinces()"
+                                            :cities="$this->psgcCities($permanentProvinceId)"
+                                            :barangays="$this->psgcBarangays($permanentCityId)"
+                                        />
                                     </div>
                                 </div>
 

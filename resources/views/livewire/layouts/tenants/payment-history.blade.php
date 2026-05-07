@@ -75,13 +75,20 @@
                 <x-ui.th>Billing Date</x-ui.th>
                 <x-ui.th>Transaction Date</x-ui.th>
                 <x-ui.th>Total Amount</x-ui.th>
+                <x-ui.th class="text-center">Payment Status</x-ui.th>
                 <x-ui.th class="text-center">Action</x-ui.th>
             </x-slot:head>
 
             <x-slot:body>
                 @forelse ($payments as $payment)
                     <x-ui.tr>
-                        <x-ui.td isHeader="true">{{ $payment->reference_number ?? '—' }}</x-ui.td>
+                        <x-ui.td isHeader="true">
+                            @if($payment->reference_number)
+                                {{ $payment->reference_number }}
+                            @else
+                                <span class="italic text-gray-400 font-normal">Not yet paid</span>
+                            @endif
+                        </x-ui.td>
                         <x-ui.td>{{ $payment->category ?? 'Rent Payment' }}</x-ui.td>
                         <x-ui.td>
                             {{ \Carbon\Carbon::parse($payment->billing_date)->format('F d, Y') }}
@@ -90,10 +97,23 @@
                             @if($payment->transaction_date)
                                 {{ \Carbon\Carbon::parse($payment->transaction_date)->format('F d, Y') }}
                             @else
-                                —
+                                <span class="italic text-gray-400">Awaiting payment</span>
                             @endif
                         </x-ui.td>
                         <x-ui.td class="font-bold text-[#070642]">₱ {{ number_format($payment->to_pay, 2) }}</x-ui.td>
+                        <x-ui.td class="text-center">
+                            @php
+                                $statusStyles = [
+                                    'Paid'    => 'bg-emerald-100 text-emerald-700',
+                                    'Unpaid'  => 'bg-amber-100 text-amber-700',
+                                    'Overdue' => 'bg-red-100 text-red-700',
+                                ];
+                                $statusClass = $statusStyles[$payment->status] ?? 'bg-gray-100 text-gray-700';
+                            @endphp
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide {{ $statusClass }}">
+                                {{ $payment->status }}
+                            </span>
+                        </x-ui.td>
                         <x-ui.td class="text-center">
                             <flux:tooltip :content="'View payment receipt and details'" position="bottom">
                                 <button
@@ -106,7 +126,7 @@
                         </x-ui.td>
                     </x-ui.tr>
                 @empty
-                    <tr><td colspan="6" class="text-center py-8 text-gray-500">No records found.</td></tr>
+                    <tr><td colspan="7" class="text-center py-8 text-gray-500">No records found.</td></tr>
                 @endforelse
             </x-slot:body>
         </x-ui.table>
@@ -114,13 +134,30 @@
         {{-- MOBILE CARDS --}}
         <div class="tenant-payment-mobile-cards space-y-3">
             @forelse ($payments as $payment)
+                @php
+                    $statusStyles = [
+                        'Paid'    => 'bg-emerald-100 text-emerald-700',
+                        'Unpaid'  => 'bg-amber-100 text-amber-700',
+                        'Overdue' => 'bg-red-100 text-red-700',
+                    ];
+                    $statusClass = $statusStyles[$payment->status] ?? 'bg-gray-100 text-gray-700';
+                @endphp
                 <div class="bg-gray-50 rounded-xl p-3.5 border border-gray-100">
                     <div class="flex items-start justify-between mb-2">
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-bold text-blue-900 truncate">{{ $payment->reference_number ?? '—' }}</p>
+                            @if($payment->reference_number)
+                                <p class="text-sm font-bold text-blue-900 truncate">{{ $payment->reference_number }}</p>
+                            @else
+                                <p class="text-sm italic text-gray-400 truncate">Not yet paid</p>
+                            @endif
                             <p class="text-[11px] text-gray-500 mt-0.5">{{ $payment->category ?? 'Rent Payment' }}</p>
                         </div>
-                        <p class="text-sm font-extrabold text-blue-900 ml-3">₱ {{ number_format($payment->to_pay, 2) }}</p>
+                        <div class="flex flex-col items-end gap-1 ml-3">
+                            <p class="text-sm font-extrabold text-blue-900">₱ {{ number_format($payment->to_pay, 2) }}</p>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide {{ $statusClass }}">
+                                {{ $payment->status }}
+                            </span>
+                        </div>
                     </div>
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3 text-[11px] text-gray-500">
@@ -133,7 +170,7 @@
                                 @if($payment->transaction_date)
                                     {{ \Carbon\Carbon::parse($payment->transaction_date)->format('M d, Y') }}
                                 @else
-                                    —
+                                    <span class="italic text-gray-400">Awaiting</span>
                                 @endif
                             </div>
                         </div>

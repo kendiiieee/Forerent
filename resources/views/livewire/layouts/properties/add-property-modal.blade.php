@@ -80,24 +80,24 @@
                                     @enderror
                                 </div>
 
-                                <!-- Address -->
-                                <div class="relative mb-6">
-                                    <input
-                                        wire:model.defer="address"
-                                        type="text"
-                                        id="address"
-                                        class="block px-2.5 pb-2.5 pt-4 w-full text-sm text-gray-900 bg-transparent rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#0030C5] peer"
-                                        placeholder=" "
+                                <!-- Address (PSGC cascading dropdowns) -->
+                                <div class="mb-6">
+                                    <x-forms.address-picker
+                                        variant="floating"
+                                        label="Address"
+                                        :required="true"
+                                        province-model="provinceId"
+                                        city-model="cityId"
+                                        barangay-model="barangayId"
+                                        street-model="street"
+                                        :province-id="$provinceId"
+                                        :city-id="$cityId"
+                                        :barangay-id="$barangayId"
+                                        :street="$street"
+                                        :provinces="$this->psgcProvinces()"
+                                        :cities="$this->psgcCities($provinceId)"
+                                        :barangays="$this->psgcBarangays($cityId)"
                                     />
-                                    <label
-                                        for="address"
-                                        class="absolute text-sm text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-focus:text-[#0030C5] peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1"
-                                    >
-                                        Address
-                                    </label>
-                                    @error('address')
-                                    <span class="text-xs text-red-500 mt-1 block">{{ $message }}</span>
-                                    @enderror
                                 </div>
 
                                 <div class="relative">

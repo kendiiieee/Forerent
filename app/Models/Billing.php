@@ -39,9 +39,38 @@ class Billing extends Model
             if ($billing->status === 'Paid' && ($billing->wasRecentlyCreated || $billing->wasChanged('status'))) {
                 DB::afterCommit(function () use ($billing) {
                     $billing->ensureCreditTransaction();
+                    $billing->maybeFlagDebtSettled();
                 });
             }
         });
+    }
+
+    /**
+     * When a blocked tenant clears a bill from the lease that caused the block,
+     * append a "debt settled" note to their eligibility record. The block itself
+     * is NOT lifted — the landlord still reviews and reinstates manually.
+     */
+    public function maybeFlagDebtSettled(): void
+    {
+        $lease = $this->lease;
+        $tenant = $lease?->tenant;
+        if (!$tenant || !$tenant->isBlockedFromRenting()) {
+            return;
+        }
+
+        $stillUnpaid = $lease->billings()
+            ->whereIn('status', ['Unpaid', 'Overdue'])
+            ->exists();
+        if ($stillUnpaid) {
+            return;
+        }
+
+        $marker = 'debt settled on lease #' . $lease->lease_id;
+        if (str_contains(strtolower((string) $tenant->eligibility_notes), $marker)) {
+            return;
+        }
+
+        $tenant->appendEligibilityNote('Outstanding ' . $marker . ' — landlord may review for reinstatement.');
     }
 
     public function ensureCreditTransaction(): void

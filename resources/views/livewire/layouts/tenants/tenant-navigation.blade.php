@@ -8,6 +8,7 @@
         {{-- Left Side: Tabs --}}
         @php
             $tabs = [
+                'pending'     => 'Pending Approval',
                 'current'     => 'Current',
                 'moving_out'  => 'Moving Out',
                 'transferred' => 'Transferred',
@@ -50,7 +51,7 @@
 
             <x-ui.button-add
                 text="Add Tenant"
-                tooltip="Register a new tenant to a unit"
+                :tooltip="auth()->user()?->role === 'landlord' ? 'Register a new tenant directly to one of your properties' : 'Register a new tenant — requires landlord approval'"
                 x-on:click="$dispatch('open-add-tenant-modal')"
             />
         </div>
@@ -80,24 +81,26 @@
                         $isActive = ($tenant['id'] == $activeTenantId);
 
                         $statusStyles = match($tenant['payment_status']) {
-                            'Paid'        => 'text-emerald-700 bg-emerald-50 border-emerald-200',
-                            'Unpaid'      => 'text-amber-700 bg-amber-50 border-amber-200',
-                            'Pending'     => 'text-amber-700 bg-amber-50 border-amber-200',
-                            'Overdue'     => 'text-red-700 bg-red-50 border-red-200',
-                            'Moving Out'  => 'text-orange-700 bg-orange-50 border-orange-200',
-                            'Transferred' => 'text-blue-700 bg-blue-50 border-blue-200',
-                            'Moved Out'   => 'text-gray-600 bg-gray-50 border-gray-200',
-                            default       => 'text-gray-600 bg-gray-50 border-gray-200'
+                            'Paid'              => 'text-emerald-700 bg-emerald-50 border-emerald-200',
+                            'Unpaid'            => 'text-amber-700 bg-amber-50 border-amber-200',
+                            'Pending'           => 'text-amber-700 bg-amber-50 border-amber-200',
+                            'Pending Approval'  => 'text-amber-700 bg-amber-50 border-amber-200',
+                            'Overdue'           => 'text-red-700 bg-red-50 border-red-200',
+                            'Moving Out'        => 'text-orange-700 bg-orange-50 border-orange-200',
+                            'Transferred'       => 'text-blue-700 bg-blue-50 border-blue-200',
+                            'Moved Out'         => 'text-gray-600 bg-gray-50 border-gray-200',
+                            default             => 'text-gray-600 bg-gray-50 border-gray-200'
                         };
                         $dotStyles = match($tenant['payment_status']) {
-                            'Paid'        => 'bg-emerald-500',
-                            'Unpaid'      => 'bg-amber-500',
-                            'Pending'     => 'bg-amber-500',
-                            'Overdue'     => 'bg-red-500',
-                            'Moving Out'  => 'bg-orange-500',
-                            'Transferred' => 'bg-blue-500',
-                            'Moved Out'   => 'bg-gray-400',
-                            default       => 'bg-gray-400'
+                            'Paid'              => 'bg-emerald-500',
+                            'Unpaid'            => 'bg-amber-500',
+                            'Pending'           => 'bg-amber-500',
+                            'Pending Approval'  => 'bg-amber-500',
+                            'Overdue'           => 'bg-red-500',
+                            'Moving Out'        => 'bg-orange-500',
+                            'Transferred'       => 'bg-blue-500',
+                            'Moved Out'         => 'bg-gray-400',
+                            default             => 'bg-gray-400'
                         };
                     @endphp
 
@@ -111,8 +114,17 @@
                     >
                         {{-- Top Row: Tenant Name and Status Badge --}}
                         <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-sm {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
+                            <h3 class="font-bold text-sm flex items-center gap-1.5 {{ $isActive ? 'text-white' : 'text-[#2B66F5]' }}">
                                 {{ $tenant['first_name'] }} {{ $tenant['last_name'] }}
+                                @if(!empty($tenant['is_blocked']))
+                                    <span
+                                        title="Blocked from new rentals"
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide {{ $isActive ? 'bg-white/20 text-white border border-white/30' : 'bg-red-50 text-red-700 border border-red-200' }}"
+                                    >
+                                        <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                                        Blocked
+                                    </span>
+                                @endif
                             </h3>
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border {{ $statusStyles }}">
                                 <span class="w-1.5 h-1.5 rounded-full {{ $dotStyles }}"></span>
