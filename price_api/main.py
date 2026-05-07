@@ -68,6 +68,10 @@ class ForecastRequest(BaseModel):
     csv_data: str
     year: int
 
+class MaintenanceForecastRequest(BaseModel):
+    csv_data: str
+    year: int   
+
 # --- REVENUE LOGIC ---
 def create_features(df):
     df = df.copy()
