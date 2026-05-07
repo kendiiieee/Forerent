@@ -9,13 +9,14 @@ use App\Models\PropertyDocument;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Component;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Validate;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class AddPropertyModal extends Component
 {
-    use WithNotifications, WithFileUploads, WithPsgcAddress;
+    use WithFileUploads, WithNotifications, WithPsgcAddress;
 
     /** Modal visibility */
     public $isOpen = false;
@@ -53,19 +54,30 @@ class AddPropertyModal extends Component
 
     /** File uploads */
     public $propertyPhotos = [];
+
     public $newPhotos = [];
+
     public $businessPermit = null;
+
     public $bir2303 = null;
+
     public $inspectionReport = null;
+
     public $barangayClearance = null;
+
     public $occupancyPermit = null;
+
     public $titleTct = null;
+
     public $taxDeclaration = null;
+
     public $transferCertificate = null;
 
     /** Existing documents for edit mode */
     public $existingPhotos = [];
+
     public $existingDocuments = [];
+
     public $removedDocumentIds = [];
 
     public function mount($modalId = null)
@@ -113,7 +125,7 @@ class AddPropertyModal extends Component
         foreach ($documentFields as $field) {
             $hasExisting = collect($this->existingDocuments)->contains('category', $categoryMap[$field]);
             $docRule = $hasExisting ? 'nullable' : 'required';
-            $rules[$field] = $docRule . '|file|mimes:pdf,jpg,jpeg,png|max:10240';
+            $rules[$field] = $docRule.'|file|mimes:pdf,jpg,jpeg,png|max:10240';
         }
 
         return $rules;
@@ -183,20 +195,20 @@ class AddPropertyModal extends Component
             $this->depositInterestRate = $property->getContractSetting('deposit_interest_rate', '');
 
             $this->existingPhotos = $property->documents
-                ->where('category', 'property_photo')
-                ->map(fn($doc) => [
+                ->where('category', 'property_photo')->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))->sortBy(fn ($d) => $d->is_seed) // non-seed first (false < true)
+                ->map(fn ($doc) => [
                     'id' => $doc->id,
-                    'url' => Storage::disk('public')->url($doc->file_path),
+                    'url' => route('file.public', ['path' => $doc->file_path]),
                     'name' => $doc->original_name,
                 ])->values()->toArray();
 
             $this->existingDocuments = $property->documents
-                ->where('category', '!=', 'property_photo')
-                ->map(fn($doc) => [
+                ->where('category', '!=', 'property_photo')->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))->map(fn ($doc) => [
                     'id' => $doc->id,
                     'category' => $doc->category,
                     'name' => $doc->original_name,
-                    'url' => Storage::disk('public')->url($doc->file_path),
+                    'url' => route('file.public', ['path' => $doc->file_path]),
+                    'isPrivate' => ($doc->visibility ?? '') !== 'all',
                 ])->values()->toArray();
 
             $this->isOpen = true;
@@ -214,19 +226,50 @@ class AddPropertyModal extends Component
         $this->barangayId = '';
     }
 
-    public function updatedBusinessPermit(): void { $this->resetValidation('businessPermit'); }
-    public function updatedBir2303(): void { $this->resetValidation('bir2303'); }
-    public function updatedInspectionReport(): void { $this->resetValidation('inspectionReport'); }
-    public function updatedBarangayClearance(): void { $this->resetValidation('barangayClearance'); }
-    public function updatedOccupancyPermit(): void { $this->resetValidation('occupancyPermit'); }
-    public function updatedTitleTct(): void { $this->resetValidation('titleTct'); }
-    public function updatedTaxDeclaration(): void { $this->resetValidation('taxDeclaration'); }
-    public function updatedTransferCertificate(): void { $this->resetValidation('transferCertificate'); }
+    public function updatedBusinessPermit(): void
+    {
+        $this->resetValidation('businessPermit');
+    }
+
+    public function updatedBir2303(): void
+    {
+        $this->resetValidation('bir2303');
+    }
+
+    public function updatedInspectionReport(): void
+    {
+        $this->resetValidation('inspectionReport');
+    }
+
+    public function updatedBarangayClearance(): void
+    {
+        $this->resetValidation('barangayClearance');
+    }
+
+    public function updatedOccupancyPermit(): void
+    {
+        $this->resetValidation('occupancyPermit');
+    }
+
+    public function updatedTitleTct(): void
+    {
+        $this->resetValidation('titleTct');
+    }
+
+    public function updatedTaxDeclaration(): void
+    {
+        $this->resetValidation('taxDeclaration');
+    }
+
+    public function updatedTransferCertificate(): void
+    {
+        $this->resetValidation('transferCertificate');
+    }
 
     public function updatedNewPhotos(): void
     {
         $remaining = 5 - count($this->propertyPhotos) - count($this->existingPhotos);
-        if ($remaining > 0 && !empty($this->newPhotos)) {
+        if ($remaining > 0 && ! empty($this->newPhotos)) {
             $toAdd = array_slice($this->newPhotos, 0, $remaining);
             $this->propertyPhotos = array_merge($this->propertyPhotos, $toAdd);
         }
@@ -245,7 +288,7 @@ class AddPropertyModal extends Component
     {
         $this->removedDocumentIds[] = $docId;
         $this->existingPhotos = array_values(
-            array_filter($this->existingPhotos, fn($p) => $p['id'] !== $docId)
+            array_filter($this->existingPhotos, fn ($p) => $p['id'] !== $docId)
         );
     }
 
@@ -253,7 +296,7 @@ class AddPropertyModal extends Component
     {
         $this->removedDocumentIds[] = $docId;
         $this->existingDocuments = array_values(
-            array_filter($this->existingDocuments, fn($d) => $d['id'] !== $docId)
+            array_filter($this->existingDocuments, fn ($d) => $d['id'] !== $docId)
         );
     }
 
@@ -269,7 +312,7 @@ class AddPropertyModal extends Component
     {
         try {
             $this->validate();
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->dispatch('scroll-to-error');
             throw $e;
         }
@@ -301,11 +344,11 @@ class AddPropertyModal extends Component
                         'barangay_id' => $this->barangayId ?: null,
                         'street' => $this->street,
                         'prop_description' => $this->description,
-                        'contract_settings' => !empty($updatedSettings) ? $updatedSettings : null,
+                        'contract_settings' => ! empty($updatedSettings) ? $updatedSettings : null,
                     ]);
 
                     // Remove documents marked for deletion
-                    if (!empty($this->removedDocumentIds)) {
+                    if (! empty($this->removedDocumentIds)) {
                         $docsToRemove = PropertyDocument::whereIn('id', $this->removedDocumentIds)->get();
                         foreach ($docsToRemove as $doc) {
                             Storage::disk('public')->delete($doc->file_path);
@@ -317,7 +360,7 @@ class AddPropertyModal extends Component
 
                     $this->notifySuccess(
                         'Property Updated Successfully!',
-                        $this->buildingName . ' has been updated.'
+                        $this->buildingName.' has been updated.'
                     );
                 }
             } else {
@@ -334,14 +377,14 @@ class AddPropertyModal extends Component
                     'barangay_id' => $this->barangayId ?: null,
                     'street' => $this->street,
                     'prop_description' => $this->description,
-                    'contract_settings' => !empty($contractSettings) ? $contractSettings : null,
+                    'contract_settings' => ! empty($contractSettings) ? $contractSettings : null,
                 ]);
 
                 $this->storeFiles($property);
 
                 $this->notifySuccess(
                     'Property Created Successfully!',
-                    'You can now add units to ' . $this->buildingName
+                    'You can now add units to '.$this->buildingName
                 );
 
                 $this->dispatch('propertyCreated', $property->property_id);
@@ -362,7 +405,20 @@ class AddPropertyModal extends Component
     private function storeFiles(Property $property): void
     {
         // Store property photos
-        if (!empty($this->propertyPhotos)) {
+        if (! empty($this->propertyPhotos)) {
+            // If editing and there are seeded photos, remove them when landlord uploads replacements
+            if ($this->editingPropertyId) {
+                $seededPhotos = PropertyDocument::where('property_id', $property->property_id)
+                    ->where('category', 'property_photo')
+                    ->where('is_seed', true)
+                    ->get();
+
+                foreach ($seededPhotos as $s) {
+                    Storage::disk('public')->delete($s->file_path);
+                    $s->delete();
+                }
+            }
+
             foreach (array_slice($this->propertyPhotos, 0, 5) as $photo) {
                 $path = $photo->store('property_photos', 'public');
                 PropertyDocument::create([
@@ -371,20 +427,22 @@ class AddPropertyModal extends Component
                     'original_name' => $photo->getClientOriginalName(),
                     'category' => 'property_photo',
                     'visibility' => 'all',
+                    'is_seed' => false,
                 ]);
             }
         }
 
         // Store documents with their categories and visibility
+        // Make all common documents public by default so tenants can view them
         $documentFields = [
-            'businessPermit' => ['category' => 'business_permit', 'visibility' => 'owner_manager'],
-            'bir2303' => ['category' => 'bir_2303', 'visibility' => 'owner_manager'],
-            'inspectionReport' => ['category' => 'inspection_report', 'visibility' => 'owner_manager'],
-            'barangayClearance' => ['category' => 'barangay_clearance', 'visibility' => 'owner_manager'],
+            'businessPermit' => ['category' => 'business_permit', 'visibility' => 'all'],
+            'bir2303' => ['category' => 'bir_2303', 'visibility' => 'all'],
+            'inspectionReport' => ['category' => 'inspection_report', 'visibility' => 'all'],
+            'barangayClearance' => ['category' => 'barangay_clearance', 'visibility' => 'all'],
             'occupancyPermit' => ['category' => 'occupancy_permit', 'visibility' => 'all'],
-            'titleTct' => ['category' => 'title_tct', 'visibility' => 'owner_manager'],
-            'taxDeclaration' => ['category' => 'tax_declaration', 'visibility' => 'owner_manager'],
-            'transferCertificate' => ['category' => 'transfer_certificate', 'visibility' => 'owner_manager'],
+            'titleTct' => ['category' => 'title_tct', 'visibility' => 'all'],
+            'taxDeclaration' => ['category' => 'tax_declaration', 'visibility' => 'all'],
+            'transferCertificate' => ['category' => 'transfer_certificate', 'visibility' => 'all'],
         ];
 
         foreach ($documentFields as $field => $meta) {
@@ -398,6 +456,15 @@ class AddPropertyModal extends Component
                         Storage::disk('public')->delete($oldDoc->file_path);
                         $oldDoc->delete();
                     }
+                    // Also remove any seeded documents for this category to avoid stale placeholders
+                    $seededDocs = PropertyDocument::where('property_id', $property->property_id)
+                        ->where('category', $meta['category'])
+                        ->where('is_seed', true)
+                        ->get();
+                    foreach ($seededDocs as $sd) {
+                        Storage::disk('public')->delete($sd->file_path);
+                        $sd->delete();
+                    }
                 }
 
                 $path = $this->{$field}->store('property_documents', 'public');
@@ -407,6 +474,7 @@ class AddPropertyModal extends Component
                     'original_name' => $this->{$field}->getClientOriginalName(),
                     'category' => $meta['category'],
                     'visibility' => $meta['visibility'],
+                    'is_seed' => false,
                 ]);
             }
         }

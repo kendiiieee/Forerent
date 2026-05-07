@@ -12,6 +12,11 @@ class PropertyDocument extends Model
         'original_name',
         'category',
         'visibility',
+        'is_seed',
+    ];
+
+    protected $casts = [
+        'is_seed' => 'boolean',
     ];
 
     /**

@@ -1,15 +1,17 @@
 <?php
 
 use App\Http\Controllers\PropertyController;
+use App\Http\Controllers\SecureFileController;
 use App\Http\Controllers\SettingsProfileController;
 use App\Livewire\Auth\ForgotPassword;
 use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 // Import the Forgot Password Component
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 // ─── LANDING PAGE (public, no auth required) ────────────────────────────────
 Route::get('/', function (Request $request) {
@@ -64,6 +66,7 @@ Route::get('/privacy-policy', function () {
     if (session()->has('terms_pending_user_id')) {
         session(['terms_has_read_privacy' => true]);
     }
+
     return view('users.privacy-policy');
 })->name('privacy-policy');
 
@@ -71,6 +74,7 @@ Route::get('/terms-of-service', function () {
     if (session()->has('terms_pending_user_id')) {
         session(['terms_has_read_terms' => true]);
     }
+
     return view('users.terms-of-service');
 })->name('terms-of-service');
 
@@ -82,8 +86,21 @@ Route::get('/data-collection-policy', function () {
     if (session()->has('terms_pending_user_id')) {
         session(['terms_has_read_data_collection' => true]);
     }
+
     return view('users.data-collection-policy');
 })->name('data-collection-policy');
+
+// Serve public storage files through Laravel (avoids symlink issues)
+Route::get('/files/{path}', function (string $path) {
+    $path = str_replace(['..', '\\'], ['', '/'], $path);
+    if (! Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+
+    return response()->file(Storage::disk('public')->path($path), [
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*')->name('file.public');
 
 // ─── HOME (after login, redirects based on role) ────────────────────────────
 Route::get('/home', function () {
@@ -108,7 +125,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/property', [PropertyController::class, 'index'])->name('properties.index');
     Route::get('/properties/create', [PropertyController::class, 'create'])->name('properties.create');
-    Route::get('/secure/file/{path}', [\App\Http\Controllers\SecureFileController::class, 'serve'])
+    Route::get('/secure/file/{path}', [SecureFileController::class, 'serve'])
         ->where('path', '.*')
         ->name('secure.file');
 });

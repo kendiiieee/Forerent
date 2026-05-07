@@ -6,11 +6,10 @@ use App\Models\Concerns\HasPsgcAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Property extends Model
 {
-    use SoftDeletes, HasFactory, HasPsgcAddress;
+    use HasFactory, HasPsgcAddress, SoftDeletes;
 
     protected static array $psgcAddressMap = [
         'main' => ['address', ''],
@@ -85,9 +84,11 @@ class Property extends Model
      */
     public function getThumbnailAttribute(): ?string
     {
-        $firstPhoto = $this->photos()->oldest()->first();
+        // Prefer landlord-uploaded photos (is_seed = false). Fallback to seeded photos.
+        $firstPhoto = $this->photos()->where('is_seed', false)->oldest()->first()
+            ?? $this->photos()->oldest()->first();
 
-        return $firstPhoto ? Storage::disk('public')->url($firstPhoto->file_path) : null;
+        return $firstPhoto ? route('file.public', ['path' => $firstPhoto->file_path]) : null;
     }
 
     public function tenantsForManager($managerId)
@@ -97,5 +98,4 @@ class Property extends Model
                 ->where('property_id', $this->property_id)->distinct();
         });
     }
-
 }

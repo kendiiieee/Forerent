@@ -4,6 +4,7 @@ namespace App\Livewire\Layouts\Settings;
 
 use App\Models\Lease;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 
 class TenantPropertyDetails extends Component
@@ -12,14 +13,20 @@ class TenantPropertyDetails extends Component
 
     // Property info
     public $buildingName = '';
+
     public $address = '';
+
     public $description = '';
+
     public $photos = [];
+
     public $documents = [];
+
     public $activePhotoIndex = 0;
 
     // Unit info
     public $unit = null;
+
     public $amenities = [];
 
     public function mount(): void
@@ -32,7 +39,7 @@ class TenantPropertyDetails extends Component
             ->latest()
             ->first();
 
-        if (!$lease) {
+        if (! $lease) {
             $lease = Lease::with(['bed.unit.property.documents'])
                 ->where('tenant_id', $user->user_id)
                 ->where('status', 'Expired')
@@ -40,7 +47,9 @@ class TenantPropertyDetails extends Component
                 ->first();
         }
 
-        if (!$lease) return;
+        if (! $lease) {
+            return;
+        }
 
         $this->hasLease = true;
 
@@ -54,22 +63,30 @@ class TenantPropertyDetails extends Component
             $this->description = $property->prop_description ?? '';
 
             // Property photos
-            $this->photos = $property->documents
+            // Prefer landlord-uploaded photos (non-seed) first, fallback to seeded photos
+            $photoPartition = $property->documents
                 ->where('category', 'property_photo')
-                ->map(fn($doc) => [
-                    'id' => $doc->id,
-                    'url' => asset('storage/' . $doc->file_path),
-                    'name' => $doc->original_name,
-                ])
+                ->partition(fn ($d) => ! $d->is_seed);
+
+            $preferredPhotos = $photoPartition[0]->isNotEmpty() ? $photoPartition[0] : $photoPartition[1];
+
+            $this->photos = $preferredPhotos->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))->map(fn ($doc) => [
+                'id' => $doc->id,
+                'url' => route('file.public', ['path' => $doc->file_path]),
+                'name' => $doc->original_name,
+            ])
                 ->values()
                 ->toArray();
 
-            // All property documents visible to tenant
+            // Only documents marked public (visibility = 'all') are visible to tenants
+            // Skip documents where the file no longer exists on disk
             $this->documents = $property->documents
                 ->where('category', '!=', 'property_photo')
-                ->map(fn($doc) => [
+                ->where('visibility', 'all')
+                ->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))
+                ->map(fn ($doc) => [
                     'id' => $doc->id,
-                    'url' => asset('storage/' . $doc->file_path),
+                    'url' => route('file.public', ['path' => $doc->file_path]),
                     'name' => $doc->original_name,
                     'category' => $doc->category,
                 ])

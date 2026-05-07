@@ -3,7 +3,7 @@
 namespace App\Livewire\Layouts\Properties;
 
 use App\Models\Property;
-use App\Models\PropertyDocument;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -93,11 +93,19 @@ class PropertyDetails extends Component
         $this->unitCount = $property->units_count;
 
         // Filter the already-loaded documents collection in memory (no extra queries)
-        $this->photos = $property->documents
+        // Show landlord-uploaded photos first. If none, show seeded photos.
+        // Skip photos where the file no longer exists on disk.
+        $photoPartition = $property->documents
             ->where('category', 'property_photo')
+            ->partition(fn ($d) => ! $d->is_seed);
+
+        $preferredPhotos = $photoPartition[0]->isNotEmpty() ? $photoPartition[0] : $photoPartition[1];
+
+        $this->photos = $preferredPhotos
+            ->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))
             ->map(fn ($doc) => [
                 'id' => $doc->id,
-                'url' => asset('storage/'.$doc->file_path),
+                'url' => route('file.public', ['path' => $doc->file_path]),
                 'name' => $doc->original_name,
             ])
             ->values()
@@ -105,13 +113,14 @@ class PropertyDetails extends Component
 
         $this->documents = $property->documents
             ->where('category', '!=', 'property_photo')
+            ->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))
             ->map(fn ($doc) => [
                 'id' => $doc->id,
-                'url' => asset('storage/'.$doc->file_path),
+                'url' => route('file.public', ['path' => $doc->file_path]),
                 'name' => $doc->original_name,
                 'category' => $doc->category,
                 'visibility' => $doc->visibility,
-                'isPrivate' => in_array($doc->category, PropertyDocument::OWNER_MANAGER_CATEGORIES),
+                'isPrivate' => ($doc->visibility ?? '') !== 'all',
             ])
             ->values()
             ->toArray();
