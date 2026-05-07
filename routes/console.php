@@ -1,15 +1,192 @@
 <?php
 
+use App\Livewire\Concerns\InspectionConfig;
+use App\Models\Barangay;
+use App\Models\Bed;
 use App\Models\Billing;
 use App\Models\BillingItem;
+use App\Models\City;
+use App\Models\ContractAuditLog;
+use App\Models\Lease;
+use App\Models\MoveInInspection;
+use App\Models\MoveOutInspection;
+use App\Models\Notification;
+use App\Models\Province;
+use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Violation;
 use Carbon\Carbon;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('psgc:import-all {--fresh : Truncate PSGC tables before import}', function () {
+    $this->info('Fetching PSGC data from public API...');
+
+    $fetch = function (string $url, string $label): array {
+        $response = Http::timeout(120)
+            ->retry(3, 500)
+            ->acceptJson()
+            ->get($url);
+
+        if (! $response->successful()) {
+            throw new RuntimeException("Failed to fetch {$label}: HTTP {$response->status()}");
+        }
+
+        $data = $response->json();
+
+        return is_array($data) ? $data : [];
+    };
+
+    try {
+        $regions = $fetch('https://psgc.gitlab.io/api/regions/', 'regions');
+        $provinces = $fetch('https://psgc.gitlab.io/api/provinces/', 'provinces');
+        $cities = $fetch('https://psgc.gitlab.io/api/cities-municipalities/', 'cities/municipalities');
+        $barangays = $fetch('https://psgc.gitlab.io/api/barangays/', 'barangays');
+    } catch (Throwable $e) {
+        $this->error($e->getMessage());
+
+        return;
+    }
+
+    $this->line('Regions: '.count($regions));
+    $this->line('Provinces: '.count($provinces));
+    $this->line('Cities/Municipalities: '.count($cities));
+    $this->line('Barangays: '.count($barangays));
+
+    DB::transaction(function () use ($regions, $provinces, $cities, $barangays) {
+        if ($this->option('fresh')) {
+            DB::statement('SET CONSTRAINTS ALL DEFERRED');
+            DB::table('barangays')->truncate();
+            DB::table('cities')->truncate();
+            DB::table('provinces')->truncate();
+        }
+
+        $regionNames = collect($regions)->mapWithKeys(function ($region) {
+            return [
+                (string) ($region['code'] ?? '') => (string) ($region['name'] ?? 'Unknown Region'),
+            ];
+        });
+
+        $provinceRows = collect($provinces)
+            ->filter(fn ($p) => ! empty($p['code']) && ! empty($p['name']))
+            ->map(fn ($p) => [
+                'psgc_code' => (string) $p['code'],
+                'name' => (string) $p['name'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])
+            ->values()
+            ->all();
+
+        if (! empty($provinceRows)) {
+            Province::upsert($provinceRows, ['psgc_code'], ['name', 'updated_at']);
+        }
+
+        $syntheticProvinceRows = collect($cities)
+            ->filter(fn ($city) => empty($city['provinceCode']) && ! empty($city['regionCode']))
+            ->map(function ($city) use ($regionNames) {
+                $regionCode = (string) $city['regionCode'];
+
+                return [
+                    'psgc_code' => 'region-'.$regionCode,
+                    'name' => (string) ($regionNames->get($regionCode) ?? ('Region '.$regionCode)),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->unique('psgc_code')
+            ->values()
+            ->all();
+
+        if (! empty($syntheticProvinceRows)) {
+            Province::upsert($syntheticProvinceRows, ['psgc_code'], ['name', 'updated_at']);
+        }
+
+        $provinceIdByCode = Province::pluck('id', 'psgc_code');
+
+        $cityRows = collect($cities)
+            ->filter(fn ($city) => ! empty($city['code']) && ! empty($city['name']))
+            ->map(function ($city) use ($provinceIdByCode) {
+                $provinceCode = ! empty($city['provinceCode'])
+                    ? (string) $city['provinceCode']
+                    : 'region-'.(string) ($city['regionCode'] ?? 'unknown');
+
+                $provinceId = $provinceIdByCode[$provinceCode] ?? null;
+
+                if (! $provinceId) {
+                    return null;
+                }
+
+                return [
+                    'psgc_code' => (string) $city['code'],
+                    'name' => (string) $city['name'],
+                    'province_id' => $provinceId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        if (! empty($cityRows)) {
+            City::upsert($cityRows, ['psgc_code'], ['name', 'province_id', 'updated_at']);
+        }
+
+        $cityIdByCode = City::pluck('id', 'psgc_code');
+
+        $barangayRows = collect($barangays)
+            ->filter(fn ($b) => ! empty($b['code']) && ! empty($b['name']))
+            ->map(function ($b) use ($cityIdByCode) {
+                $cityCode = ! empty($b['cityCode'])
+                    ? (string) $b['cityCode']
+                    : (string) ($b['municipalityCode'] ?? '');
+
+                $cityId = $cityIdByCode[$cityCode] ?? null;
+
+                if (! $cityId) {
+                    return null;
+                }
+
+                return [
+                    'psgc_code' => (string) $b['code'],
+                    'name' => (string) $b['name'],
+                    'city_id' => $cityId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            })
+            ->filter()
+            ->values();
+
+        foreach ($barangayRows->chunk(1000) as $chunk) {
+            Barangay::upsert($chunk->all(), ['psgc_code'], ['name', 'city_id', 'updated_at']);
+        }
+    });
+
+    Cache::forget('psgc_provinces');
+    foreach (DB::table('cities')->select('province_id')->distinct()->pluck('province_id') as $provinceId) {
+        Cache::forget('psgc_cities_'.$provinceId);
+    }
+    foreach (DB::table('barangays')->select('city_id')->distinct()->pluck('city_id') as $cityId) {
+        Cache::forget('psgc_barangays_'.$cityId);
+    }
+
+    $this->newLine();
+    $this->info('PSGC import completed.');
+    $this->line('Provinces: '.Province::count());
+    $this->line('Cities: '.City::count());
+    $this->line('Barangays: '.Barangay::count());
+})->purpose('Import full Philippines PSGC provinces, cities/municipalities, and barangays from public API');
 
 Artisan::command('billings:backfill-credit-transactions {--dry-run : Show what would be created without writing data}', function () {
     $dryRun = (bool) $this->option('dry-run');
@@ -49,10 +226,11 @@ Artisan::command('billings:backfill-credit-transactions {--dry-run : Show what w
 
                 if ($amount <= 0) {
                     $skippedNoAmount++;
+
                     continue;
                 }
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     $billing->ensureCreditTransaction();
                     $created++;
                 }
@@ -63,7 +241,7 @@ Artisan::command('billings:backfill-credit-transactions {--dry-run : Show what w
     $this->line("Paid billings scanned: {$scanned}");
     $this->line("Missing credit transactions: {$missing}");
     if ($dryRun) {
-        $this->line('Would be created: ' . ($missing - $skippedNoAmount));
+        $this->line('Would be created: '.($missing - $skippedNoAmount));
     } else {
         $this->line("Created: {$created}");
     }
@@ -84,7 +262,7 @@ Artisan::command('billings:realign-credit-transaction-dates {--dry-run : Show af
         $this->comment('Dry run mode enabled. No data will be written.');
     }
 
-    $query = \App\Models\Transaction::query()
+    $query = Transaction::query()
         ->join('billings', 'billings.billing_id', '=', 'transactions.billing_id')
         ->where('transactions.transaction_type', 'Credit')
         ->where('transactions.category', 'Rent Payment')
@@ -94,9 +272,9 @@ Artisan::command('billings:realign-credit-transaction-dates {--dry-run : Show af
     $affected = (clone $query)->count();
     $this->line("Rows needing realignment: {$affected}");
 
-    if (!$dryRun && $affected > 0) {
+    if (! $dryRun && $affected > 0) {
         $updated = $query->update([
-            'transactions.transaction_date' => \Illuminate\Support\Facades\DB::raw('billings.billing_date'),
+            'transactions.transaction_date' => DB::raw('billings.billing_date'),
         ]);
 
         $this->line("Rows updated: {$updated}");
@@ -141,8 +319,9 @@ Artisan::command('billings:apply-late-fees {--dry-run : Show what would change w
 
     foreach ($billings as $billing) {
         $lease = $billing->lease;
-        if (!$lease || !$lease->late_payment_penalty || !$lease->contract_rate) {
+        if (! $lease || ! $lease->late_payment_penalty || ! $lease->contract_rate) {
             $skipped++;
+
             continue;
         }
 
@@ -150,6 +329,7 @@ Artisan::command('billings:apply-late-fees {--dry-run : Show what would change w
         $daysLate = Carbon::parse($billing->due_date)->startOfDay()->diffInDays($today);
         if ($daysLate < 1) {
             $skipped++;
+
             continue;
         }
 
@@ -161,11 +341,11 @@ Artisan::command('billings:apply-late-fees {--dry-run : Show what would change w
         $maxPenalty = round((float) $lease->contract_rate * 0.25, 2);
         $totalLateFee = min($totalLateFee, $maxPenalty);
 
-        $description = "Late Payment Fee ({$daysLate} day(s) × ₱" . number_format($dailyPenalty, 2) . "/day)";
+        $description = "Late Payment Fee ({$daysLate} day(s) × ₱".number_format($dailyPenalty, 2).'/day)';
 
-        $this->line("  Billing #{$billing->billing_id}: {$daysLate} day(s) late → ₱" . number_format($totalLateFee, 2));
+        $this->line("  Billing #{$billing->billing_id}: {$daysLate} day(s) late → ₱".number_format($totalLateFee, 2));
 
-        if (!$dryRun) {
+        if (! $dryRun) {
             // Mark as Overdue if still Unpaid
             if ($billing->status === 'Unpaid') {
                 $billing->update(['status' => 'Overdue']);
@@ -201,7 +381,7 @@ Artisan::command('billings:apply-late-fees {--dry-run : Show what would change w
     }
 
     $this->newLine();
-    $this->line("Overdue billings found: " . $billings->count());
+    $this->line('Overdue billings found: '.$billings->count());
     $this->line("Processed: {$processed}");
     $this->line("Skipped (no penalty config): {$skipped}");
     if ($dryRun) {
@@ -240,23 +420,25 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
     foreach ([30, 15, 7] as $days) {
         $targetDate = $today->copy()->addDays($days);
 
-        $expiringLeases = \App\Models\Lease::where('status', 'Active')
+        $expiringLeases = Lease::where('status', 'Active')
             ->whereDate('end_date', $targetDate)
             ->with('tenant')
             ->get();
 
         foreach ($expiringLeases as $lease) {
-            if (!$lease->tenant) continue;
+            if (! $lease->tenant) {
+                continue;
+            }
 
             $this->line("  Warning ({$days}d): Lease #{$lease->lease_id} — {$lease->tenant->first_name} {$lease->tenant->last_name}");
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $rate = number_format((float) $lease->contract_rate, 2);
                 $message = $lease->auto_renew
-                    ? "Your lease ends on " . $lease->end_date->format('M d, Y') . ". It will automatically renew at the current rate of PHP {$rate}/month. A new contract will be generated for signing."
-                    : "Your lease ends on " . $lease->end_date->format('M d, Y') . " at a rate of PHP {$rate}/month. Contact management if you wish to renew.";
+                    ? 'Your lease ends on '.$lease->end_date->format('M d, Y').". It will automatically renew at the current rate of PHP {$rate}/month. A new contract will be generated for signing."
+                    : 'Your lease ends on '.$lease->end_date->format('M d, Y')." at a rate of PHP {$rate}/month. Contact management if you wish to renew.";
 
-                \App\Models\Notification::create([
+                Notification::create([
                     'user_id' => $lease->tenant_id,
                     'type' => 'lease_expiring',
                     'title' => "Lease Expiring in {$days} Days",
@@ -269,7 +451,7 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
     }
 
     // 2. Auto-renew leases past their end_date with auto_renew = true
-    $autoRenewLeases = \App\Models\Lease::where('status', 'Active')
+    $autoRenewLeases = Lease::where('status', 'Active')
         ->where('auto_renew', true)
         ->whereDate('end_date', '<', $today)
         ->get();
@@ -279,7 +461,7 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
 
         $this->line("  Auto-renew: Lease #{$lease->lease_id} → new end {$newEndDate->format('Y-m-d')}");
 
-        if (!$dryRun) {
+        if (! $dryRun) {
             $oldEndDate = $lease->end_date->format('Y-m-d');
             $lease->update([
                 'end_date' => $newEndDate,
@@ -297,33 +479,33 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
                 'signed_contract_path' => null,
             ]);
 
-            \App\Models\ContractAuditLog::log($lease->lease_id, 'lease_auto_renewed', [
+            ContractAuditLog::log($lease->lease_id, 'lease_auto_renewed', [
                 'field_changed' => 'end_date',
                 'old_value' => $oldEndDate,
                 'new_value' => $newEndDate->format('Y-m-d'),
                 'metadata' => ['term' => $lease->term],
             ]);
 
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $lease->tenant_id,
                 'type' => 'lease_renewed',
                 'title' => 'Lease Auto-Renewed',
-                'message' => "Your lease has been automatically renewed until " . $newEndDate->format('M d, Y') . ". A new contract will need to be signed.",
+                'message' => 'Your lease has been automatically renewed until '.$newEndDate->format('M d, Y').'. A new contract will need to be signed.',
                 'link' => '/tenant?tab=inspection',
             ]);
 
             // Notify manager
-            $managerId = \Illuminate\Support\Facades\DB::table('beds')
+            $managerId = DB::table('beds')
                 ->join('units', 'beds.unit_id', '=', 'units.unit_id')
                 ->where('beds.bed_id', $lease->bed_id)
                 ->value('units.manager_id');
 
             if ($managerId) {
-                \App\Models\Notification::create([
+                Notification::create([
                     'user_id' => $managerId,
                     'type' => 'lease_renewed',
                     'title' => 'Lease Auto-Renewed',
-                    'message' => "Lease #{$lease->lease_id} has been auto-renewed until " . $newEndDate->format('M d, Y') . ". Please prepare a new contract.",
+                    'message' => "Lease #{$lease->lease_id} has been auto-renewed until ".$newEndDate->format('M d, Y').'. Please prepare a new contract.',
                     'link' => '/manager/tenant',
                 ]);
             }
@@ -335,7 +517,7 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
     // 3. Auto-initiate move-out for leases past their end_date (non auto-renew)
     //    Instead of immediately expiring, we initiate the move-out workflow
     //    so the full inspection + signing process can be completed.
-    $expiredLeases = \App\Models\Lease::where('status', 'Active')
+    $expiredLeases = Lease::where('status', 'Active')
         ->where('auto_renew', false)
         ->whereDate('end_date', '<', $today)
         ->whereNull('move_out_initiated_at')
@@ -345,18 +527,18 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
     foreach ($expiredLeases as $lease) {
         $this->line("  Initiate move-out: Lease #{$lease->lease_id}");
 
-        if (!$dryRun) {
+        if (! $dryRun) {
             $lease->update([
                 'move_out_initiated_at' => $today,
             ]);
 
-            \App\Models\ContractAuditLog::log($lease->lease_id, 'lease_expired_moveout_auto_initiated', [
+            ContractAuditLog::log($lease->lease_id, 'lease_expired_moveout_auto_initiated', [
                 'metadata' => [
                     'end_date' => $lease->end_date->format('Y-m-d'),
                 ],
             ]);
 
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $lease->tenant_id,
                 'type' => 'lease_expired',
                 'title' => 'Lease Expired — Move-Out Required',
@@ -365,13 +547,13 @@ Artisan::command('leases:handle-expiration {--dry-run : Show what would change w
             ]);
 
             // Notify manager
-            $managerId = \Illuminate\Support\Facades\DB::table('beds')
+            $managerId = DB::table('beds')
                 ->join('units', 'beds.unit_id', '=', 'units.unit_id')
                 ->where('beds.bed_id', $lease->bed_id)
                 ->value('units.manager_id');
 
             if ($managerId) {
-                \App\Models\Notification::create([
+                Notification::create([
                     'user_id' => $managerId,
                     'type' => 'lease_expired',
                     'title' => 'Lease Expired — Move-Out Pending',
@@ -416,13 +598,13 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
     $this->newLine();
     $this->comment('--- STEP 1: Find/Create Tenant ---');
 
-    $tricia = \App\Models\User::where('email', 'tenant@example.com')->first();
+    $tricia = User::where('email', 'tenant@example.com')->first();
 
-    if (!$tricia) {
-        $tricia = \App\Models\User::create([
+    if (! $tricia) {
+        $tricia = User::create([
             'first_name' => 'Tricia', 'last_name' => 'Tenant', 'gender' => 'Female',
             'email' => 'tenant@example.com', 'contact' => '9171234567', 'role' => 'tenant',
-            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'password' => Hash::make('password'),
             'permanent_address' => '123 Main St, Quezon City',
             'government_id_type' => 'National ID', 'government_id_number' => 'NID-2024-00001',
             'company_school' => 'UP Diliman', 'position_course' => 'BS Computer Science',
@@ -449,10 +631,10 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
 
     // Reset if requested
     if ($reset) {
-        $existing = \App\Models\Lease::where('tenant_id', $tricia->user_id)->where('status', 'Active')->first();
+        $existing = Lease::where('tenant_id', $tricia->user_id)->where('status', 'Active')->first();
         if ($existing) {
-            \App\Models\MoveInInspection::where('lease_id', $existing->lease_id)->delete();
-            \App\Models\Bed::where('bed_id', $existing->bed_id)->update(['status' => 'Vacant']);
+            MoveInInspection::where('lease_id', $existing->lease_id)->delete();
+            Bed::where('bed_id', $existing->bed_id)->update(['status' => 'Vacant']);
             $existing->update(['status' => 'Expired']);
             $this->warn("  [RESET] Expired lease #{$existing->lease_id}, freed bed #{$existing->bed_id}");
         }
@@ -462,20 +644,23 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
     $this->newLine();
     $this->comment('--- STEP 2: Find Vacant Bed ---');
 
-    $existingLease = \App\Models\Lease::where('tenant_id', $tricia->user_id)->where('status', 'Active')->first();
+    $existingLease = Lease::where('tenant_id', $tricia->user_id)->where('status', 'Active')->first();
 
     if ($existingLease) {
         $this->warn("  [!] Already has active lease #{$existingLease->lease_id} (contract: {$existingLease->contract_status})");
-        $this->line("  Skipping to inspection step...");
+        $this->line('  Skipping to inspection step...');
         $lease = $existingLease;
-        $bed = \App\Models\Bed::find($lease->bed_id);
+        $bed = Bed::find($lease->bed_id);
     } else {
-        $bed = \App\Models\Bed::where('status', 'Vacant')
-            ->whereHas('unit', fn($q) => $q->whereIn('occupants', ['Female', 'Co-ed']))
+        $bed = Bed::where('status', 'Vacant')
+            ->whereHas('unit', fn ($q) => $q->whereIn('occupants', ['Female', 'Co-ed']))
             ->with('unit.property')->first();
-        if (!$bed) $bed = \App\Models\Bed::where('status', 'Vacant')->with('unit.property')->first();
-        if (!$bed) {
+        if (! $bed) {
+            $bed = Bed::where('status', 'Vacant')->with('unit.property')->first();
+        }
+        if (! $bed) {
             $this->error('  No vacant beds available!');
+
             return 1;
         }
 
@@ -493,8 +678,8 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
         $securityDeposit = $monthlyRate;
         $lease = null;
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($tricia, $bed, $startDate, $term, $monthlyRate, $securityDeposit, &$lease) {
-            $lease = \App\Models\Lease::create([
+        DB::transaction(function () use ($tricia, $bed, $startDate, $term, $monthlyRate, $securityDeposit, &$lease) {
+            $lease = Lease::create([
                 'tenant_id' => $tricia->user_id, 'bed_id' => $bed->bed_id,
                 'status' => 'Active', 'contract_status' => 'draft', 'term' => $term,
                 'auto_renew' => false, 'start_date' => $startDate,
@@ -505,34 +690,40 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
                 'short_term_premium' => 0, 'reservation_fee_paid' => 0, 'early_termination_fee' => 0,
             ]);
 
-            $billing = \App\Models\Billing::create([
+            $billing = Billing::create([
                 'lease_id' => $lease->lease_id, 'billing_date' => $startDate,
                 'next_billing' => $startDate->copy()->addMonth(),
                 'to_pay' => $monthlyRate, 'amount' => $monthlyRate, 'status' => 'Paid',
             ]);
 
-            $depBilling = \App\Models\Billing::create([
+            $depBilling = Billing::create([
                 'lease_id' => $lease->lease_id, 'billing_date' => $startDate,
                 'next_billing' => $startDate, 'to_pay' => $securityDeposit,
                 'amount' => $securityDeposit, 'status' => 'Unpaid',
             ]);
 
-            $advTx = \App\Models\Transaction::createWithSequenceRetry([
+            $advTx = Transaction::createWithSequenceRetry([
                 'billing_id' => $billing->billing_id, 'reference_number' => 'placeholder',
                 'transaction_type' => 'Debit', 'category' => 'Advance',
                 'transaction_date' => today(), 'amount' => $monthlyRate,
             ]);
-            $advTx->update(['reference_number' => 'ADV' . now()->format('Ymd') . '-' . str_pad($advTx->transaction_id, 6, '0', STR_PAD_LEFT)]);
+            $advTx->update(['reference_number' => 'ADV'.now()->format('Ymd').'-'.str_pad($advTx->transaction_id, 6, '0', STR_PAD_LEFT)]);
 
-            $depTx = \App\Models\Transaction::createWithSequenceRetry([
+            $depTx = Transaction::createWithSequenceRetry([
                 'billing_id' => $depBilling->billing_id, 'reference_number' => 'placeholder',
                 'transaction_type' => 'Debit', 'category' => 'Deposit',
                 'transaction_date' => today(), 'amount' => $securityDeposit,
             ]);
-            $depTx->update(['reference_number' => 'DEP' . now()->format('Ymd') . '-' . str_pad($depTx->transaction_id, 6, '0', STR_PAD_LEFT)]);
+            $depTx->update(['reference_number' => 'DEP'.now()->format('Ymd').'-'.str_pad($depTx->transaction_id, 6, '0', STR_PAD_LEFT)]);
 
             $bed->update(['status' => 'Occupied']);
         });
+
+        if (! $lease instanceof Lease) {
+            $this->error('  Failed to create lease record.');
+
+            return 1;
+        }
 
         $this->line("  [CREATED] Lease #{$lease->lease_id}");
         $this->line("    Rate: PHP {$monthlyRate}/mo | Deposit: PHP {$securityDeposit}");
@@ -547,20 +738,20 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
     $receivedItems = ['Unit Key(s)', 'Building Access Card', 'Wi-Fi Credentials', 'AC Remote', 'Cabinet Key'];
 
     foreach ($checklistItems as $item) {
-        \App\Models\MoveInInspection::updateOrCreate(
+        MoveInInspection::updateOrCreate(
             ['lease_id' => $lease->lease_id, 'type' => 'checklist', 'item_name' => $item],
             ['condition' => 'good', 'remarks' => null, 'tenant_confirmed' => true]
         );
     }
-    $this->line('  [OK] ' . count($checklistItems) . ' checklist items (all good)');
+    $this->line('  [OK] '.count($checklistItems).' checklist items (all good)');
 
     foreach ($receivedItems as $item) {
-        \App\Models\MoveInInspection::updateOrCreate(
+        MoveInInspection::updateOrCreate(
             ['lease_id' => $lease->lease_id, 'type' => 'item_received', 'item_name' => $item],
             ['condition' => 'good', 'quantity' => 1, 'remarks' => null, 'tenant_confirmed' => true]
         );
     }
-    $this->line('  [OK] ' . count($receivedItems) . ' items received');
+    $this->line('  [OK] '.count($receivedItems).' items received');
 
     // STEP 5: Contract signing
     $this->newLine();
@@ -583,8 +774,8 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
 
     // SUMMARY
     $lease->refresh();
-    $billings = \App\Models\Billing::where('lease_id', $lease->lease_id)->get();
-    $inspCount = \App\Models\MoveInInspection::where('lease_id', $lease->lease_id)->count();
+    $billings = Billing::where('lease_id', $lease->lease_id)->get();
+    $inspCount = MoveInInspection::where('lease_id', $lease->lease_id)->count();
 
     $this->newLine();
     $this->info('========================================');
@@ -592,7 +783,7 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
     $this->info('========================================');
     $this->line("  Tenant:    {$tricia->first_name} {$tricia->last_name} ({$tricia->email})");
     $this->line("  Lease:     #{$lease->lease_id}");
-    $this->line("  Bed:       #{$lease->bed_id} (" . \App\Models\Bed::find($lease->bed_id)->status . ')');
+    $this->line("  Bed:       #{$lease->bed_id} (".Bed::find($lease->bed_id)->status.')');
     $this->line("  Status:    {$lease->status} | Contract: {$lease->contract_status}");
     $this->line("  Move-In:   {$lease->move_in}");
     $this->line("  Billings:  {$billings->count()}");
@@ -600,7 +791,7 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
         $this->line("    - #{$b->billing_id}: PHP {$b->amount} ({$b->status})");
     }
     $this->line("  Inspections: {$inspCount} items");
-    $this->line("  Signed:    Owner=" . ($lease->owner_signed_at ? 'Yes' : 'No') . " | Tenant=" . ($lease->tenant_signed_at ? 'Yes' : 'No'));
+    $this->line('  Signed:    Owner='.($lease->owner_signed_at ? 'Yes' : 'No').' | Tenant='.($lease->tenant_signed_at ? 'Yes' : 'No'));
     $this->newLine();
     $this->info('  Flow complete. You can view Tricia in the dashboard.');
     $this->newLine();
@@ -627,21 +818,23 @@ Artisan::command('test:tricia-move-out', function () {
     $this->newLine();
     $this->comment('--- STEP 1: Find Tenant & Active Lease ---');
 
-    $tricia = \App\Models\User::where('email', 'tenant@example.com')->first();
-    if (!$tricia) {
+    $tricia = User::where('email', 'tenant@example.com')->first();
+    if (! $tricia) {
         $this->error('  Tricia not found! Run test:tricia-move-in first.');
+
         return 1;
     }
     $this->line("  [FOUND] {$tricia->first_name} {$tricia->last_name} (user_id: {$tricia->user_id})");
 
-    $lease = \App\Models\Lease::where('tenant_id', $tricia->user_id)
+    $lease = Lease::where('tenant_id', $tricia->user_id)
         ->where('status', 'Active')
         ->with(['bed.unit.property', 'moveInInspections', 'billings'])
         ->latest()
         ->first();
 
-    if (!$lease) {
+    if (! $lease) {
         $this->error('  No active lease found! Run test:tricia-move-in first.');
+
         return 1;
     }
     $this->line("  [FOUND] Lease #{$lease->lease_id} | Bed #{$lease->bed_id} | Contract: {$lease->contract_status}");
@@ -667,11 +860,11 @@ Artisan::command('test:tricia-move-out', function () {
         'deposit_refund_account' => '0917-123-4567',
     ]);
 
-    \App\Models\ContractAuditLog::log($lease->lease_id, 'move_out_initiated', [
+    ContractAuditLog::log($lease->lease_id, 'move_out_initiated', [
         'metadata' => ['reason' => 'End of lease term (contract expired)', 'source' => 'test_command'],
     ]);
 
-    $this->line('  [OK] move_out_initiated_at = ' . now()->format('Y-m-d H:i'));
+    $this->line('  [OK] move_out_initiated_at = '.now()->format('Y-m-d H:i'));
     $this->line('  [OK] Forwarding: 456 New Address, Makati City');
     $this->line('  [OK] Refund: GCash → 0917-123-4567');
 
@@ -679,12 +872,12 @@ Artisan::command('test:tricia-move-out', function () {
     $this->newLine();
     $this->comment('--- STEP 3: Move-Out Room Inspection ---');
 
-    $checklistItems = \App\Livewire\Concerns\InspectionConfig::CHECKLIST_ITEMS;
+    $checklistItems = InspectionConfig::CHECKLIST_ITEMS;
     $conditions = ['good', 'good', 'good', 'good', 'good', 'good', 'damaged', 'good', 'good'];
     $repairCosts = [null, null, null, null, null, null, 500.00, null, null]; // Walls damaged = ₱500
 
     foreach ($checklistItems as $i => $item) {
-        \App\Models\MoveOutInspection::updateOrCreate(
+        MoveOutInspection::updateOrCreate(
             ['lease_id' => $lease->lease_id, 'type' => 'checklist', 'item_name' => $item],
             [
                 'condition' => $conditions[$i],
@@ -693,19 +886,19 @@ Artisan::command('test:tricia-move-out', function () {
             ]
         );
     }
-    $this->line('  [OK] ' . count($checklistItems) . ' checklist items recorded');
+    $this->line('  [OK] '.count($checklistItems).' checklist items recorded');
     $this->line('  [!] "Walls (stains, cracks, holes)" marked DAMAGED — repair cost: PHP 500');
 
     // STEP 4: Items returned
     $this->newLine();
     $this->comment('--- STEP 4: Items Returned ---');
 
-    $returnItems = \App\Livewire\Concerns\InspectionConfig::RETURNED_ITEMS;
+    $returnItems = InspectionConfig::RETURNED_ITEMS;
     $returnStatus = [true, true, true, false]; // Cabinet Key NOT returned
     $replacementCosts = [null, null, null, 150.00]; // Cabinet Key = ₱150
 
     foreach ($returnItems as $i => $item) {
-        \App\Models\MoveOutInspection::updateOrCreate(
+        MoveOutInspection::updateOrCreate(
             ['lease_id' => $lease->lease_id, 'type' => 'item_returned', 'item_name' => $item],
             [
                 'quantity' => 1,
@@ -716,7 +909,7 @@ Artisan::command('test:tricia-move-out', function () {
             ]
         );
     }
-    $this->line('  [OK] ' . count($returnItems) . ' items processed');
+    $this->line('  [OK] '.count($returnItems).' items processed');
     $this->line('  [!] "Cabinet Key" NOT returned — replacement cost: PHP 150');
 
     // STEP 5: Sign move-out contract (both parties)
@@ -745,12 +938,12 @@ Artisan::command('test:tricia-move-out', function () {
     $this->comment('--- STEP 6: Deposit Refund Preview ---');
 
     $refundData = $lease->calculateDepositRefund($lease->end_date);
-    $this->line("  Deposit:         PHP " . number_format($refundData['deposit'], 2));
+    $this->line('  Deposit:         PHP '.number_format($refundData['deposit'], 2));
     foreach ($refundData['deductions'] as $d) {
-        $this->line("  (-) {$d['label']}: PHP " . number_format($d['amount'], 2));
+        $this->line("  (-) {$d['label']}: PHP ".number_format($d['amount'], 2));
     }
-    $this->line("  Total Deductions: PHP " . number_format($refundData['total_deductions'], 2));
-    $this->info("  NET REFUND:       PHP " . number_format($refundData['refund_amount'], 2));
+    $this->line('  Total Deductions: PHP '.number_format($refundData['total_deductions'], 2));
+    $this->info('  NET REFUND:       PHP '.number_format($refundData['refund_amount'], 2));
 
     // STEP 7: Finalize move-out
     $this->newLine();
@@ -771,9 +964,9 @@ Artisan::command('test:tricia-move-out', function () {
         'deposit_deductions' => $refundData['deductions'],
     ]);
 
-    \App\Models\Bed::where('bed_id', $lease->bed_id)->update(['status' => 'Vacant']);
+    Bed::where('bed_id', $lease->bed_id)->update(['status' => 'Vacant']);
 
-    \App\Models\ContractAuditLog::log($lease->lease_id, 'move_out_completed', [
+    ContractAuditLog::log($lease->lease_id, 'move_out_completed', [
         'metadata' => [
             'deposit_refund' => $refundData['refund_amount'],
             'total_deductions' => $refundData['total_deductions'],
@@ -795,20 +988,20 @@ Artisan::command('test:tricia-move-out', function () {
     $this->info('========================================');
     $this->line("  Tenant:     {$tricia->first_name} {$tricia->last_name}");
     $this->line("  Lease:      #{$lease->lease_id} → {$lease->status}");
-    $this->line("  Bed:        #{$lease->bed_id} → " . \App\Models\Bed::find($lease->bed_id)->status);
+    $this->line("  Bed:        #{$lease->bed_id} → ".Bed::find($lease->bed_id)->status);
     $this->line("  Move-Out:   {$lease->move_out}");
     $this->line("  Initiated:  {$lease->move_out_initiated_at}");
     $this->line("  Reason:     {$lease->reason_for_vacating}");
     $this->line("  Forwarding: {$lease->forwarding_address}");
-    $this->line("  Refund:     PHP " . number_format($lease->deposit_refund_amount, 2) . " via {$lease->deposit_refund_method}");
+    $this->line('  Refund:     PHP '.number_format($lease->deposit_refund_amount, 2)." via {$lease->deposit_refund_method}");
     $this->line("  Contract:   moveout_contract_status = {$lease->moveout_contract_status}");
-    $this->line("  Signed:     Owner=" . ($lease->moveout_owner_signed_at ? 'Yes' : 'No') . " | Tenant=" . ($lease->moveout_tenant_signed_at ? 'Yes' : 'No'));
+    $this->line('  Signed:     Owner='.($lease->moveout_owner_signed_at ? 'Yes' : 'No').' | Tenant='.($lease->moveout_tenant_signed_at ? 'Yes' : 'No'));
 
     $deductions = $lease->deposit_deductions ?? [];
-    if (!empty($deductions)) {
-        $this->line("  Deductions:");
+    if (! empty($deductions)) {
+        $this->line('  Deductions:');
         foreach ($deductions as $d) {
-            $this->line("    - {$d['label']}: PHP " . number_format($d['amount'], 2));
+            $this->line("    - {$d['label']}: PHP ".number_format($d['amount'], 2));
         }
     }
 
@@ -832,7 +1025,7 @@ Artisan::command('deposits:send-refund-reminders', function () {
     $sent = 0;
 
     // Find expired leases with pending refunds
-    $leases = \App\Models\Lease::where('status', 'Expired')
+    $leases = Lease::where('status', 'Expired')
         ->where('deposit_refund_amount', '>', 0)
         ->whereNotNull('deposit_refund_deadline')
         ->whereNull('deposit_refund_completed_at')
@@ -840,34 +1033,36 @@ Artisan::command('deposits:send-refund-reminders', function () {
         ->get();
 
     foreach ($leases as $lease) {
-        if (!$lease->tenant) continue;
+        if (! $lease->tenant) {
+            continue;
+        }
 
         $deadline = Carbon::parse($lease->deposit_refund_deadline);
         $daysRemaining = $today->diffInDays($deadline, false); // negative = overdue
 
         // Send at 7 days before, 3 days before, on the day, and if overdue
-        if (!in_array($daysRemaining, [7, 3, 0]) && $daysRemaining >= 0) {
+        if (! in_array($daysRemaining, [7, 3, 0]) && $daysRemaining >= 0) {
             continue;
         }
 
-        $tenantName = $lease->tenant->first_name . ' ' . $lease->tenant->last_name;
+        $tenantName = $lease->tenant->first_name.' '.$lease->tenant->last_name;
         $amount = number_format((float) $lease->deposit_refund_amount, 2);
 
         if ($daysRemaining < 0) {
             $title = 'Deposit Refund OVERDUE';
-            $message = "Deposit refund of PHP {$amount} for {$tenantName} was due on " . $deadline->format('M d, Y') . ". Please process immediately.";
+            $message = "Deposit refund of PHP {$amount} for {$tenantName} was due on ".$deadline->format('M d, Y').'. Please process immediately.';
         } elseif ($daysRemaining === 0) {
             $title = 'Deposit Refund Due TODAY';
             $message = "Deposit refund of PHP {$amount} for {$tenantName} is due today. Please process the refund.";
         } else {
             $title = "Deposit Refund Due in {$daysRemaining} Days";
-            $message = "Deposit refund of PHP {$amount} for {$tenantName} is due by " . $deadline->format('M d, Y') . ". Please prepare the refund.";
+            $message = "Deposit refund of PHP {$amount} for {$tenantName} is due by ".$deadline->format('M d, Y').'. Please prepare the refund.';
         }
 
         // Notify owner
         $ownerId = $lease->bed?->unit?->property?->owner_id;
         if ($ownerId) {
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $ownerId,
                 'type' => 'deposit_refund_reminder',
                 'title' => $title,
@@ -880,7 +1075,7 @@ Artisan::command('deposits:send-refund-reminders', function () {
         // Notify manager
         $managerId = $lease->bed?->unit?->manager_id;
         if ($managerId) {
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => $managerId,
                 'type' => 'deposit_refund_reminder',
                 'title' => $title,
@@ -894,10 +1089,10 @@ Artisan::command('deposits:send-refund-reminders', function () {
         $tenantTitle = $daysRemaining < 0
             ? 'Your Deposit Refund is Overdue'
             : ($daysRemaining === 0 ? 'Your Deposit Refund is Due Today' : "Your Deposit Refund is in {$daysRemaining} Days");
-        $tenantMsg = "Your security deposit refund of PHP {$amount} is " .
-            ($daysRemaining < 0 ? 'overdue. Please contact management.' : "expected by " . $deadline->format('M d, Y') . ".");
+        $tenantMsg = "Your security deposit refund of PHP {$amount} is ".
+            ($daysRemaining < 0 ? 'overdue. Please contact management.' : 'expected by '.$deadline->format('M d, Y').'.');
 
-        \App\Models\Notification::create([
+        Notification::create([
             'user_id' => $lease->tenant_id,
             'type' => 'deposit_refund_reminder',
             'title' => $tenantTitle,
@@ -938,7 +1133,7 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
     $terminated = 0;
 
     // Get all active leases that have overdue billings
-    $leases = \App\Models\Lease::where('status', 'Active')
+    $leases = Lease::where('status', 'Active')
         ->whereNull('move_out_initiated_at')
         ->whereNull('move_out')
         ->whereHas('billings', function ($q) {
@@ -948,7 +1143,9 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
         ->get();
 
     foreach ($leases as $lease) {
-        if (!$lease->tenant) continue;
+        if (! $lease->tenant) {
+            continue;
+        }
 
         // Count how many distinct billings are overdue for 30+ days
         $overdueCount = $lease->billings()
@@ -956,12 +1153,14 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
             ->where('due_date', '<=', $today->copy()->subDays(30))
             ->count();
 
-        if ($overdueCount < 1) continue;
+        if ($overdueCount < 1) {
+            continue;
+        }
 
-        $tenantName = $lease->tenant->first_name . ' ' . $lease->tenant->last_name;
+        $tenantName = $lease->tenant->first_name.' '.$lease->tenant->last_name;
 
         // Get manager ID for notifications
-        $managerId = \Illuminate\Support\Facades\DB::table('beds')
+        $managerId = DB::table('beds')
             ->join('units', 'beds.unit_id', '=', 'units.unit_id')
             ->where('beds.bed_id', $lease->bed_id)
             ->value('units.manager_id');
@@ -970,23 +1169,23 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
             // 3+ months overdue → Lease termination (RA 9653 Section 9a)
             $this->line("  TERMINATE: Lease #{$lease->lease_id} — {$tenantName} ({$overdueCount} months overdue)");
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 // Check if a non-payment termination violation already exists
-                $existingTermination = \App\Models\Violation::where('lease_id', $lease->lease_id)
+                $existingTermination = Violation::where('lease_id', $lease->lease_id)
                     ->where('category', 'Non-Payment of Rent')
                     ->where('penalty_type', 'lease_termination')
                     ->whereNull('deleted_at')
                     ->exists();
 
-                if (!$existingTermination) {
-                    $existingViolations = \App\Models\Violation::where('lease_id', $lease->lease_id)
+                if (! $existingTermination) {
+                    $existingViolations = Violation::where('lease_id', $lease->lease_id)
                         ->whereNull('deleted_at')
                         ->count();
 
-                    \App\Models\Violation::create([
+                    Violation::create([
                         'lease_id' => $lease->lease_id,
                         'reported_by' => $managerId,
-                        'violation_number' => 'NP-' . $lease->lease_id . '-' . now()->format('Ymd'),
+                        'violation_number' => 'NP-'.$lease->lease_id.'-'.now()->format('Ymd'),
                         'offense_number' => $existingViolations + 1,
                         'category' => 'Non-Payment of Rent',
                         'description' => "Tenant has {$overdueCount} months of unpaid rent. Lease termination initiated per RA 9653 Section 9(a).",
@@ -1002,14 +1201,14 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
                         'move_out_initiated_at' => $today,
                     ]);
 
-                    \App\Models\ContractAuditLog::log($lease->lease_id, 'nonpayment_lease_termination', [
+                    ContractAuditLog::log($lease->lease_id, 'nonpayment_lease_termination', [
                         'metadata' => [
                             'overdue_months' => $overdueCount,
                             'legal_basis' => 'RA 9653 Section 9(a)',
                         ],
                     ]);
 
-                    \App\Models\Notification::create([
+                    Notification::create([
                         'user_id' => $lease->tenant_id,
                         'type' => 'nonpayment_termination',
                         'title' => 'Lease Termination — Non-Payment of Rent',
@@ -1018,7 +1217,7 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
                     ]);
 
                     if ($managerId) {
-                        \App\Models\Notification::create([
+                        Notification::create([
                             'user_id' => $managerId,
                             'type' => 'nonpayment_termination',
                             'title' => 'Lease Terminated — Non-Payment',
@@ -1032,16 +1231,16 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
             }
         } elseif ($overdueCount === 2) {
             // 2 months overdue → Final warning
-            $alreadyNotified = \App\Models\Notification::where('user_id', $lease->tenant_id)
+            $alreadyNotified = Notification::where('user_id', $lease->tenant_id)
                 ->where('type', 'nonpayment_final_warning')
                 ->where('created_at', '>=', $today->copy()->subDays(30))
                 ->exists();
 
-            if (!$alreadyNotified) {
+            if (! $alreadyNotified) {
                 $this->line("  FINAL WARNING: Lease #{$lease->lease_id} — {$tenantName} ({$overdueCount} months overdue)");
 
-                if (!$dryRun) {
-                    \App\Models\Notification::create([
+                if (! $dryRun) {
+                    Notification::create([
                         'user_id' => $lease->tenant_id,
                         'type' => 'nonpayment_final_warning',
                         'title' => 'Final Warning — Non-Payment of Rent',
@@ -1050,7 +1249,7 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
                     ]);
 
                     if ($managerId) {
-                        \App\Models\Notification::create([
+                        Notification::create([
                             'user_id' => $managerId,
                             'type' => 'nonpayment_final_warning',
                             'title' => 'Tenant Final Warning — Non-Payment',
@@ -1064,16 +1263,16 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
             }
         } else {
             // 1 month overdue → First warning (demand to pay)
-            $alreadyNotified = \App\Models\Notification::where('user_id', $lease->tenant_id)
+            $alreadyNotified = Notification::where('user_id', $lease->tenant_id)
                 ->where('type', 'nonpayment_warning')
                 ->where('created_at', '>=', $today->copy()->subDays(30))
                 ->exists();
 
-            if (!$alreadyNotified) {
+            if (! $alreadyNotified) {
                 $this->line("  WARNING: Lease #{$lease->lease_id} — {$tenantName} ({$overdueCount} month overdue)");
 
-                if (!$dryRun) {
-                    \App\Models\Notification::create([
+                if (! $dryRun) {
+                    Notification::create([
                         'user_id' => $lease->tenant_id,
                         'type' => 'nonpayment_warning',
                         'title' => 'Notice — Overdue Rent Payment',
@@ -1082,7 +1281,7 @@ Artisan::command('leases:check-nonpayment {--dry-run : Show what would change wi
                     ]);
 
                     if ($managerId) {
-                        \App\Models\Notification::create([
+                        Notification::create([
                             'user_id' => $managerId,
                             'type' => 'nonpayment_warning',
                             'title' => 'Tenant Overdue Notice Sent',
@@ -1114,3 +1313,6 @@ Schedule::command('billings:apply-late-fees')->daily();
 Schedule::command('leases:handle-expiration')->daily();
 Schedule::command('leases:check-nonpayment')->daily();
 Schedule::command('deposits:send-refund-reminders')->daily();
+
+// Schedule: run weekly (Monday at 2 AM) to refresh PSGC location data
+Schedule::command('psgc:import-all')->weekly()->mondays()->at('02:00');

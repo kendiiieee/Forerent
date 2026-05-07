@@ -36,7 +36,7 @@ class AddTenantModal extends Component
 
     public $isOpen = false;
 
-    public $modalId;
+    public mixed $modalId;
 
     // --- Mode: 'add', 'transfer', or 'edit' ---
     public string $mode = 'add';
@@ -79,7 +79,7 @@ class AddTenantModal extends Component
     public $currentAutoRenew = false;
 
     // === STEP 1: Profile Information ===
-    public $profilePicture = null;
+    public mixed $profilePicture = null;
 
     public ?string $existingProfileImg = null;
 
@@ -124,7 +124,7 @@ class AddTenantModal extends Component
     public $governmentIdNumber = '';
 
     #[Validate('nullable|image|max:10240')]
-    public $governmentIdImage = null;
+    public mixed $governmentIdImage = null;
 
     public ?string $existingGovernmentIdImage = null;
 
@@ -437,7 +437,7 @@ class AddTenantModal extends Component
      * Apply role-based ownership filter to a Unit query.
      * Landlord sees units in properties they own; manager sees units they manage.
      */
-    protected function applyUnitOwnership($query)
+    protected function applyUnitOwnership(mixed $query): mixed
     {
         if ($this->isLandlord()) {
             $query->whereIn('property_id', function ($q) {
@@ -506,7 +506,7 @@ class AddTenantModal extends Component
         $this->permanentBarangayId = '';
     }
 
-    public function updatedSelectedBuilding($propertyId)
+    public function updatedSelectedBuilding(mixed $propertyId): void
     {
         $this->selectedUnit = '';
         $this->selectedBed = '';
@@ -539,7 +539,7 @@ class AddTenantModal extends Component
         }
     }
 
-    public function updatedGender($value)
+    public function updatedGender(mixed $value): void
     {
         // Reset rent details when gender changes since available units depend on gender
         $this->selectedBuilding = '';
@@ -554,7 +554,7 @@ class AddTenantModal extends Component
         $this->loadBuildings();
     }
 
-    public function updatedSelectedUnit($unitId)
+    public function updatedSelectedUnit(mixed $unitId): void
     {
         $this->selectedBed = '';
         $this->beds = [];
@@ -584,13 +584,13 @@ class AddTenantModal extends Component
     }
 
     // Auto-sync security deposit when monthly rate changes
-    public function updatedMonthlyRate($value)
+    public function updatedMonthlyRate(mixed $value): void
     {
         $this->securityDeposit = $value;
     }
 
     // Auto-compute short-term premium when term changes (does NOT affect monthlyRate)
-    public function updatedTerm($value)
+    public function updatedTerm(mixed $value): void
     {
         if ($value && (int) $value < 6) {
             $this->shortTermPremium = 500;
