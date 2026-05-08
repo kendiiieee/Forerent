@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('units', function (Blueprint $table) {
-            $table->string('room_type')->nullable()->after('price');
-        });
+        // Add this check to prevent the "Duplicate column" error on Render
+        if (!Schema::hasColumn('units', 'room_type')) {
+            Schema::table('units', function (Blueprint $table) {
+                $table->string('room_type')->nullable()->after('price');
+            });
+        }
     }
 
     /**
@@ -21,8 +24,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('units', function (Blueprint $table) {
-            $table->dropColumn('room_type');
-        });
+        if (Schema::hasColumn('units', 'room_type')) {
+            Schema::table('units', function (Blueprint $table) {
+                $table->dropColumn('room_type');
+            });
+        }
     }
 };
