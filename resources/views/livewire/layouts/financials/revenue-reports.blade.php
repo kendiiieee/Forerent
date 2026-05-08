@@ -81,12 +81,13 @@
                 @endphp
 
                 {{-- Legend items --}}
-                <div class="w-full mt-4 sm:mt-6 space-y-2 sm:space-y-3">
+                <div class="w-full mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     @foreach($maintenanceCostData['labels'] as $i => $label)
                         @php
                             $pct = $totalAmount > 0 ? round(($maintenanceCostData['amounts'][$i] / $totalAmount) * 100, 1) : 0;
+                            $spanClass = $loop->last ? 'sm:col-span-2' : '';
                         @endphp
-                        <div class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-gray-50/80 group cursor-default transition-all duration-200 hover:bg-gray-100/80">
+                        <div class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-gray-50/80 group cursor-default transition-all duration-200 hover:bg-gray-100/80 {{ $spanClass }}">
                             <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0 ring-4 transition-all duration-200"
                                   style="background-color: {{ $colors[$i % count($colors)] }}; --tw-ring-color: {{ $colors[$i % count($colors)] }}1a;"></span>
                             <div class="flex-1 min-w-0">
