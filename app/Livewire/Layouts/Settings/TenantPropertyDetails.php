@@ -3,6 +3,7 @@
 namespace App\Livewire\Layouts\Settings;
 
 use App\Models\Lease;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
@@ -28,6 +29,9 @@ class TenantPropertyDetails extends Component
     public $unit = null;
 
     public $amenities = [];
+
+    // Tenant government ID
+    public $tenantGovernmentId = null;
 
     public function mount(): void
     {
