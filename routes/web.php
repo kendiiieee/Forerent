@@ -182,3 +182,14 @@ Route::get('/clear-system-cache', function () {
 
     return 'ForeRent system cache has been successfully cleared! You can now check the Forecast pages.';
 });
+
+// ─── DATABASE PROVISIONING (Temporary for Free Tier Sync) ───────────────────
+Route::get('/sync-production-database', function () {
+    // Run migrations first to ensure TiDB has all new columns (like provinces)
+    Artisan::call('migrate', ['--force' => true]);
+
+    // Run seeds to populate the 8 documents and fix occupancy analytics
+    Artisan::call('db:seed', ['--force' => true]);
+
+    return 'ForeRent database has been successfully synchronized with the latest production data!';
+});
