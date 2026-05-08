@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Property;
+use App\Models\User;
 use Faker\Generator;
 use Illuminate\Database\Seeder;
 
@@ -17,7 +18,7 @@ class PropertySeeder extends Seeder
     {
         $this->faker = app(Generator::class);
 
-        $liam = \App\Models\User::where('email', 'landlord@example.com')->first();
+        $liam = User::where('email', 'landlord@example.com')->first();
 
         // Create 3 properties owned by Liam Landlord
         Property::factory()
