@@ -185,11 +185,16 @@ Route::get('/clear-system-cache', function () {
 
 // ─── DATABASE PROVISIONING (Temporary for Free Tier Sync) ───────────────────
 Route::get('/sync-production-database', function () {
-    // Run migrations first to ensure TiDB has all new columns (like provinces)
-    Artisan::call('migrate', ['--force' => true]);
+    try {
+        // Step 1: Run migrations (unblocks Reigne's address tables)
+        Artisan::call('migrate', ['--force' => true]);
 
-    // Run seeds to populate the 8 documents and fix occupancy analytics
-    Artisan::call('db:seed', ['--force' => true]);
+        // Step 2: Run seeders (updates occupancy and documents)
+        Artisan::call('db:seed', ['--force' => true]);
 
-    return 'ForeRent database has been successfully synchronized with the latest production data!';
+        return 'ForeRent database successfully synchronized!';
+    } catch (Exception $e) {
+        // If it fails, this will show the exact error (e.g., API Timeout, Duplicate Column)
+        return 'Sync failed: '.$e->getMessage();
+    }
 });
