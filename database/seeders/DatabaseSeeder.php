@@ -2,10 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Models\Bed;
+use App\Models\Lease;
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Property;
+use App\Models\Unit;
 use App\Models\User;
 use Faker\Generator;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,6 +23,10 @@ class DatabaseSeeder extends Seeder
     {
         $this->faker = app(Generator::class);
 
+        Schema::disableForeignKeyConstraints();
+        User::truncate();
+        Property::truncate();
+        Schema::enableForeignKeyConstraints();
 
         $this->call([
             PsgcSeeder::class,
@@ -30,21 +39,20 @@ class DatabaseSeeder extends Seeder
             BillingSeeder::class,
             TransactionSeeder::class,
             MaintenanceSeeder::class,
-            TransactionSeeder::class,
             AnnouncementSeeder::class,
             PaymentRequestSeeder::class,
         ]);
 
         // Ensure Marcus Manager manages the unit where Tricia Tenant lives
         // and reset her active lease to draft so the move-in contract can be tested
-        $marcus = \App\Models\User::where('first_name', 'Marcus')->where('role', 'manager')->first();
-        $tricia = \App\Models\User::where('first_name', 'Tricia')->where('role', 'tenant')->first();
+        $marcus = User::where('first_name', 'Marcus')->where('role', 'manager')->first();
+        $tricia = User::where('first_name', 'Tricia')->where('role', 'tenant')->first();
         if ($marcus && $tricia) {
-            $lease = \App\Models\Lease::where('tenant_id', $tricia->user_id)->where('status', 'Active')->first();
+            $lease = Lease::where('tenant_id', $tricia->user_id)->where('status', 'Active')->first();
             if ($lease) {
-                $bed = \App\Models\Bed::find($lease->bed_id);
+                $bed = Bed::find($lease->bed_id);
                 if ($bed) {
-                    \App\Models\Unit::where('unit_id', $bed->unit_id)->update(['manager_id' => $marcus->user_id]);
+                    Unit::where('unit_id', $bed->unit_id)->update(['manager_id' => $marcus->user_id]);
                 }
 
                 // Reset contract to draft for testing the move-in contract flow
@@ -70,14 +78,14 @@ class DatabaseSeeder extends Seeder
         }
 
         // Ensure Mia Martinez manages the unit where Tanya Torres lives
-        $mia = \App\Models\User::where('first_name', 'Mia')->where('role', 'manager')->first();
-        $tanya = \App\Models\User::where('first_name', 'Tanya')->where('role', 'tenant')->first();
+        $mia = User::where('first_name', 'Mia')->where('role', 'manager')->first();
+        $tanya = User::where('first_name', 'Tanya')->where('role', 'tenant')->first();
         if ($mia && $tanya) {
-            $lease = \App\Models\Lease::where('tenant_id', $tanya->user_id)->where('status', 'Active')->first();
+            $lease = Lease::where('tenant_id', $tanya->user_id)->where('status', 'Active')->first();
             if ($lease) {
-                $bed = \App\Models\Bed::find($lease->bed_id);
+                $bed = Bed::find($lease->bed_id);
                 if ($bed) {
-                    \App\Models\Unit::where('unit_id', $bed->unit_id)->update(['manager_id' => $mia->user_id]);
+                    Unit::where('unit_id', $bed->unit_id)->update(['manager_id' => $mia->user_id]);
                 }
             }
         }
