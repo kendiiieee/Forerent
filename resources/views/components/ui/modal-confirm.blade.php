@@ -6,6 +6,9 @@
     'cancelText' => 'Cancel',
     'confirmAction' => null,
     'cancelUrl' => null,
+    // 'hidden' (default) clips children to rounded corners; 'visible' lets
+    // absolutely-positioned children (e.g. address-picker dropdowns) escape.
+    'bodyOverflow' => 'hidden',
 ])
 
 <div
@@ -23,7 +26,7 @@
         <div class="absolute inset-0 bg-gray-600 opacity-50"></div>
     </div>
 
-    <div x-show="show" class="bg-white rounded-2xl sm:rounded-[20px] overflow-hidden shadow-xl transform transition-all w-full max-w-[340px] sm:max-w-[480px] p-5 sm:p-8 relative z-[100] mx-3">
+    <div x-show="show" class="bg-white rounded-2xl sm:rounded-[20px] {{ $bodyOverflow === 'visible' ? 'overflow-visible' : 'overflow-hidden' }} shadow-xl transform transition-all w-full max-w-[340px] sm:max-w-[480px] p-5 sm:p-8 relative z-[100] mx-3">
 
         <button @click="show = false" class="absolute top-3 right-3 sm:top-5 sm:right-5 text-[#0C0B50] hover:text-blue-700">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

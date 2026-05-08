@@ -12,8 +12,6 @@ class UnitSeeder extends Seeder
 {
     protected Generator $faker;
 
-    private const MAX_UNITS_PER_MANAGER = 10;
-
     public function run(): void
     {
         $this->faker = app(Generator::class);
@@ -21,32 +19,26 @@ class UnitSeeder extends Seeder
         $properties = Property::all();
         $managers = User::where('role', 'manager')->pluck('user_id')->toArray();
 
-        // Track how many units each manager has been assigned
-        $managerUnitCounts = array_fill_keys($managers, 0);
+        if (empty($managers)) {
+            throw new \RuntimeException('UnitSeeder requires at least one user with role=manager.');
+        }
+
+        $rrIndex = 0;
+        $managerCount = count($managers);
 
         foreach ($properties as $property) {
 
             for ($floor = 1; $floor <= 5; $floor++) {
 
-                $floorFormatted = str_pad($floor, 2, '0', STR_PAD_LEFT); // "01", "02", ...
+                $floorFormatted = str_pad($floor, 2, '0', STR_PAD_LEFT);
 
                 for ($unit = 1; $unit <= 4; $unit++) {
 
-                    $unitFormatted = str_pad($unit, 2, '0', STR_PAD_LEFT); // "01", "02", "03", "04"
+                    $unitFormatted = str_pad($unit, 2, '0', STR_PAD_LEFT);
+                    $unitNumber = $floorFormatted . $unitFormatted;
 
-                    $unitNumber = $floorFormatted . $unitFormatted; // e.g., "0101"
-
-                    // 30% chance of having no manager
-                    $managerId = null;
-                    if (mt_rand(1, 100) > 30 && !empty($managers)) {
-                        // Only pick from managers who haven't hit the 10-unit cap
-                        $eligible = array_filter($managers, fn($id) => $managerUnitCounts[$id] < self::MAX_UNITS_PER_MANAGER);
-
-                        if (!empty($eligible)) {
-                            $managerId = $eligible[array_rand($eligible)];
-                            $managerUnitCounts[$managerId]++;
-                        }
-                    }
+                    $managerId = $managers[$rrIndex % $managerCount];
+                    $rrIndex++;
 
                     Unit::factory()
                         ->create([
