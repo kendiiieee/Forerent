@@ -21,85 +21,106 @@
     ]) !!}</script>
 
     @if(!empty($monthlyForecasts))
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-            <!-- Summary Cards -->
-            <div class="flex flex-col gap-4">
-                <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6 shadow-sm">
-                    <p class="text-sm font-medium text-green-700 mb-2">Annual Forecast</p>
-                    <p class="text-3xl font-bold text-green-600">₱{{ number_format($totalAnnualRevenue, 0) }}</p>
+        <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-lg flex flex-col">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-[#070642]">Monthly Revenue Forecast - {{ $forecastYear }}</h3>
                 </div>
 
-                <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 shadow-sm">
-                    <p class="text-sm font-medium text-blue-700 mb-2">Remaining Revenue</p>
-                    <p class="text-3xl font-bold text-blue-600">₱{{ number_format($totalRemainingRevenue, 0) }}</p>
-                </div>
+                <div class="flex items-center gap-6">
+                    <!-- Download Dropdown -->
+                    <div x-data="{ open: false }" @click.away="open = false" @keydown.escape.stop="open = false" class="relative">
+                        <button
+                            @click="open = !open"
+                            type="button"
+                            class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-[#070642] shadow-sm hover:border-gray-300 transition-all focus:outline-none focus:ring-0"
+                        >
+                            <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Download</span>
+                            <svg :class="{ 'rotate-180': open }" class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
 
-                <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-6 shadow-sm">
-                    <p class="text-sm font-medium text-purple-700 mb-2">Monthly Average</p>
-                    <p class="text-3xl font-bold text-purple-600">₱{{ number_format($averageMonthlyRevenue, 0) }}</p>
-                </div>
-            </div>
-
-            <!-- Revenue Chart -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-6 xl:col-span-2 shadow-lg flex flex-col" wire:ignore>
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 class="text-xl font-bold text-[#070642]">Monthly Revenue Forecast - {{ $forecastYear }}</h3>
-                    </div>
-
-                    <div class="flex items-center gap-6">
-                        <!-- Download Dropdown -->
-                        <div x-data="{ open: false }" @click.away="open = false" @keydown.escape.stop="open = false" class="relative">
-                            <button
-                                @click="open = !open"
-                                type="button"
-                                class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-[#070642] shadow-sm hover:border-gray-300 transition-all focus:outline-none focus:ring-0"
-                            >
-                                <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                                <span>Download</span>
-                                <svg :class="{ 'rotate-180': open }" class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
+                        <div
+                            x-show="open"
+                            x-transition.origin.top.right
+                            style="display: none;"
+                            class="absolute right-0 z-30 w-40 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
+                        >
+                            <button type="button" @click="downloadForecastChart('svg'); open = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-600">
+                                Download SVG
                             </button>
-
-                            <div
-                                x-show="open"
-                                x-transition.origin.top.right
-                                style="display: none;"
-                                class="absolute right-0 z-30 w-40 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
-                            >
-                                <button type="button" @click="downloadForecastChart('svg'); open = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-600">
-                                    Download SVG
-                                </button>
-                                <button type="button" @click="downloadForecastChart('png'); open = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-600">
-                                    Download PNG
-                                </button>
-                                <button type="button" @click="downloadForecastCSV(); open = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-600">
-                                    Download CSV
-                                </button>
-                            </div>
+                            <button type="button" @click="downloadForecastChart('png'); open = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-600">
+                                Download PNG
+                            </button>
+                            <button type="button" @click="downloadForecastCSV(); open = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-600">
+                                Download CSV
+                            </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- Legend below header --}}
-                <div class="flex items-center gap-5 mb-4">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-sm" style="background-color: #8CC5FF;"></span>
-                        <span class="text-sm text-gray-500 font-medium">Actual Earnings</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-sm" style="background-color: #1E1B4B;"></span>
-                        <span class="text-sm text-gray-500 font-medium">Forecasted Revenue</span>
-                    </div>
+            {{-- Legend below header --}}
+            <div class="flex items-center gap-5 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-sm" style="background-color: #8CC5FF;"></span>
+                    <span class="text-sm text-gray-500 font-medium">Actual Earnings</span>
                 </div>
-
-                <div class="relative flex-1 min-h-80">
-                    <canvas id="revenueChart"></canvas>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-sm" style="background-color: #1E1B4B;"></span>
+                    <span class="text-sm text-gray-500 font-medium">Forecasted Revenue</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-sm" style="background-color: #F59E0B;"></span>
+                    <span class="text-sm text-gray-500 font-medium">Previous Year</span>
                 </div>
             </div>
+
+            <div class="relative flex-1 min-h-80" wire:ignore>
+                <canvas id="revenueChart"></canvas>
+            </div>
+
+            @if(!empty($insights))
+                <div class="mt-6 border-t border-gray-100 pt-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-[0.15em]">Insights</h4>
+                        <span class="text-xs text-gray-400">
+                            {{ $forecastYear === now()->year ? 'Year-to-date' : 'Full-year' }} comparison
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        @foreach($insights as $insight)
+                            @php
+                                $tone = $insight['tone'] ?? 'neutral';
+                                $cardClasses = [
+                                    'positive' => 'border-emerald-200 bg-emerald-50',
+                                    'negative' => 'border-rose-200 bg-rose-50',
+                                    'neutral' => 'border-gray-200 bg-gray-50',
+                                ];
+                                $valueClasses = [
+                                    'positive' => 'text-emerald-700',
+                                    'negative' => 'text-rose-700',
+                                    'neutral' => 'text-gray-700',
+                                ];
+                                $detailClasses = [
+                                    'positive' => 'text-emerald-600/80',
+                                    'negative' => 'text-rose-600/80',
+                                    'neutral' => 'text-gray-500',
+                                ];
+                            @endphp
+                            <div class="rounded-xl border p-4 {{ $cardClasses[$tone] ?? $cardClasses['neutral'] }}">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ $insight['label'] ?? 'Insight' }}</p>
+                                <p class="text-2xl font-bold {{ $valueClasses[$tone] ?? $valueClasses['neutral'] }}">{{ $insight['value_text'] ?? 'N/A' }}</p>
+                                <p class="text-xs mt-1 {{ $detailClasses[$tone] ?? $detailClasses['neutral'] }}">{{ $insight['detail'] ?? '' }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
 
     @else
@@ -151,6 +172,7 @@
             const categories = monthlyForecasts.map(f => f.month_name);
             const actualData = monthlyForecasts.map(f => Number(f.actual_revenue || 0));
             const forecastData = monthlyForecasts.map(f => Number(f.forecasted_revenue || 0));
+            const previousYearData = monthlyForecasts.map(f => Number(f.previous_year_revenue || 0));
             const chartCtx = chartElement.getContext('2d');
 
             const actualGradient = chartCtx.createLinearGradient(0, 0, 0, chartElement.parentElement.offsetHeight || 320);
@@ -205,6 +227,24 @@
                             pointHoverBorderWidth: 3,
                             tension: 0.4,
                             fill: true
+                        },
+                        {
+                            label: 'Previous Year',
+                            data: previousYearData,
+                            borderColor: '#F59E0B',
+                            backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            pointBackgroundColor: '#F59E0B',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: '#F59E0B',
+                            pointHoverBorderColor: '#FFFFFF',
+                            pointHoverBorderWidth: 3,
+                            tension: 0.35,
+                            fill: false
                         }
                     ]
                 },
@@ -305,9 +345,9 @@
 
             if (monthlyForecasts.length === 0) return;
 
-            let csv = 'Month,Actual Earnings,Forecasted Revenue\n';
+            let csv = 'Month,Actual Earnings,Forecasted Revenue,Previous Year Revenue\n';
             monthlyForecasts.forEach(f => {
-                csv += `"${f.month_name}",${f.actual_revenue || 0},${f.forecasted_revenue}\n`;
+                csv += `"${f.month_name}",${f.actual_revenue || 0},${f.forecasted_revenue},${f.previous_year_revenue || 0}\n`;
             });
 
             const link = document.createElement('a');

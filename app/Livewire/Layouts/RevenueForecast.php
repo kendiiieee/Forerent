@@ -21,6 +21,7 @@ class RevenueForecast extends Component
     public $isFallback = false;
     public $dataPointsUsed = 0;
     public $forecastLoaded = false;
+    public $insights = [];
 
     protected $revenueForecastService;
 
@@ -67,6 +68,7 @@ class RevenueForecast extends Component
         $this->totalRemainingRevenue = 0;
         $this->averageMonthlyRevenue = 0;
         $this->dataPointsUsed = 0;
+        $this->insights = [];
 
         try {
             $result = $this->revenueForecastService->generateMonthlyForecast($this->forecastYear);
@@ -83,6 +85,9 @@ class RevenueForecast extends Component
             if (!$this->isFallback) {
                 $this->monthlyForecasts = $this->enrichForecastWithActualEarnings($this->monthlyForecasts);
             }
+
+            $this->monthlyForecasts = $this->addPreviousYearRevenue($this->monthlyForecasts);
+            $this->insights = $this->buildInsights($this->monthlyForecasts);
             
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
@@ -117,6 +122,172 @@ class RevenueForecast extends Component
         }
 
         return $forecasts;
+    }
+
+    private function addPreviousYearRevenue(array $forecasts): array
+    {
+        if (empty($forecasts)) {
+            return $forecasts;
+        }
+
+        $previousYear = (int) $this->forecastYear - 1;
+        $previousYearTotals = $this->getMonthlyTotalsForYear($previousYear);
+
+        foreach ($forecasts as &$monthForecast) {
+            $monthNumber = $monthForecast['month'] ?? null;
+
+            if ($monthNumber) {
+                $monthForecast['previous_year_revenue'] = (float) ($previousYearTotals[$monthNumber] ?? 0);
+            } else {
+                $monthForecast['previous_year_revenue'] = 0;
+            }
+        }
+
+        return $forecasts;
+    }
+
+    private function getMonthlyTotalsForYear(int $year): array
+    {
+        $monthExpr = $this->transactionMonthExpression();
+
+        $rows = Transaction::query()
+            ->creditInflows()
+            ->whereYear('transaction_date', $year)
+            ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
+            ->groupBy('month')
+            ->pluck('total', 'month');
+
+        $totals = [];
+        foreach ($rows as $month => $total) {
+            $totals[(int) $month] = (float) $total;
+        }
+
+        return $totals;
+    }
+
+    private function buildInsights(array $forecasts): array
+    {
+        if (empty($forecasts)) {
+            return [];
+        }
+
+        $now = Carbon::now();
+        $forecastYear = (int) $this->forecastYear;
+        $isCurrentYear = $forecastYear === (int) $now->year;
+        $comparisonMonths = $isCurrentYear ? (int) $now->month : 12;
+        $useForecastAsCurrent = $forecastYear > (int) $now->year;
+        $periodLabel = $isCurrentYear ? 'YTD' : 'Full Year';
+
+        $actualTotal = $this->sumMonthly($forecasts, 'actual_revenue', $comparisonMonths);
+        $forecastBaseline = $this->sumMonthly($forecasts, 'forecasted_revenue', $comparisonMonths);
+        $previousTotal = $this->sumMonthly($forecasts, 'previous_year_revenue', $comparisonMonths);
+        $currentTotal = $useForecastAsCurrent ? $forecastBaseline : $actualTotal;
+
+        $annualForecast = $this->sumMonthly($forecasts, 'forecasted_revenue', 12);
+        $previousYearFull = $this->sumMonthly($forecasts, 'previous_year_revenue', 12);
+
+        $peak = $this->getPeakForecastMonth($forecasts);
+        $peakShare = $annualForecast > 0 ? ($peak['value'] / $annualForecast) * 100 : null;
+
+        $baselineDelta = $this->calculatePercentDelta($currentTotal, $forecastBaseline);
+        $previousDelta = $this->calculatePercentDelta($currentTotal, $previousTotal);
+        $yearEndDelta = $this->calculatePercentDelta($annualForecast, $previousYearFull);
+
+        return [
+            [
+                'label' => "Vs Forecast Baseline ({$periodLabel})",
+                'value_text' => $this->formatSignedPercent($baselineDelta),
+                'detail' => $this->formatCurrency($currentTotal) . ' vs ' . $this->formatCurrency($forecastBaseline),
+                'tone' => $this->toneFromDelta($baselineDelta),
+            ],
+            [
+                'label' => "Vs Previous Year ({$periodLabel})",
+                'value_text' => $this->formatSignedPercent($previousDelta),
+                'detail' => $this->formatCurrency($currentTotal) . ' vs ' . $this->formatCurrency($previousTotal),
+                'tone' => $this->toneFromDelta($previousDelta),
+            ],
+            [
+                'label' => 'Year-End Forecast vs Last Year',
+                'value_text' => $this->formatSignedPercent($yearEndDelta),
+                'detail' => $this->formatCurrency($annualForecast) . ' vs ' . $this->formatCurrency($previousYearFull),
+                'tone' => $this->toneFromDelta($yearEndDelta),
+            ],
+            [
+                'label' => 'Peak Month Share',
+                'value_text' => $peakShare === null ? 'N/A' : number_format($peakShare, 1) . '%',
+                'detail' => $peak['month_name'] ? $peak['month_name'] . ' forecast' : 'No data',
+                'tone' => 'neutral',
+            ],
+        ];
+    }
+
+    private function sumMonthly(array $forecasts, string $key, int $maxMonth): float
+    {
+        $total = 0.0;
+
+        foreach ($forecasts as $monthForecast) {
+            $month = (int) ($monthForecast['month'] ?? 0);
+            if ($month === 0 || $month > $maxMonth) {
+                continue;
+            }
+
+            $total += (float) ($monthForecast[$key] ?? 0);
+        }
+
+        return $total;
+    }
+
+    private function getPeakForecastMonth(array $forecasts): array
+    {
+        $peakValue = null;
+        $peakMonthName = null;
+
+        foreach ($forecasts as $monthForecast) {
+            $value = (float) ($monthForecast['forecasted_revenue'] ?? 0);
+            if ($peakValue === null || $value > $peakValue) {
+                $peakValue = $value;
+                $peakMonthName = $monthForecast['month_name'] ?? null;
+            }
+        }
+
+        return [
+            'value' => $peakValue ?? 0.0,
+            'month_name' => $peakMonthName,
+        ];
+    }
+
+    private function calculatePercentDelta(float $current, float $baseline): ?float
+    {
+        if ($baseline <= 0) {
+            return null;
+        }
+
+        return (($current - $baseline) / $baseline) * 100;
+    }
+
+    private function formatSignedPercent(?float $value): string
+    {
+        if ($value === null) {
+            return 'N/A';
+        }
+
+        $sign = $value > 0 ? '+' : '';
+
+        return $sign . number_format($value, 1) . '%';
+    }
+
+    private function formatCurrency(float $value): string
+    {
+        return '₱' . number_format($value, 0);
+    }
+
+    private function toneFromDelta(?float $delta): string
+    {
+        if ($delta === null) {
+            return 'neutral';
+        }
+
+        return $delta >= 0 ? 'positive' : 'negative';
     }
 
     private function transactionMonthExpression(): string
