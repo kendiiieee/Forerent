@@ -75,7 +75,6 @@
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 w-1/3 border-r bg-gray-50">Full Legal Name:</td><td class="p-2">{{ $t['personal_info']['first_name'] }} {{ $t['personal_info']['last_name'] }}</td></tr>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Contact Number:</td><td class="p-2">{{ $t['contact_info']['contact_number'] }}</td></tr>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Email Address:</td><td class="p-2">{{ $t['contact_info']['email'] }}</td></tr>
-        <tr class="border-b"><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Forwarding Address (for deposit refund / correspondence):</td><td class="p-2 {{ empty($t['move_out_details']['forwarding_address']) ? 'text-red-500 font-medium' : '' }}">{{ $t['move_out_details']['forwarding_address'] ?? 'Not provided — required before signing' }}</td></tr>
         <tr class="border-b"><td class="p-2 font-semibold text-gray-600 border-r bg-gray-50">Emergency Contact:</td><td class="p-2">{{ $t['personal_info']['emergency_contact_name'] ?? '—' }} ({{ $t['personal_info']['emergency_contact_relationship'] ?? '' }}) — {{ $t['personal_info']['emergency_contact_number'] ?? '—' }}</td></tr>
     </tbody></table>
 </div>
