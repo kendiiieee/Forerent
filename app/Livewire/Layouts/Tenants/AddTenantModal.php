@@ -301,15 +301,16 @@ class AddTenantModal extends Component
             $bed = $lease->bed;
             $unit = $bed?->unit;
 
-            $this->currentBuilding = $unit?->property?->building_name ?? '—';
-            $this->currentUnit = $unit?->unit_number ?? '—';
-            $this->currentBed = $bed?->bed_number ?? '—';
-            $this->currentDormType = $unit?->occupants ?? '—';
-            $this->currentTerm = $lease->term ? $lease->term.' Months' : '—';
-            $this->currentShift = $lease->shift ?? '—';
-            $this->currentStartDate = $lease->start_date ? Carbon::parse($lease->start_date)->format('M d, Y') : '—';
-            $this->currentEndDate = $lease->end_date ? Carbon::parse($lease->end_date)->format('M d, Y') : '—';
-            $this->currentRate = $lease->contract_rate ? '₱ '.number_format((float) $lease->contract_rate, 0) : '—';
+            $this->currentBuilding  = $unit?->property?->building_name ?? '—';
+            $this->currentUnit      = $unit?->unit_number ?? '—';
+            $this->currentBed       = $bed?->bed_number ?? '—';
+            $this->currentDormType  = $unit?->occupants ?? '—';
+            $this->currentTerm      = $lease->term ? $lease->term . ' Months' : '—';
+            $this->currentShift     = $lease->shift ?? '—';
+            $this->currentStartDate = $lease->start_date ? Carbon::parse($lease->start_date)->format('F j, Y') : '—';
+            $this->currentEndDate   = $lease->end_date ? Carbon::parse($lease->end_date)->format('F j, Y') : '—';
+            $this->currentRate      = $lease->contract_rate ? '₱ ' . number_format((float) $lease->contract_rate, 0) : '—';
+
             $this->currentAutoRenew = $lease->auto_renew ?? false;
         }
 
@@ -988,6 +989,8 @@ class AddTenantModal extends Component
         });
 
         $this->dispatch('tenantSelected', tenantId: $this->transferFromTenantId);
+        // Tenant moved to a different bed/unit — refresh the navigation list/counts.
+        $this->dispatch('refresh-tenant-list');
 
         $this->notifySuccess(
             'Tenant Transferred Successfully!',
@@ -1079,6 +1082,8 @@ class AddTenantModal extends Component
         });
 
         $this->dispatch('tenantSelected', tenantId: $this->editTenantId);
+        // Edit can change bed/unit → tenant may move in/out of the manager's scope.
+        $this->dispatch('refresh-tenant-list');
 
         $this->notifySuccess(
             'Tenant Updated Successfully!',

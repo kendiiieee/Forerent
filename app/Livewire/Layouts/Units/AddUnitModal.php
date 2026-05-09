@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Units;
 use App\Livewire\Concerns\WithNotifications;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -33,8 +34,12 @@ class AddUnitModal extends Component
 
     public $properties = [];
 
+    public $managers = [];
+
     public $property_id;
 
+    public $manager_id;
+    
     public $floor_number;
 
     public $occupants = 'Co-ed';
@@ -66,6 +71,7 @@ class AddUnitModal extends Component
     // Fixed the missing comma here
     protected $rules = [
         'property_id' => 'required|integer|exists:properties,property_id',
+        'manager_id' => 'required|integer|exists:users,user_id',
         'floor_number' => 'required|integer|min:0',
         'occupants' => 'required|in:Male,Female,Co-ed',
         'living_area' => 'required|numeric|min:1',
@@ -79,8 +85,12 @@ class AddUnitModal extends Component
         $this->modalId = $modalId ?? uniqid('add_unit_modal_');
         try {
             $this->properties = Property::all(['property_id', 'building_name']);
+            $this->managers = User::where('role', 'manager')
+                ->orderBy('first_name')
+                ->get(['user_id', 'first_name', 'last_name']);
         } catch (\Exception $e) {
             $this->properties = collect([]);
+            $this->managers = collect([]);
         }
         $this->initializeAmenities();
     }
@@ -111,6 +121,7 @@ class AddUnitModal extends Component
             $this->editingUnitId = $unit->unit_id;
             $this->editingUnitNumber = $unit->unit_number;
             $this->property_id = $unit->property_id;
+            $this->manager_id = $unit->manager_id;
             $this->floor_number = $unit->floor_number;
             $this->occupants = $unit->occupants ?? 'Co-ed';
             $this->living_area = $unit->living_area;
@@ -172,6 +183,7 @@ class AddUnitModal extends Component
         if ($this->currentStep == 1) {
             $this->validate([
                 'property_id' => 'required',
+                'manager_id' => 'required|integer|exists:users,user_id',
                 'floor_number' => 'required|numeric',
                 'occupants' => 'required',
                 'living_area' => 'required|numeric',
@@ -277,6 +289,7 @@ class AddUnitModal extends Component
 
             $data = [
                 'property_id' => $this->property_id,
+                'manager_id' => $this->manager_id,
                 'floor_number' => $this->floor_number,
                 'occupants' => $this->occupants,
                 'living_area' => $this->living_area,
@@ -337,6 +350,7 @@ class AddUnitModal extends Component
         $this->reset([
             'currentStep',
             'property_id',
+            'manager_id',
             'floor_number',
             'occupants',
             'living_area',

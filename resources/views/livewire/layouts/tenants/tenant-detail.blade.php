@@ -1446,16 +1446,62 @@
                 @endforeach
             </div>
 
-            {{-- Deposit Interest Input (RA 9653 IRR Section 7b) --}}
-            <div class="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
-                <label class="block text-xs font-semibold text-blue-800 mb-1.5">Deposit Interest Earned (optional)</label>
-                <p class="text-[11px] text-blue-600 mb-2">Enter the interest earned on the security deposit per RA 9653. This amount will be added to the tenant's refund.</p>
-                <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold text-gray-600">PHP</span>
-                    <input type="number" wire:model="depositInterestAmount" step="0.01" min="0" placeholder="0.00"
-                        class="flex-1 text-sm border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+            @php
+                $isForfeit = $moveOutRefundPreview
+                    && collect($moveOutRefundPreview['deductions'])
+                        ->contains(fn($d) => str_contains($d['label'], 'Early Termination'));
+                $refundAmt = $moveOutRefundPreview ? (float) $moveOutRefundPreview['refund_amount'] : 0;
+            @endphp
+
+            {{-- Deposit Interest Input (RA 9653 IRR Section 7b) — hidden when forfeiture applies --}}
+            @if(!$isForfeit)
+                <div class="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                    <label class="block text-xs font-semibold text-blue-800 mb-1.5">Deposit Interest Earned (optional)</label>
+                    <p class="text-[11px] text-blue-600 mb-2">Enter the interest earned on the security deposit per RA 9653. Leave blank to auto-compute from the property's configured rate.</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-gray-600">PHP</span>
+                        <input type="number" wire:model.live.debounce.500ms="depositInterestAmount" step="0.01" min="0" placeholder="0.00"
+                            class="flex-1 text-sm border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                    </div>
                 </div>
-            </div>
+            @endif
+
+            {{-- Refund Preview --}}
+            @if($moveOutRefundPreview)
+                <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <h4 class="text-xs font-semibold text-gray-700 mb-2">Deposit Refund Preview</h4>
+                    <div class="space-y-1 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Security Deposit</span>
+                            <span class="font-medium text-gray-800">PHP {{ number_format($moveOutRefundPreview['deposit'], 2) }}</span>
+                        </div>
+                        @foreach($moveOutRefundPreview['deductions'] as $d)
+                            <div class="flex justify-between">
+                                <span class="text-red-600 truncate pr-2">− {{ $d['label'] }}</span>
+                                <span class="font-medium text-red-600 whitespace-nowrap">PHP {{ number_format(abs((float) $d['amount']), 2) }}</span>
+                            </div>
+                        @endforeach
+                        @if(!$isForfeit && (float) $moveOutRefundPreview['interest_earned'] > 0)
+                            <div class="flex justify-between">
+                                <span class="text-emerald-700">+ Interest Earned</span>
+                                <span class="font-medium text-emerald-700">PHP {{ number_format($moveOutRefundPreview['interest_earned'], 2) }}</span>
+                            </div>
+                        @endif
+                        <div class="border-t border-gray-300 my-1.5"></div>
+                        <div class="flex justify-between text-sm font-bold">
+                            <span class="text-[#0C0B50]">Refund to Tenant</span>
+                            <span class="{{ $refundAmt > 0 ? 'text-emerald-700' : 'text-red-600' }}">PHP {{ number_format($refundAmt, 2) }}</span>
+                        </div>
+                        @if($isForfeit)
+                            <p class="text-[11px] text-red-600 italic mt-1.5">Full deposit forfeited — early termination per Contract Section 7. No refund or interest will be issued.</p>
+                        @elseif($refundAmt <= 0)
+                            <p class="text-[11px] text-amber-600 italic mt-1.5">Deductions equal or exceed the deposit. No cash refund will be issued.</p>
+                        @else
+                            <p class="text-[11px] text-emerald-600 italic mt-1.5">Refund will be processed within 30 days of move-out.</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             <div class="flex justify-center gap-4 px-2">
                 <button @click="show = false" class="flex-1 bg-[#D6E6FF] hover:bg-[#c3daff] text-[#0C0B50] font-bold py-3 rounded-xl transition-colors text-sm">
@@ -1531,6 +1577,7 @@
     @endif
 
     {{-- Initiate Move-Out Form Modal --}}
+    {{-- bodyOverflow=visible so the address-picker dropdown isn't clipped by the modal panel. --}}
     <x-ui.modal-confirm
         name="initiate-move-out"
         title="Initiate Move-Out"
@@ -1538,19 +1585,27 @@
         confirmText="Start Move-Out Process"
         cancelText="Cancel"
         confirmAction="initiateMoveOut"
+        bodyOverflow="visible"
     >
         <div class="space-y-4 text-left">
             <div>
                 <label class="block text-xs font-semibold text-gray-700 mb-1">Reason for Vacating <span class="text-red-500">*</span></label>
-                <select wire:model="reasonForVacating" class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] {{ $errors->has('reasonForVacating') ? 'border-red-400' : 'border-gray-200' }}">
-                    <option value="">Select a reason...</option>
-                    <option value="End of lease term (contract expired)">End of lease term (contract expired)</option>
-                    <option value="Voluntary early termination by Lessee">Voluntary early termination by Lessee</option>
-                    <option value="Mutual agreement between both parties">Mutual agreement between both parties</option>
-                    <option value="Lease violation or termination by Lessor">Lease violation or termination by Lessor</option>
-                    <option value="Transfer to a different unit / building (internal transfer)">Transfer to a different unit / building</option>
-                </select>
-                @error('reasonForVacating') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                @if($moveOutLeaseExpired)
+                    {{-- Auto-detected from lease end date — no user input needed. --}}
+                    <div class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 text-gray-700">
+                        End of lease term (contract expired)
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-1 italic">Auto-detected — the lease has reached its end date.</p>
+                @else
+                    {{-- Lease still active → this is an early termination. Transfers go through the dedicated Transfer button. --}}
+                    <select wire:model="reasonForVacating" class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] {{ $errors->has('reasonForVacating') ? 'border-red-400' : 'border-gray-200' }}">
+                        <option value="">Select a reason...</option>
+                        <option value="Voluntary early termination by Lessee">Voluntary early termination by Lessee</option>
+                        <option value="Mutual agreement between both parties">Mutual agreement between both parties</option>
+                        <option value="Lease violation or termination by Lessor">Lease violation or termination by Lessor</option>
+                    </select>
+                    @error('reasonForVacating') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                @endif
             </div>
             <div>
                 <x-forms.address-picker

@@ -9,9 +9,7 @@ use Illuminate\Database\Seeder;
 
 class UnitSeeder extends Seeder
 {
-    private const MAX_UNITS_PER_MANAGER = 10;
-    private const FLOORS_PER_PROPERTY   = 5;
-    private const UNITS_PER_FLOOR       = 4;
+    protected Generator $faker;
 
     public function run(): void
     {
@@ -21,8 +19,12 @@ class UnitSeeder extends Seeder
             return;
         }
 
-        $managers = User::where('role', 'manager')->pluck('user_id')->toArray();
-        $managerUnitCounts = array_fill_keys($managers, 0);
+        if (empty($managers)) {
+            throw new \RuntimeException('UnitSeeder requires at least one user with role=manager.');
+        }
+
+        $rrIndex = 0;
+        $managerCount = count($managers);
 
         foreach ($properties as $property) {
             for ($floor = 1; $floor <= self::FLOORS_PER_PROPERTY; $floor++) {
@@ -31,18 +33,15 @@ class UnitSeeder extends Seeder
                     $unitNumber = str_pad($floor, 2, '0', STR_PAD_LEFT)
                         . str_pad($unit, 2, '0', STR_PAD_LEFT);
 
-                    $managerId = null;
-                    if (!empty($managers)) {
-                        $eligible = array_keys(array_filter(
-                            $managerUnitCounts,
-                            fn($count) => $count < self::MAX_UNITS_PER_MANAGER
-                        ));
+                $floorFormatted = str_pad($floor, 2, '0', STR_PAD_LEFT);
 
-                        if (!empty($eligible)) {
-                            $managerId = $eligible[array_rand($eligible)];
-                            $managerUnitCounts[$managerId]++;
-                        }
-                    }
+                for ($unit = 1; $unit <= 4; $unit++) {
+
+                    $unitFormatted = str_pad($unit, 2, '0', STR_PAD_LEFT);
+                    $unitNumber = $floorFormatted . $unitFormatted;
+
+                    $managerId = $managers[$rrIndex % $managerCount];
+                    $rrIndex++;
 
                     Unit::factory()->create([
                         'property_id' => $property->property_id,

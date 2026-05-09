@@ -9,7 +9,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
 
         {{-- Property (Building) --}}
-        <div class="relative md:col-span-2">
+        <div class="relative">
             <select id="property_id" wire:model.defer="property_id" class="block px-2.5 pb-2.5 pt-4 w-full text-sm text-gray-900 bg-transparent rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#0030C5] peer">
                 <option value="" selected>Select a Building...</option>
                 @foreach($properties as $property)
@@ -18,6 +18,18 @@
             </select>
             <label for="property_id" class="absolute text-sm text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-focus:text-[#0030C5] peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1">Property / Building</label>
             @error('property_id') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
+        </div>
+
+        {{-- Assigned Manager --}}
+        <div class="relative">
+            <select id="manager_id" wire:model.defer="manager_id" class="block px-2.5 pb-2.5 pt-4 w-full text-sm text-gray-900 bg-transparent rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-[#0030C5] peer">
+                <option value="" selected>Select a Manager...</option>
+                @foreach($managers as $manager)
+                    <option value="{{ $manager->user_id }}">{{ $manager->first_name }} {{ $manager->last_name }}</option>
+                @endforeach
+            </select>
+            <label for="manager_id" class="absolute text-sm text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-focus:text-[#0030C5] peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1">Assigned Manager</label>
+            @error('manager_id') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
         </div>
 
         {{-- Floor Number --}}

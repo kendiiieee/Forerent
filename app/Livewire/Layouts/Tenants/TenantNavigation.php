@@ -91,6 +91,7 @@ class TenantNavigation extends Component
         $this->activeTenantId = null;
         $this->search = '';
         $this->loadTenants();
+        $this->loadCounts();
         $this->autoSelectFirst();
     }
 
@@ -398,8 +399,14 @@ class TenantNavigation extends Component
         $bedSubquery = function ($q) use ($unitIds) {
             $q->select('bed_id')->from('beds')->whereIn('unit_id', $unitIds);
         };
+        // Match the lists, which eager-load `tenant` via Eloquent and so filter
+        // soft-deleted users — without `whereNull('deleted_at')` here, a
+        // soft-deleted tenant's still-Active lease would inflate the count
+        // without ever appearing in the corresponding list.
         $tenantUserSubquery = function ($q) {
-            $q->select('user_id')->from('users')->where('role', 'tenant');
+            $q->select('user_id')->from('users')
+              ->where('role', 'tenant')
+              ->whereNull('deleted_at');
         };
 
         $pendingCount = Lease::where('leases.status', 'Active')
