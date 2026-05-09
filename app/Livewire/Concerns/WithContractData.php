@@ -117,6 +117,15 @@ trait WithContractData
                     'is_overdue'     => $isOverdue,
                     'violation_id'   => $lease?->termination_notice_violation_id,
                     'has_pdf'        => (bool) $lease?->termination_notice_path,
+                    'early_vacate'   => [
+                        'status'         => $lease?->early_vacate_status, // null | pending_tenant | accepted | declined
+                        'proposed_date'  => $lease?->early_vacate_proposed_date?->format('M d, Y'),
+                        'proposed_date_iso' => $lease?->early_vacate_proposed_date?->toDateString(),
+                        'reason'         => $lease?->early_vacate_request_reason,
+                        'requested_at'   => $lease?->early_vacate_requested_at?->format('M d, Y'),
+                        'responded_at'   => $lease?->early_vacate_responded_at?->format('M d, Y'),
+                        'response_note'  => $lease?->early_vacate_response_note,
+                    ],
                 ];
             })(),
             'signature_info' => [

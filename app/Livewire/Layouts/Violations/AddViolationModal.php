@@ -210,6 +210,26 @@ class AddViolationModal extends Component
                 'link' => route('tenant.dashboard'),
             ]);
 
+            // Notify the property owner (landlord) so they have visibility into
+            // tenant conduct on their unit — every violation, not just terminations.
+            $tenantName = trim(($lease->tenant?->first_name ?? '') . ' ' . ($lease->tenant?->last_name ?? ''));
+            $unitNumber = $lease->bed?->unit?->unit_number ?? '—';
+            $ownerId = DB::table('beds')
+                ->join('units', 'beds.unit_id', '=', 'units.unit_id')
+                ->join('properties', 'units.property_id', '=', 'properties.property_id')
+                ->where('beds.bed_id', $lease->bed_id)
+                ->value('properties.owner_id');
+
+            if ($ownerId) {
+                Notification::create([
+                    'user_id' => $ownerId,
+                    'type'    => 'violation_issued',
+                    'title'   => 'Violation Recorded — Unit ' . $unitNumber,
+                    'message' => "A {$this->severity} violation ({$this->category}) has been recorded for {$tenantName} (Unit {$unitNumber}). Penalty: {$penaltyLabel}. Reference: {$violation->violation_number}.",
+                    'link'    => '/landlord/property',
+                ]);
+            }
+
             // Termination penalty → issue formal Notice of Termination on the lease.
             // Sets vacate_by_date and triggers the persistent banner on the tenant detail.
             if ($penalty['penalty_type'] === 'lease_termination') {

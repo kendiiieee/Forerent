@@ -139,18 +139,93 @@
                                     <span wire:loading wire:target="downloadTerminationNotice">Generating…</span>
                                 </button>
                                 @if(auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') === 'approved')
-                                    <button
-                                        type="button"
-                                        wire:click="moveOutTenant"
-                                        class="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
-                                        </svg>
-                                        Initiate Move-Out Process
-                                    </button>
+                                    @php
+                                        $ev = $tn['early_vacate'] ?? [];
+                                        $evStatus = $ev['status'] ?? null;
+                                        $canInitiate = ($tn['is_overdue'] ?? false)
+                                            || (($tn['days_remaining'] ?? null) === 0)
+                                            || $evStatus === 'accepted';
+                                    @endphp
+                                    @if($canInitiate)
+                                        <button
+                                            type="button"
+                                            wire:click="moveOutTenant"
+                                            class="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
+                                            </svg>
+                                            Initiate Move-Out Process
+                                        </button>
+                                    @else
+                                        <flux:tooltip content="The tenant has the full notice period to vacate. Move-out can be initiated on or after {{ $tn['vacate_by'] }}, or earlier if the tenant accepts an early-vacate request." position="top">
+                                            <div class="flex-1 inline-flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2.5 px-4 rounded-xl text-xs cursor-not-allowed select-none">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                Available {{ $tn['vacate_by'] }}
+                                            </div>
+                                        </flux:tooltip>
+                                    @endif
                                 @endif
                             </div>
+
+                            {{-- Early-vacate state row — only when notice is active and within the notice period --}}
+                            @if(auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') === 'approved' && !($tn['is_overdue'] ?? false) && (($tn['days_remaining'] ?? null) > 0))
+                                @php
+                                    $ev = $tn['early_vacate'] ?? [];
+                                    $evStatus = $ev['status'] ?? null;
+                                @endphp
+                                <div class="mt-3 pt-3 border-t border-red-200/60">
+                                    @if($evStatus === null || $evStatus === 'declined')
+                                        @if($evStatus === 'declined')
+                                            <div class="flex items-start gap-2 mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg>
+                                                <div class="text-[11px] text-amber-800">
+                                                    <strong>Tenant declined the early-vacate request</strong>
+                                                    @if(!empty($ev['response_note']))
+                                                        — "{{ $ev['response_note'] }}"
+                                                    @endif
+                                                    {{ $ev['responded_at'] ? '(' . $ev['responded_at'] . ')' : '' }}
+                                                </div>
+                                            </div>
+                                        @endif
+                                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                                            <p class="text-[10px] text-gray-600 italic flex-1">
+                                                Tenant entitled to full {{ $tn['days_remaining'] }}-day notice period.
+                                                If they want to vacate earlier, file a request &mdash; tenant must accept before move-out unlocks.
+                                            </p>
+                                            <button type="button" wire:click="openEarlyVacateModal"
+                                                class="text-[11px] font-semibold text-red-700 hover:text-red-900 underline whitespace-nowrap">
+                                                {{ $evStatus === 'declined' ? 'Try a new request →' : 'Request early vacate →' }}
+                                            </button>
+                                        </div>
+                                    @elseif($evStatus === 'pending_tenant')
+                                        <div class="flex items-start gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <div class="flex-1 text-[11px] text-blue-800">
+                                                <strong>Early-vacate request pending tenant acceptance.</strong>
+                                                Proposed vacate date: <strong>{{ $ev['proposed_date'] }}</strong>.
+                                                Sent {{ $ev['requested_at'] }}.
+                                            </div>
+                                            <button type="button" wire:click="cancelEarlyVacateRequest"
+                                                wire:confirm="Withdraw the early-vacate request?"
+                                                class="text-[11px] font-semibold text-blue-700 hover:text-blue-900 underline whitespace-nowrap">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    @elseif($evStatus === 'accepted')
+                                        <div class="flex items-start gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                            <svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <div class="text-[11px] text-emerald-800">
+                                                <strong>Tenant accepted early-vacate</strong> on {{ $ev['responded_at'] }}.
+                                                New effective vacate date: <strong>{{ $ev['proposed_date'] }}</strong>.
+                                                You can now initiate the move-out process.
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @endif
@@ -1653,6 +1728,41 @@
             </div>
         </x-ui.modal-confirm>
     @endif
+
+    {{-- Request Early Vacate Modal — manager files an override request, tenant must accept --}}
+    <x-ui.modal-confirm
+        name="request-early-vacate"
+        title="Request Early Vacate"
+        description="The tenant must accept this request before the move-out gate unlocks. Both sides will see the agreement details."
+        confirmText="Send Request to Tenant"
+        cancelText="Cancel"
+        confirmAction="requestEarlyVacate"
+    >
+        <div class="space-y-4 text-left">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p class="text-[11px] text-amber-800 leading-relaxed">
+                    <strong>Heads up:</strong> The notice period exists to protect the tenant. Only file an early-vacate request when the tenant has expressly agreed to leave earlier. The tenant must accept on their dashboard before move-out unlocks.
+                </p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Proposed Vacate Date <span class="text-red-500">*</span></label>
+                <input type="date" wire:model="earlyVacateProposedDate"
+                    min="{{ now()->format('Y-m-d') }}"
+                    max="{{ \Carbon\Carbon::parse($currentTenant['termination_notice']['vacate_by_iso'] ?? now())->subDay()->format('Y-m-d') }}"
+                    class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] {{ $errors->has('earlyVacateProposedDate') ? 'border-red-400' : 'border-gray-200' }}">
+                @error('earlyVacateProposedDate') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                <p class="text-[11px] text-gray-500 mt-1">Must be earlier than the original vacate-by date ({{ $currentTenant['termination_notice']['vacate_by'] ?? '—' }}).</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Reason / Agreement Details <span class="text-red-500">*</span></label>
+                <textarea wire:model="earlyVacateReason" rows="3"
+                    placeholder="e.g. Tenant verbally requested early vacate on May 15, 2026. They've secured new accommodation and want to leave before the notice period ends."
+                    class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('earlyVacateReason') ? 'border-red-400' : 'border-gray-200' }}"></textarea>
+                @error('earlyVacateReason') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                <p class="text-[11px] text-gray-500 mt-1">This is recorded in the audit log and shown to the tenant when they review the request.</p>
+            </div>
+        </div>
+    </x-ui.modal-confirm>
 
     {{-- Initiate Move-Out Form Modal --}}
     <x-ui.modal-confirm
