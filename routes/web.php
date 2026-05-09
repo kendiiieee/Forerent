@@ -186,15 +186,17 @@ Route::get('/clear-system-cache', function () {
 // ─── DATABASE PROVISIONING (Temporary for Free Tier Sync) ───────────────────
 Route::get('/sync-production-database', function () {
     try {
-        // Step 1: Run migrations (unblocks Reigne's address tables)
+        // Step 1: Wipe the database to prevent "Table already exists" errors
+        Artisan::call('db:wipe', ['--force' => true]);
+
+        // Step 2: Run migrations fresh
         Artisan::call('migrate', ['--force' => true]);
 
-        // Step 2: Run seeders (updates occupancy and documents)
+        // Step 3: Run seeds to get that 46.8% occupancy data back
         Artisan::call('db:seed', ['--force' => true]);
 
-        return 'ForeRent database successfully synchronized!';
-    } catch (Exception $e) {
-        // If it fails, this will show the exact error (e.g., API Timeout, Duplicate Column)
-        return 'Sync failed: '.$e->getMessage();
+        return 'ForeRent database successfully wiped and synchronized!';
+    } catch (\Exception $e) {
+        return 'Sync failed: ' . $e->getMessage();
     }
 });
