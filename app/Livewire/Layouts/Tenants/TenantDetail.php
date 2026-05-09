@@ -66,13 +66,7 @@ class TenantDetail extends Component
     public $moveOutManagerSignedAt = null;
     public $moveOutContractAgreed = false;
 
-    // Move-out form fields — forwardingAddress is the legacy concatenated text
-    // kept in sync by the Lease model's saving event from the four PSGC fields.
-    public $forwardingAddress = '';
-    public $forwardingProvinceId = '';
-    public $forwardingCityId = '';
-    public $forwardingBarangayId = '';
-    public $forwardingStreet = '';
+    // Move-out form fields
     public $reasonForVacating = '';
     public $depositRefundMethod = '';
     public $depositRefundAccount = '';
@@ -165,11 +159,6 @@ class TenantDetail extends Component
         $this->loadMoveOutInspectionData($lease);
         $this->loadViolations($lease);
         $this->moveOutInitiated = (bool) $lease?->move_out_initiated_at;
-        $this->forwardingAddress = $lease?->forwarding_address ?? '';
-        $this->forwardingProvinceId = $lease?->forwarding_province_id ?? '';
-        $this->forwardingCityId = $lease?->forwarding_city_id ?? '';
-        $this->forwardingBarangayId = $lease?->forwarding_barangay_id ?? '';
-        $this->forwardingStreet = $lease?->forwarding_street ?? '';
         $this->reasonForVacating = $lease?->reason_for_vacating ?? '';
         $this->depositRefundMethod = $lease?->deposit_refund_method ?? '';
         $this->depositRefundAccount = $lease?->deposit_refund_account ?? '';
@@ -760,13 +749,19 @@ class TenantDetail extends Component
             return;
         }
 
-        // Auto-derive end-of-lease vs early termination from the lease end date —
-        // the user only needs to pick a reason for early terminations.
+        // Auto-derive reason from lease state. Precedence:
+        //   1. Termination notice on file → reason = lease violation
+        //   2. End date passed → reason = end of lease term
+        //   3. Otherwise → blank, manager picks
         $lease = $this->currentLeaseId ? Lease::find($this->currentLeaseId) : null;
         $this->moveOutLeaseExpired = (bool) ($lease?->end_date && now()->gte($lease->end_date));
-        $this->reasonForVacating = $this->moveOutLeaseExpired
-            ? 'End of lease term (contract expired)'
-            : '';
+        if ($lease?->termination_notice_issued_at) {
+            $this->reasonForVacating = 'Lease violation or termination by Lessor';
+        } elseif ($this->moveOutLeaseExpired) {
+            $this->reasonForVacating = 'End of lease term (contract expired)';
+        } else {
+            $this->reasonForVacating = '';
+        }
         $this->resetErrorBag('reasonForVacating');
 
         $this->dispatch('open-modal', 'initiate-move-out');
@@ -781,18 +776,6 @@ class TenantDetail extends Component
 
         // Validate required fields for move-out initiation
         $moveOutErrors = [];
-        if (!$this->forwardingProvinceId) {
-            $moveOutErrors['forwardingProvinceId'] = 'Province is required for the forwarding address.';
-        }
-        if (!$this->forwardingCityId) {
-            $moveOutErrors['forwardingCityId'] = 'City / Municipality is required for the forwarding address.';
-        }
-        if (!$this->forwardingBarangayId) {
-            $moveOutErrors['forwardingBarangayId'] = 'Barangay is required for the forwarding address.';
-        }
-        if (empty(trim($this->forwardingStreet ?? ''))) {
-            $moveOutErrors['forwardingStreet'] = 'House #, Street is required for the forwarding address.';
-        }
         if (empty($this->reasonForVacating)) {
             $moveOutErrors['reasonForVacating'] = 'Reason for vacating is required.';
         }
@@ -831,10 +814,6 @@ class TenantDetail extends Component
 
         $lease->update([
             'move_out_initiated_at' => now(),
-            'forwarding_province_id' => $this->forwardingProvinceId ?: null,
-            'forwarding_city_id' => $this->forwardingCityId ?: null,
-            'forwarding_barangay_id' => $this->forwardingBarangayId ?: null,
-            'forwarding_street' => $this->forwardingStreet,
             'reason_for_vacating' => $this->reasonForVacating,
             'deposit_refund_method' => $this->depositRefundMethod,
             'deposit_refund_account' => $this->depositRefundMethod === 'Cash' ? null : $this->depositRefundAccount,
@@ -882,33 +861,16 @@ class TenantDetail extends Component
     {
         if (!$this->currentLeaseId) return;
 
-        // Use instance update (not query-builder bulk update) so the Lease
-        // model's saving event fires and keeps forwarding_address text in sync.
         $lease = Lease::find($this->currentLeaseId);
         if (!$lease) return;
 
         $lease->update([
-            'forwarding_province_id' => $this->forwardingProvinceId ?: null,
-            'forwarding_city_id' => $this->forwardingCityId ?: null,
-            'forwarding_barangay_id' => $this->forwardingBarangayId ?: null,
-            'forwarding_street' => $this->forwardingStreet ?: null,
             'reason_for_vacating' => $this->reasonForVacating ?: null,
             'deposit_refund_method' => $this->depositRefundMethod ?: null,
             'deposit_refund_account' => $this->depositRefundAccount ?: null,
         ]);
 
         $this->dispatch('notify', type: 'success', title: 'Details Saved', description: 'Move-out details have been updated.');
-    }
-
-    public function updatedForwardingProvinceId(): void
-    {
-        $this->forwardingCityId = '';
-        $this->forwardingBarangayId = '';
-    }
-
-    public function updatedForwardingCityId(): void
-    {
-        $this->forwardingBarangayId = '';
     }
 
     public function computeMoveOutPrerequisites(): void
@@ -1837,6 +1799,68 @@ class TenantDetail extends Component
         $cachePath = 'contracts/move-out-' . $lease->id . '.pdf';
         Storage::disk('public')->put($cachePath, $pdf->output());
         $lease->update(['moveout_signed_contract_path' => $cachePath]);
+
+        return Storage::disk('public')->download($cachePath, $filename);
+    }
+
+    /**
+     * Generate (or serve cached) Notice of Termination PDF for the current lease.
+     * The notice is a point-in-time document — once a path is stored on the lease
+     * we serve the cached file so the tenant and manager always see the same notice.
+     */
+    public function downloadTerminationNotice()
+    {
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::with(['tenant', 'bed.unit.property', 'terminationNoticeViolation'])
+            ->find($this->currentLeaseId);
+
+        if (!$lease || !$lease->termination_notice_issued_at) return;
+
+        $tenant = $lease->tenant;
+        $unitNumber = $lease->bed->unit->unit_number ?? 'N-A';
+        $filename = 'Notice-of-Termination_' . $tenant->first_name . '-' . $tenant->last_name . '_Unit-' . $unitNumber . '.pdf';
+
+        // Serve cached file if we already generated this notice
+        if ($lease->termination_notice_path && Storage::disk('public')->exists($lease->termination_notice_path)) {
+            return Storage::disk('public')->download($lease->termination_notice_path, $filename);
+        }
+
+        $managerId = $this->findManagerIdForLease($lease);
+        $manager = $managerId ? User::find($managerId) : null;
+
+        $property = $lease->bed?->unit?->property;
+        $noticePeriodDays = (int) ($property?->getContractSetting('termination_notice_period_days', 30) ?? 30);
+
+        // Pull all violations on this lease as the cited grounds (chronological order)
+        $groundsViolations = \App\Models\Violation::where('lease_id', $lease->lease_id)
+            ->whereNull('deleted_at')
+            ->orderBy('violation_date')
+            ->get();
+
+        $referenceNumber = 'NOT-' . str_pad((string) $lease->lease_id, 5, '0', STR_PAD_LEFT)
+            . '-' . $lease->termination_notice_issued_at->format('Ymd');
+
+        $data = [
+            'tenant'             => $this->currentTenant,
+            'lease'              => $lease,
+            'propertyName'       => $property?->building_name ?? '—',
+            'unitNumber'         => $unitNumber,
+            'bedNumber'          => $lease->bed?->bed_number,
+            'noticePeriodDays'   => $noticePeriodDays,
+            'issuedAt'           => $lease->termination_notice_issued_at,
+            'referenceNumber'    => $referenceNumber,
+            'groundsViolations'  => $groundsViolations,
+            'managerName'        => $manager ? ($manager->first_name . ' ' . $manager->last_name) : 'Property Manager',
+        ];
+
+        $pdf = Pdf::loadView('pdf.notice-of-termination', $data)
+            ->setPaper('a4')
+            ->setOption('isRemoteEnabled', false);
+
+        $cachePath = 'contracts/notice-of-termination-' . $lease->lease_id . '.pdf';
+        Storage::disk('public')->put($cachePath, $pdf->output());
+        $lease->update(['termination_notice_path' => $cachePath]);
 
         return Storage::disk('public')->download($cachePath, $filename);
     }

@@ -6,6 +6,8 @@ use App\Models\Lease;
 use App\Models\Violation;
 use App\Models\Billing;
 use App\Models\BillingItem;
+use App\Models\ContractAuditLog;
+use App\Models\Notification;
 use Illuminate\Support\Facades\DB;
 
 class ViolationEscalationService
@@ -13,24 +15,18 @@ class ViolationEscalationService
     /**
      * Determine the penalty for the next violation on a lease.
      *
+     * Penalty escalates purely by offense count, regardless of severity.
+     * Severity is recorded for context but does not influence the schedule.
+     *
      * @return array{offense_number: int, penalty_type: string, fine_amount: float|null}
      */
-    public static function determinePenalty(Lease $lease, string $severity): array
+    public static function determinePenalty(Lease $lease): array
     {
         $existingCount = Violation::where('lease_id', $lease->lease_id)
             ->whereNull('deleted_at')
             ->count();
 
         $offenseNumber = $existingCount + 1;
-
-        // Serious violations (illegal activity, property destruction) = immediate termination
-        if ($severity === 'serious') {
-            return [
-                'offense_number' => $offenseNumber,
-                'penalty_type' => 'lease_termination',
-                'fine_amount' => null,
-            ];
-        }
 
         // Get fine amount from property contract_settings
         $fineAmount = 500.00; // default
@@ -88,12 +84,14 @@ class ViolationEscalationService
         // No active billing — create a standalone "Violation Charges" billing
         if (!$billing) {
             $lease = Lease::find($violation->lease_id);
+            $dueDate = now()->addDays(5);
             $billing = Billing::create([
                 'lease_id'     => $violation->lease_id,
                 'tenant_id'    => $lease?->tenant_id,
                 'billing_type' => 'charges',
                 'billing_date' => now(),
-                'due_date'     => now()->addDays(5),
+                'next_billing' => $dueDate,
+                'due_date'     => $dueDate,
                 'to_pay'       => 0,
                 'amount'       => 0,
                 'status'       => 'Unpaid',
@@ -116,5 +114,65 @@ class ViolationEscalationService
 
         // Link billing item to violation
         $violation->update(['billing_item_id' => $billingItem->billing_item_id]);
+    }
+
+    /**
+     * Issue a formal Notice of Termination on the lease.
+     *
+     * Idempotent: if a notice has already been issued, the existing record is kept
+     * (multiple termination-grade violations don't reset the vacate-by clock).
+     *
+     * The notice period defaults to 30 days but can be overridden per property
+     * via contract_settings.termination_notice_period_days. Common range is 15–30
+     * days for dorms; the vacate-by date is computed from issuance + notice period.
+     *
+     * @return Lease|null The lease with the notice fields hydrated, or null if not applicable.
+     */
+    public static function issueTerminationNotice(Violation $violation): ?Lease
+    {
+        if ($violation->penalty_type !== 'lease_termination') {
+            return null;
+        }
+
+        $lease = Lease::with('bed.unit.property')->find($violation->lease_id);
+        if (!$lease) return null;
+
+        // Don't reissue if a notice is already on file for this lease
+        if ($lease->termination_notice_issued_at) {
+            return $lease;
+        }
+
+        $property = $lease->bed?->unit?->property;
+        $noticePeriodDays = (int) ($property?->getContractSetting('termination_notice_period_days', 30) ?? 30);
+
+        $issuedAt = now();
+        $vacateBy = $issuedAt->copy()->addDays($noticePeriodDays)->toDateString();
+
+        $lease->update([
+            'termination_notice_issued_at'    => $issuedAt,
+            'vacate_by_date'                  => $vacateBy,
+            'termination_notice_violation_id' => $violation->violation_id,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'termination_notice_issued', [
+            'metadata' => [
+                'violation_id'        => $violation->violation_id,
+                'violation_number'    => $violation->violation_number,
+                'notice_period_days'  => $noticePeriodDays,
+                'vacate_by_date'      => $vacateBy,
+            ],
+        ]);
+
+        $lease->refresh();
+
+        Notification::create([
+            'user_id' => $lease->tenant_id,
+            'type'    => 'termination_notice_issued',
+            'title'   => 'Notice of Lease Termination',
+            'message' => "A formal Notice of Termination has been issued ({$noticePeriodDays}-day notice period). You must vacate the premises by " . $lease->vacate_by_date->format('M d, Y') . " and coordinate with management for the move-out inspection and settlement.",
+            'link'    => '/tenant',
+        ]);
+
+        return $lease;
     }
 }

@@ -101,6 +101,24 @@ trait WithContractData
                 'deposit_refund_method'  => $lease?->deposit_refund_method,
                 'deposit_refund_account' => $lease?->deposit_refund_account,
             ],
+            'termination_notice' => (function () use ($lease) {
+                $vacateBy = $lease?->vacate_by_date;
+                $today    = now()->startOfDay();
+                $isOverdue = $vacateBy && $today->gt($vacateBy->startOfDay());
+
+                return [
+                    'issued_at'      => $lease?->termination_notice_issued_at?->format('M d, Y'),
+                    'issued_at_iso'  => $lease?->termination_notice_issued_at?->toDateString(),
+                    'vacate_by'      => $vacateBy?->format('M d, Y'),
+                    'vacate_by_iso'  => $vacateBy?->toDateString(),
+                    'days_remaining' => $vacateBy
+                        ? ($isOverdue ? 0 : (int) $today->diffInDays($vacateBy->startOfDay()))
+                        : null,
+                    'is_overdue'     => $isOverdue,
+                    'violation_id'   => $lease?->termination_notice_violation_id,
+                    'has_pdf'        => (bool) $lease?->termination_notice_path,
+                ];
+            })(),
             'signature_info' => [
                 'tenant_signature'      => $lease?->tenant_signature,
                 'tenant_signed_at'      => $lease?->tenant_signed_at?->format('M d, Y h:i A'),

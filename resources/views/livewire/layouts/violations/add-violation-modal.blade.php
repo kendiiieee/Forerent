@@ -109,7 +109,7 @@
                     <div>
                         <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 block">Severity Level</label>
                         <div class="grid grid-cols-3 gap-3">
-                            @foreach(['minor' => ['Minor', 'Low-impact violation', 'bg-blue-50 border-blue-300 text-blue-700'], 'major' => ['Major', 'Significant impact', 'bg-orange-50 border-orange-300 text-orange-700'], 'serious' => ['Serious', 'Immediate termination', 'bg-red-50 border-red-300 text-red-700']] as $key => [$label, $desc, $activeStyle])
+                            @foreach(['minor' => ['Minor', 'Low-impact violation', 'bg-blue-50 border-blue-300 text-blue-700'], 'major' => ['Major', 'Significant impact', 'bg-orange-50 border-orange-300 text-orange-700'], 'serious' => ['Serious', 'Severe impact', 'bg-red-50 border-red-300 text-red-700']] as $key => [$label, $desc, $activeStyle])
                                 <button
                                     type="button"
                                     wire:click="$set('severity', '{{ $key }}')"
@@ -193,7 +193,7 @@
                         class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-xl text-sm transition-colors">
                         Cancel
                     </button>
-                    <button type="button" x-on:click="$dispatch('open-modal', 'save-violation-confirmation')"
+                    <button type="button" wire:click="requestSave"
                         class="bg-[#070589] hover:bg-[#000060] text-white font-bold py-3 px-10 rounded-xl text-sm transition-colors shadow-lg">
                         Issue Violation
                     </button>
