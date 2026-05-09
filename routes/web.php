@@ -186,13 +186,13 @@ Route::get('/clear-system-cache', function () {
 // ─── DATABASE PROVISIONING (Temporary for Free Tier Sync) ───────────────────
 Route::get('/sync-production-database', function () {
     try {
-        // Step 1: Wipe the database to prevent "Table already exists" errors
+        // 1. Drop all existing tables/views to solve the 1050 error
         Artisan::call('db:wipe', ['--force' => true]);
 
-        // Step 2: Run migrations fresh
+        // 2. Recreate the schema from scratch
         Artisan::call('migrate', ['--force' => true]);
 
-        // Step 3: Run seeds to get that 46.8% occupancy data back
+        // 3. Populate the data for your 8 documents and occupancy stats
         Artisan::call('db:seed', ['--force' => true]);
 
         return 'ForeRent database successfully wiped and synchronized!';
