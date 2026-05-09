@@ -12,15 +12,31 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE billings DROP CONSTRAINT IF EXISTS billings_billing_type_check');
-        DB::statement("ALTER TABLE billings ADD CONSTRAINT billings_billing_type_check
-            CHECK (billing_type IN ('monthly', 'move_in', 'move_out', 'charges'))");
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE billings DROP CONSTRAINT IF EXISTS billings_billing_type_check');
+            DB::statement("ALTER TABLE billings ADD CONSTRAINT billings_billing_type_check
+                CHECK (billing_type IN ('monthly', 'move_in', 'move_out', 'charges'))");
+
+            return;
+        }
+
+        DB::statement("ALTER TABLE billings MODIFY COLUMN billing_type ENUM('monthly', 'move_in', 'move_out', 'charges') NOT NULL DEFAULT 'monthly'");
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE billings DROP CONSTRAINT IF EXISTS billings_billing_type_check');
-        DB::statement("ALTER TABLE billings ADD CONSTRAINT billings_billing_type_check
-            CHECK (billing_type IN ('monthly', 'move_in', 'move_out'))");
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE billings DROP CONSTRAINT IF EXISTS billings_billing_type_check');
+            DB::statement("ALTER TABLE billings ADD CONSTRAINT billings_billing_type_check
+                CHECK (billing_type IN ('monthly', 'move_in', 'move_out'))");
+
+            return;
+        }
+
+        DB::statement("ALTER TABLE billings MODIFY COLUMN billing_type ENUM('monthly', 'move_in', 'move_out') NOT NULL DEFAULT 'monthly'");
     }
 };
