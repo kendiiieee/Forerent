@@ -1,3 +1,4 @@
+SET FOREIGN_KEY_CHECKS=0;
 INSERT INTO `announcements` (announcement_id, author_id, property_id, headline, details, sender_role, recipient_role, created_at, updated_at, deleted_at, notification_date) VALUES
 ('1', '5', '3', 'Pool Area Cleaning', 'Tillman Inc Apartments: Pool maintenance is scheduled for Tuesday. Please refrain from using the pool area during this time.', 'landlord', 'manager', '2026-01-26 16:11:36', '2026-01-26 16:11:36', NULL, '2026-01-26'),
 ('2', '5', '1', 'Pool Area Cleaning', 'Christiansen-Harris Apartments: Pool maintenance is scheduled for Sunday. Please refrain from using the pool area during this time.', 'landlord', 'manager', '2026-03-11 23:59:49', '2026-03-11 23:59:49', NULL, '2026-03-11'),
@@ -60646,3 +60647,4 @@ INSERT INTO `utility_bills` (utility_bill_id, unit_id, utility_type, billing_per
 ('1734', '16', 'water', '2026-04-01', '427.81', '3', '142.60', '43', '2026-05-07 21:27:57', '2026-05-07 21:27:57', NULL),
 ('1735', '16', 'electricity', '2026-05-01', '2224.95', '2', '1112.48', '43', '2026-05-07 21:27:57', '2026-05-07 21:27:57', NULL);
 
+SET FOREIGN_KEY_CHECKS=1;

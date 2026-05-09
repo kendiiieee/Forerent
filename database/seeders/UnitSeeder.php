@@ -10,9 +10,11 @@ use Illuminate\Database\Seeder;
 
 class UnitSeeder extends Seeder
 {
-    const FLOORS_PER_PROPERTY = 5;
+    private const MAX_UNITS_PER_MANAGER = 10;
 
-    const UNITS_PER_FLOOR = 4;
+    private const FLOORS_PER_PROPERTY = 5;
+
+    private const UNITS_PER_FLOOR = 4;
 
     protected Generator $faker;
 
@@ -28,6 +30,8 @@ class UnitSeeder extends Seeder
             return;
         }
 
+        $managers = User::where('role', 'manager')->pluck('user_id')->toArray();
+        $managerUnitCounts = array_fill_keys($managers, 0);
         if (empty($managers)) {
             throw new \RuntimeException('UnitSeeder requires at least one user with role=manager.');
         }
@@ -37,17 +41,16 @@ class UnitSeeder extends Seeder
 
         foreach ($properties as $property) {
             for ($floor = 1; $floor <= self::FLOORS_PER_PROPERTY; $floor++) {
-                // Keep '$unit' for this outer floor-loop
                 for ($unit = 1; $unit <= self::UNITS_PER_FLOOR; $unit++) {
 
                     $floorFormatted = str_pad($floor, 2, '0', STR_PAD_LEFT);
 
-                    // FIX: Changed '$unit' to '$i' here to avoid collision
-                    for ($i = 1; $i <= 4; $i++) {
+                    // FIXED: Changed $i to $unit
+                    $unitFormatted = str_pad($unit, 2, '0', STR_PAD_LEFT);
+                    $unitNumber = $floorFormatted.$unitFormatted;
 
-                        $unitFormatted = str_pad($i, 2, '0', STR_PAD_LEFT);
-                        $unitNumber = $floorFormatted.$unitFormatted;
-
+                    if (! empty($managers)) {
+                        // Round-robin assignment for managers
                         $managerId = $managers[$rrIndex % $managerCount];
                         $rrIndex++;
 
@@ -60,8 +63,7 @@ class UnitSeeder extends Seeder
                     }
                 }
             }
-
-            $this->command->info('✅ Units seeded successfully using factory!');
         }
+        $this->command->info('✅ Units seeded successfully using factory!');
     }
 }

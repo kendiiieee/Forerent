@@ -7,6 +7,9 @@ BEGIN {
     FS = "\t"
     in_copy = 0
     first_row = 1
+    data_count = 0
+    header_printed = 0
+    insert_header = ""
 }
 
 function should_skip_table(t) {
@@ -60,31 +63,41 @@ function sql_value(v,    out) {
 
     in_copy = 1
     first_row = 1
+    data_count = 0
+    current_table = table
 
     open_paren = index(line, "(")
     close_paren = index(line, ")")
     cols = substr(line, open_paren + 1, close_paren - open_paren - 1)
     cols = trim(cols)
 
-    printf("INSERT INTO `%s` (%s) VALUES\n", table, cols)
+    insert_header = sprintf("INSERT INTO `%s` (%s) VALUES\n", table, cols)
+    header_printed = 0
     next
 }
 
 in_copy && /^\\\.$/ {
-    if (in_copy == 1) {
+    if (in_copy == 1 && data_count > 0) {
         printf(";\n\n")
     }
     in_copy = 0
+    data_count = 0
+    header_printed = 0
     next
 }
 
-in_copy {
+in_copy && in_copy == 1 {
     row = ""
     for (i = 1; i <= NF; i++) {
         if (i > 1) {
             row = row ", "
         }
         row = row sql_value($i)
+    }
+
+    if (!header_printed) {
+        printf("%s", insert_header)
+        header_printed = 1
     }
 
     if (first_row) {
@@ -94,6 +107,7 @@ in_copy {
         printf(",\n(%s)", row)
     }
 
+    data_count++
     next
 }
 
