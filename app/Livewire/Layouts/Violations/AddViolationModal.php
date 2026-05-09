@@ -77,11 +77,6 @@ class AddViolationModal extends Component
         $this->updatePenaltyPreview();
     }
 
-    public function updatedSeverity()
-    {
-        $this->updatePenaltyPreview();
-    }
-
     private function updatePenaltyPreview(): void
     {
         if (!$this->leaseId) {
@@ -95,7 +90,7 @@ class AddViolationModal extends Component
             return;
         }
 
-        $this->penaltyPreview = ViolationEscalationService::determinePenalty($lease, $this->severity);
+        $this->penaltyPreview = ViolationEscalationService::determinePenalty($lease);
     }
 
     public function removePhoto($index)
@@ -103,9 +98,9 @@ class AddViolationModal extends Component
         array_splice($this->evidencePhotos, $index, 1);
     }
 
-    public function save()
+    private function validationRules(): array
     {
-        $this->validate([
+        return [
             'leaseId' => 'required|exists:leases,lease_id',
             'category' => 'required|string|max:255',
             'severity' => 'required|in:minor,major,serious',
@@ -113,13 +108,33 @@ class AddViolationModal extends Component
             'violationDate' => 'required|date|before_or_equal:today',
             'evidencePhotos' => 'nullable|array|max:3',
             'evidencePhotos.*' => 'image|max:5120',
-        ], [
+        ];
+    }
+
+    private function validationMessages(): array
+    {
+        return [
             'leaseId.required' => 'Please select a tenant.',
             'description.required' => 'Please describe the violation.',
             'description.min' => 'Description must be at least 10 characters.',
             'violationDate.required' => 'Please set the violation date.',
             'violationDate.before_or_equal' => 'Violation date cannot be in the future.',
-        ]);
+        ];
+    }
+
+    /**
+     * Validate the form first; only open the confirmation modal if everything passes.
+     * Prevents the confirmation dialog from appearing over an invalid form.
+     */
+    public function requestSave(): void
+    {
+        $this->validate($this->validationRules(), $this->validationMessages());
+        $this->dispatch('open-modal', 'save-violation-confirmation');
+    }
+
+    public function save()
+    {
+        $this->validate($this->validationRules(), $this->validationMessages());
 
         // Verify manager has authority over this lease
         $authorized = DB::table('leases')
@@ -136,7 +151,7 @@ class AddViolationModal extends Component
         $lease = Lease::findOrFail($this->leaseId);
 
         // Determine penalty based on offense history
-        $penalty = ViolationEscalationService::determinePenalty($lease, $this->severity);
+        $penalty = ViolationEscalationService::determinePenalty($lease);
 
         // Store evidence photos
         $evidencePaths = [];
@@ -195,12 +210,16 @@ class AddViolationModal extends Component
                 'link' => route('tenant.dashboard'),
             ]);
 
-            // If lease termination, also alert the manager prominently
+            // Termination penalty → issue formal Notice of Termination on the lease.
+            // Sets vacate_by_date and triggers the persistent banner on the tenant detail.
             if ($penalty['penalty_type'] === 'lease_termination') {
-                $this->notifyWarning(
-                    'Lease Termination Flagged',
-                    "This is the {$penalty['offense_number']}th offense. Consider initiating the move-out process for this tenant."
-                );
+                $updatedLease = ViolationEscalationService::issueTerminationNotice($violation);
+                if ($updatedLease && $updatedLease->termination_notice_issued_at) {
+                    $this->notifyWarning(
+                        'Notice of Termination Issued',
+                        'Tenant must vacate by ' . $updatedLease->vacate_by_date->format('M d, Y') . '. Initiate the move-out process from the tenant detail.'
+                    );
+                }
             }
         }
 

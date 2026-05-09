@@ -28,6 +28,10 @@ class Lease extends Model
         'move_out',
         'termination_reason',
         'move_out_initiated_at',
+        'termination_notice_issued_at',
+        'vacate_by_date',
+        'termination_notice_violation_id',
+        'termination_notice_path',
         'monthly_due_date',
         'late_payment_penalty',
         'short_term_premium',
@@ -78,6 +82,8 @@ class Lease extends Model
         'move_in' => 'date',
         'move_out' => 'date',
         'move_out_initiated_at' => 'datetime',
+        'termination_notice_issued_at' => 'datetime',
+        'vacate_by_date' => 'date',
         'auto_renew' => 'boolean',
         'contract_rate' => 'decimal:2',
         'advance_amount' => 'decimal:2',
@@ -162,6 +168,11 @@ class Lease extends Model
     public function violations()
     {
         return $this->hasMany(Violation::class, 'lease_id', 'lease_id');
+    }
+
+    public function terminationNoticeViolation()
+    {
+        return $this->belongsTo(Violation::class, 'termination_notice_violation_id', 'violation_id');
     }
 
     /**

@@ -356,7 +356,6 @@
         <td class="field-label" style="padding-left:20px;">Email:</td><td class="field-value">{{ $tenant['contact_info']['email'] }}</td>
     </tr></table>
     <table class="field-table">
-        <tr><td class="field-label">Forwarding Address:</td><td class="field-value">{{ $tenant['move_out_details']['forwarding_address'] ?? '' }}</td></tr>
         <tr><td class="field-label">Emergency Contact:</td><td class="field-value">{{ $tenant['personal_info']['emergency_contact_name'] ?? '' }} ({{ $tenant['personal_info']['emergency_contact_relationship'] ?? '' }}) — {{ $tenant['personal_info']['emergency_contact_number'] ?? '' }}</td></tr>
     </table>
 

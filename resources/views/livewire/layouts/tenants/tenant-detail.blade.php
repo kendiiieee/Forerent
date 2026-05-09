@@ -30,6 +30,20 @@
                                     </button>
                                 </flux:tooltip>
                                 @endif
+
+                                @if($viewingTab === 'moving_out' && auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') === 'approved' && $moveOutInitiated)
+                                <flux:tooltip content="Complete the move-out process and close this lease" position="bottom">
+                                    <button
+                                        wire:click="moveOutTenant"
+                                        class="flex items-center gap-1.5 bg-white text-[#070589] rounded-lg px-3 py-1.5 text-xs font-semibold hover:bg-blue-50 transition-colors border border-white shadow-sm"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
+                                        </svg>
+                                        Finalize Move Out
+                                    </button>
+                                </flux:tooltip>
+                                @endif
                             </div>
                     </div>
 
@@ -50,7 +64,7 @@
                             <svg class="w-3.5 h-3.5 flex-shrink-0" style="color: #93c5fd;" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                             </svg>
-                            <span class="text-xs truncate max-w-[220px]" style="color: rgba(255,255,255,0.85);">{{ $currentTenant['personal_info']['address'] }}</span>
+                            <span class="text-xs truncate max-w-[420px]" title="{{ $currentTenant['personal_info']['address'] }}" style="color: rgba(255,255,255,0.85);">{{ $currentTenant['personal_info']['address'] }}</span>
                         </div>
                         <div class="flex items-center gap-1.5 rounded-lg px-3 py-1.5" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.06);">
                             <svg class="w-3.5 h-3.5 flex-shrink-0" style="color: #93c5fd;" fill="currentColor" viewBox="0 0 20 20">
@@ -76,6 +90,70 @@
                     })
                 "
             >
+
+                {{-- Termination Notice Banner — visible while a notice is on file and the move-out hasn't been initiated yet. --}}
+                @if(($currentTenant['termination_notice']['issued_at'] ?? null) && !($currentTenant['move_out_details']['move_out_initiated_at'] ?? null))
+                    @php
+                        $tn = $currentTenant['termination_notice'];
+                        $daysRemaining = $tn['days_remaining'] ?? null;
+                    @endphp
+                    <div class="rounded-2xl shadow-sm overflow-hidden border border-red-200">
+                        <div class="bg-gradient-to-r from-red-50 to-rose-50 p-5">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                        <h5 class="font-bold text-sm text-red-700 uppercase tracking-wide">Notice of Termination Issued</h5>
+                                        @if($tn['is_overdue'] ?? false)
+                                            <span class="text-[10px] font-bold uppercase tracking-wider bg-red-700 text-white px-2 py-0.5 rounded-full">Vacate date passed</span>
+                                        @elseif($daysRemaining !== null && $daysRemaining <= 7)
+                                            <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-white px-2 py-0.5 rounded-full">{{ $daysRemaining }} day{{ $daysRemaining === 1 ? '' : 's' }} left</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-sm text-gray-800 mb-1">
+                                        Tenant must vacate the premises by
+                                        <strong class="text-red-700">{{ $tn['vacate_by'] }}</strong>.
+                                    </p>
+                                    <p class="text-[11px] text-gray-600">
+                                        Notice issued {{ $tn['issued_at'] }}. Complete the move-out inspection,
+                                        settlement, and clearance via the move-out process. The tenant has been notified.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button
+                                    type="button"
+                                    wire:click="downloadTerminationNotice"
+                                    wire:loading.attr="disabled"
+                                    class="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-red-300 hover:bg-red-50 text-red-700 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg wire:loading.remove wire:target="downloadTerminationNotice" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                    </svg>
+                                    <svg wire:loading wire:target="downloadTerminationNotice" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                    <span wire:loading.remove wire:target="downloadTerminationNotice">Download Notice (PDF)</span>
+                                    <span wire:loading wire:target="downloadTerminationNotice">Generating…</span>
+                                </button>
+                                @if(auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') === 'approved')
+                                    <button
+                                        type="button"
+                                        wire:click="moveOutTenant"
+                                        class="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
+                                        </svg>
+                                        Initiate Move-Out Process
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Rental Eligibility Block Banner --}}
                 @if(!empty($currentTenant['eligibility']['is_blocked']))
@@ -1577,7 +1655,6 @@
     @endif
 
     {{-- Initiate Move-Out Form Modal --}}
-    {{-- bodyOverflow=visible so the address-picker dropdown isn't clipped by the modal panel. --}}
     <x-ui.modal-confirm
         name="initiate-move-out"
         title="Initiate Move-Out"
@@ -1585,7 +1662,6 @@
         confirmText="Start Move-Out Process"
         cancelText="Cancel"
         confirmAction="initiateMoveOut"
-        bodyOverflow="visible"
     >
         <div class="space-y-4 text-left">
             <div>
@@ -1606,24 +1682,6 @@
                     </select>
                     @error('reasonForVacating') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 @endif
-            </div>
-            <div>
-                <x-forms.address-picker
-                    variant="compact"
-                    label="Forwarding Address"
-                    :required="true"
-                    province-model="forwardingProvinceId"
-                    city-model="forwardingCityId"
-                    barangay-model="forwardingBarangayId"
-                    street-model="forwardingStreet"
-                    :province-id="$forwardingProvinceId"
-                    :city-id="$forwardingCityId"
-                    :barangay-id="$forwardingBarangayId"
-                    :street="$forwardingStreet"
-                    :provinces="$this->psgcProvinces()"
-                    :cities="$this->psgcCities($forwardingProvinceId)"
-                    :barangays="$this->psgcBarangays($forwardingCityId)"
-                />
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
