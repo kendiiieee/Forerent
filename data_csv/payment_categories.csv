@@ -1,0 +1,8 @@
+payment_category_id,name,description,type,is_active,created_at,updated_at,deleted_at
+1,Rent Payment,Monthly rental payment,income,t,2026-04-06 19:15:53,2026-04-06 19:15:53,
+2,Move-In Payment,Payment upon move-in (advance + deposit),income,t,2026-04-06 19:15:53,2026-04-06 19:15:53,
+3,Advance,Advance rent payment,income,t,2026-04-06 19:15:53,2026-04-06 19:15:53,
+4,Deposit,Security deposit,income,t,2026-04-06 19:15:53,2026-04-06 19:15:53,
+5,Maintenance,Maintenance and repair costs,expense,t,2026-04-06 19:15:53,2026-04-06 19:15:53,
+6,Vendor Payment,Payments to vendors and suppliers,expense,t,2026-04-06 19:15:53,2026-04-06 19:15:53,
+7,Move-Out Settlement,Settlement upon tenant move-out,expense,t,2026-04-06 19:15:53,2026-04-06 19:15:53,

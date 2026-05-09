@@ -1,0 +1,1 @@
+violation_id,lease_id,reported_by,violation_number,offense_number,category,description,evidence_path,severity,penalty_type,fine_amount,status,violation_date,issued_at,tenant_acknowledged_at,resolution_notes,resolved_at,billing_item_id,created_at,updated_at,deleted_at

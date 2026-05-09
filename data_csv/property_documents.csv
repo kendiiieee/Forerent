@@ -1,0 +1,62 @@
+id,property_id,file_path,original_name,category,visibility,created_at,updated_at,is_seed
+32,2,property_documents/2-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+33,2,property_documents/2-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+34,2,property_documents/2-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+37,3,property_documents/3-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+38,3,property_documents/3-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+39,3,property_documents/3-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+40,3,property_documents/3-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
+50,2,property_documents/2-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+51,2,property_documents/2-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+52,2,property_documents/2-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+53,2,property_documents/2-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+56,3,property_documents/3-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+57,3,property_documents/3-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+58,3,property_documents/3-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+59,3,property_documents/3-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 22:11:31,2026-05-07 22:25:18,t
+69,2,property_documents/2-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+70,2,property_documents/2-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+71,2,property_documents/2-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+72,2,property_documents/2-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+75,3,property_documents/3-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+76,3,property_documents/3-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+77,3,property_documents/3-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+78,3,property_documents/3-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 22:13:13,2026-05-07 22:25:18,t
+9,2,property_documents/2-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+10,2,property_documents/2-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+11,2,property_documents/2-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+12,2,property_documents/2-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+15,3,property_documents/3-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+16,3,property_documents/3-bir-2303.pdf,bir-2303.pdf,bir_2303,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+17,3,property_documents/3-inspection-report.pdf,inspection-report.pdf,inspection_report,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+18,3,property_documents/3-barangay-clearance.pdf,barangay-clearance.pdf,barangay_clearance,all,2026-05-07 21:25:48,2026-05-07 22:25:18,t
+80,1,property_documents/VrxlOheV38vDdsMSoFuWSnYz2trJvjnlg5xFJIWY.pdf,business permit.pdf,business_permit,all,2026-05-07 22:37:01,2026-05-07 22:37:01,f
+81,1,property_documents/sG5YCBZdyQVDZ7p6wiFfZZT5u0pSMYtShsM6gFIr.png,bir 2303.png,bir_2303,all,2026-05-07 22:37:01,2026-05-07 22:37:01,f
+82,1,property_documents/kBmbd2UNJcOfbDU6n7jgUSsOO0tKYSHWEpDfTmnj.pdf,inspection report.pdf,inspection_report,all,2026-05-07 22:37:02,2026-05-07 22:37:02,f
+83,1,property_documents/f6MnBWffG3w2FoMJBX13DHtlqXkiLy0y1PkQEFuI.pdf,barangay clearance.pdf,barangay_clearance,all,2026-05-07 22:37:02,2026-05-07 22:37:02,f
+84,1,property_documents/L7phompeL7aeZZzTGEYSbbjsudBSurnirVChO4g1.pdf,occupancy permit.pdf,occupancy_permit,all,2026-05-07 22:37:02,2026-05-07 22:37:02,f
+7,2,property_photos/2-property-b.png,property-b.png,property_photo,all,2026-05-07 21:25:48,2026-05-07 22:19:41,t
+8,2,property_photos/2-property-b-1.png,property-b-1.png,property_photo,all,2026-05-07 21:25:48,2026-05-07 22:19:41,t
+13,2,property_documents/2-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 21:25:48,2026-05-07 22:19:41,t
+14,3,property_photos/3-property-c.png,property-c.png,property_photo,all,2026-05-07 21:25:48,2026-05-07 22:19:41,t
+19,3,property_documents/3-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 21:25:48,2026-05-07 22:19:41,t
+55,3,property_photos/3-property-c.png,property-c.png,property_photo,all,2026-05-07 22:11:31,2026-05-07 22:19:41,t
+85,1,property_documents/tmArfdOLOGmIb4WSXl40bCvE1f37dZP2AUb95uNn.png,tct.png,title_tct,all,2026-05-07 22:37:02,2026-05-07 22:37:02,f
+86,1,property_documents/AWZM4Iljxh05VBoal1cfHFniWjZn7JhaYbM60yj8.png,tax declaration.jpg,tax_declaration,all,2026-05-07 22:37:02,2026-05-07 22:37:02,f
+87,1,property_documents/sblFGQ8ifUu3SSnEeFXjS4H6L6hnBYbEtkEFaMJv.png,deed of sale.jpg,transfer_certificate,all,2026-05-07 22:37:02,2026-05-07 22:37:02,f
+29,2,property_photos/2-property-b.png,property-b.png,property_photo,all,2026-05-07 22:08:25,2026-05-07 22:19:41,t
+30,2,property_photos/2-property-b-1.png,property-b-1.png,property_photo,all,2026-05-07 22:08:25,2026-05-07 22:19:41,t
+35,2,property_documents/2-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 22:08:25,2026-05-07 22:19:41,t
+36,3,property_photos/3-property-c.png,property-c.png,property_photo,all,2026-05-07 22:08:25,2026-05-07 22:19:41,t
+41,3,property_documents/3-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 22:08:25,2026-05-07 22:19:41,t
+48,2,property_photos/2-property-b.png,property-b.png,property_photo,all,2026-05-07 22:11:31,2026-05-07 22:19:41,t
+49,2,property_photos/2-property-b-1.png,property-b-1.png,property_photo,all,2026-05-07 22:11:31,2026-05-07 22:19:41,t
+54,2,property_documents/2-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 22:11:31,2026-05-07 22:19:41,t
+60,3,property_documents/3-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 22:11:31,2026-05-07 22:19:41,t
+61,1,property_photos/1-property-a.png,property-a.png,property_photo,all,2026-05-07 22:13:13,2026-05-07 22:19:41,t
+67,2,property_photos/2-property-b.png,property-b.png,property_photo,all,2026-05-07 22:13:13,2026-05-07 22:19:41,t
+68,2,property_photos/2-property-b-1.png,property-b-1.png,property_photo,all,2026-05-07 22:13:13,2026-05-07 22:19:41,t
+73,2,property_documents/2-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 22:13:13,2026-05-07 22:19:41,t
+74,3,property_photos/3-property-c.png,property-c.png,property_photo,all,2026-05-07 22:13:13,2026-05-07 22:19:41,t
+79,3,property_documents/3-occupancy-permit.pdf,occupancy-permit.pdf,occupancy_permit,all,2026-05-07 22:13:13,2026-05-07 22:19:41,t
+31,2,property_documents/2-business-permit.pdf,business-permit.pdf,business_permit,all,2026-05-07 22:08:25,2026-05-07 22:25:18,t
