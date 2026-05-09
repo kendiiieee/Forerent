@@ -26,9 +26,9 @@ return new class extends Migration
         // On a fresh install (empty units), seeders run after migrations, so
         // there's nothing to assign — just enforce NOT NULL and exit.
         if ($orphans->isNotEmpty() && empty($managerIds)) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'Cannot make units.manager_id required: orphan units exist but no users with role=manager. '
-                . 'Seed or create at least one manager before running this migration.'
+                .'Seed or create at least one manager before running this migration.'
             );
         }
 
@@ -44,7 +44,7 @@ return new class extends Migration
                 ->values()
                 ->all();
 
-            if (!empty($localManagers)) {
+            if (! empty($localManagers)) {
                 $loadCounts = DB::table('units')
                     ->where('property_id', $orphan->property_id)
                     ->whereIn('manager_id', $localManagers)
@@ -72,7 +72,7 @@ return new class extends Migration
             $table->dropForeign(['manager_id']);
         });
 
-        DB::statement('ALTER TABLE units ALTER COLUMN manager_id SET NOT NULL');
+        DB::statement('ALTER TABLE units MODIFY COLUMN manager_id BIGINT UNSIGNED NOT NULL');
 
         Schema::table('units', function (Blueprint $table) {
             $table->foreign('manager_id')
@@ -87,7 +87,7 @@ return new class extends Migration
             $table->dropForeign(['manager_id']);
         });
 
-        DB::statement('ALTER TABLE units ALTER COLUMN manager_id DROP NOT NULL');
+        DB::statement('ALTER TABLE units MODIFY COLUMN manager_id BIGINT UNSIGNED NULL');
 
         Schema::table('units', function (Blueprint $table) {
             $table->foreign('manager_id')

@@ -7,11 +7,11 @@ use App\Livewire\Auth\ForgotPassword;
 use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Http\Request;
-// Import the Forgot Password Component
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 // ─── LANDING PAGE (public, no auth required) ────────────────────────────────
 Route::get('/', function (Request $request) {
@@ -186,16 +186,19 @@ Route::get('/clear-system-cache', function () {
 // ─── DATABASE PROVISIONING (Temporary for Free Tier Sync) ───────────────────
 Route::get('/sync-production-database', function () {
     try {
-        // 1. Drop all existing tables/views to solve the 1050 error
+        // Step 1: Disable foreign key checks for the wipe
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // Step 2: Wipe everything
         Artisan::call('db:wipe', ['--force' => true]);
-
-        // 2. Recreate the schema from scratch
+        
+        // Step 3: Re-enable checks and build
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        
         Artisan::call('migrate', ['--force' => true]);
-
-        // 3. Populate the data for your 8 documents and occupancy stats
         Artisan::call('db:seed', ['--force' => true]);
 
-        return 'ForeRent database successfully wiped and synchronized!';
+        return 'ForeRent database successfully reset and synchronized!';
     } catch (\Exception $e) {
         return 'Sync failed: ' . $e->getMessage();
     }
