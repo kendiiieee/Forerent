@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('bed_id')
                 ->constrained('beds', 'bed_id')
                 ->onDelete('cascade');
-            $table->enum('status',['Active', 'Expired']);
+            $table->enum('status', ['Active', 'Expired']);
             $table->integer('term');
             $table->enum('shift', ['Night', 'Morning']);
             $table->boolean('auto_renew');
@@ -40,6 +40,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('lease_info');
+        Schema::dropIfExists('leases');
     }
 };

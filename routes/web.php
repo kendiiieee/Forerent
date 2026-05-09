@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 
 // ─── LANDING PAGE (public, no auth required) ────────────────────────────────
 Route::get('/', function (Request $request) {
@@ -186,20 +185,12 @@ Route::get('/clear-system-cache', function () {
 // ─── DATABASE PROVISIONING (Temporary for Free Tier Sync) ───────────────────
 Route::get('/sync-production-database', function () {
     try {
-        // Step 1: Disable foreign key checks for the wipe
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Use migrate:fresh + seed which reliably drops and recreates all tables
+        // in one step and is typically more reliable on TiDB/MySQL platforms.
+        Artisan::call('migrate:fresh', ['--force' => true, '--seed' => true]);
 
-        // Step 2: Wipe everything
-        Artisan::call('db:wipe', ['--force' => true]);
-        
-        // Step 3: Re-enable checks and build
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-        
-        Artisan::call('migrate', ['--force' => true]);
-        Artisan::call('db:seed', ['--force' => true]);
-
-        return 'ForeRent database successfully reset and synchronized!';
-    } catch (\Exception $e) {
-        return 'Sync failed: ' . $e->getMessage();
+        return 'ForeRent database successfully reset and synchronized! (migrate:fresh)';
+    } catch (Exception $e) {
+        return 'Sync failed: '.$e->getMessage();
     }
 });
