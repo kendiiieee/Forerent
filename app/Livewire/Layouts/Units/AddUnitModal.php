@@ -18,12 +18,6 @@ class AddUnitModal extends Component
 
     public $isOpen = false;
 
-    public $modalId;
-
-    public $editingUnitId = null;
-
-    public $editingUnitNumber = null;
-
     public $currentStep = 1;
 
     public $steps = [
@@ -36,37 +30,43 @@ class AddUnitModal extends Component
 
     public $managers = [];
 
-    public $property_id;
-
-    public $manager_id;
-    
-    public $floor_number;
-
     public $occupants = 'Co-ed';
 
-    public $living_area;
-
     public $furnishing = 'Semi-furnished';
-
-    public $bed_type;
-
-    public $room_cap;
-
-    public $unit_cap;
-
-    public $m_f;
-
-    public $room_type;
 
     public $model_amenities = [];
 
     public $amenity_labels = [];
 
-    public $predicted_price = null;
-
-    public $actual_price;
-
     public $is_predicting = false;
+
+    public mixed $modalId;
+
+    public ?int $editingUnitId = null;
+
+    public ?string $editingUnitNumber = null;
+
+    public ?int $property_id = null;
+
+    public ?int $manager_id = null;
+
+    public ?int $floor_number = null;
+
+    public ?float $living_area = null;
+
+    public ?string $bed_type = null;
+
+    public ?int $room_cap = null;
+
+    public ?int $unit_cap = null;
+
+    public ?string $m_f = null; // Occupants/Gender
+
+    public ?string $room_type = null;
+
+    public ?float $predicted_price = null;
+
+    public ?float $actual_price = null;
 
     // Fixed the missing comma here
     protected $rules = [
@@ -112,7 +112,7 @@ class AddUnitModal extends Component
     }
 
     #[On('open-unit-modal')]
-    public function loadUnitForEditing($unitId)
+    public function openEdit(int $unitId)
     {
         $this->resetForm();
         $unit = Unit::find($unitId);
@@ -240,7 +240,7 @@ class AddUnitModal extends Component
         $dataForModel = array_merge($dataForModel, $this->model_amenities);
 
         try {
-            $response = Http::post(env('PRICE_API_URL') . '/predict', $dataForModel);
+            $response = Http::post(env('PRICE_API_URL').'/predict', $dataForModel);
             if ($response->successful()) {
                 $this->predicted_price = $response->json('predicted_price');
             } else {
@@ -335,7 +335,7 @@ class AddUnitModal extends Component
         }
     }
 
-    private function generateUniqueUnitNumber($propertyId, $floorNumber): string
+    private function generateUniqueUnitNumber(int $propertyId, int $floorNumber): string
     {
         $baseNumber = sprintf('F%dU%d', $floorNumber, rand(100, 999));
         while (Unit::where('property_id', $propertyId)->where('unit_number', $baseNumber)->exists()) {
