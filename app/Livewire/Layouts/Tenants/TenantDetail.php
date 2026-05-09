@@ -91,10 +91,12 @@ class TenantDetail extends Component
     // Move-out workflow
     public $moveOutInitiated = false;
     public $moveOutPrerequisites = [];
+    public bool $moveOutLeaseExpired = false;
 
     // Deposit refund tracking
     public $depositInterestAmount = '';
     public $depositRefundReference = '';
+    public ?array $moveOutRefundPreview = null;
 
     // Violations
     public $violations = [];
@@ -126,7 +128,9 @@ class TenantDetail extends Component
             return;
         }
 
-        if ($tab === 'current' || $tab === 'moving_out') {
+        // 'pending' tenants also have an Active lease (with approval_status='pending'),
+        // so they need the Active-lease query — only 'transferred' / 'moved_out' look at Expired.
+        if ($tab === 'current' || $tab === 'moving_out' || $tab === 'pending') {
             $lease = Lease::where('tenant_id', $tenantId)
                 ->where('status', 'Active')
                 ->latest()
@@ -555,6 +559,8 @@ class TenantDetail extends Component
         $this->moveOutContractAgreed = false;
         $this->moveOutInitiated = false;
         $this->moveOutPrerequisites = [];
+        $this->moveOutRefundPreview = null;
+        $this->depositInterestAmount = '';
         $this->violations = [];
         $this->violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
     }
@@ -754,7 +760,15 @@ class TenantDetail extends Component
             return;
         }
 
-        // Otherwise open the initiation form
+        // Auto-derive end-of-lease vs early termination from the lease end date —
+        // the user only needs to pick a reason for early terminations.
+        $lease = $this->currentLeaseId ? Lease::find($this->currentLeaseId) : null;
+        $this->moveOutLeaseExpired = (bool) ($lease?->end_date && now()->gte($lease->end_date));
+        $this->reasonForVacating = $this->moveOutLeaseExpired
+            ? 'End of lease term (contract expired)'
+            : '';
+        $this->resetErrorBag('reasonForVacating');
+
         $this->dispatch('open-modal', 'initiate-move-out');
     }
 
@@ -796,7 +810,6 @@ class TenantDetail extends Component
                 'Voluntary early termination by Lessee',
                 'Mutual agreement between both parties',
                 'Lease violation or termination by Lessor',
-                'Transfer to a different unit / building (internal transfer)',
             ];
             $normalEndReason = 'End of lease term (contract expired)';
 
@@ -860,6 +873,8 @@ class TenantDetail extends Component
 
         // Reload tenant data to unlock the move-out UI
         $this->loadTenant($this->currentTenantId, $this->viewingTab);
+        // Tenant just moved Current → Moving Out — refresh the navigation list/counts.
+        $this->dispatch('refresh-tenant-list');
         $this->dispatch('notify', type: 'success', title: 'Move-Out Initiated', description: 'The move-out process has been started. You can now complete the inspection and contract.');
     }
 
@@ -956,7 +971,13 @@ class TenantDetail extends Component
         $noticePeriodMet = true;
         $noticeLabel = '30-day notice period (N/A — normal end of lease)';
         if ($isEarlyTermination) {
-            $daysSinceNotice = \Carbon\Carbon::parse($lease->move_out_initiated_at)->diffInDays(\Carbon\Carbon::today());
+            // startOfDay + abs + int — Carbon 3 returns signed floats, and the
+            // initiated_at timestamp is mid-day while today() is midnight.
+            $daysSinceNotice = (int) abs(
+                \Carbon\Carbon::parse($lease->move_out_initiated_at)
+                    ->startOfDay()
+                    ->diffInDays(\Carbon\Carbon::today()->startOfDay())
+            );
             $noticePeriodMet = $daysSinceNotice >= 30;
             $noticeLabel = "30-day notice period elapsed ({$daysSinceNotice}/30 days)";
         }
@@ -969,6 +990,38 @@ class TenantDetail extends Component
             ['label' => 'Move-out contract signed by both parties', 'done' => $contractSigned],
             ['label' => $noticeLabel, 'done' => $noticePeriodMet],
         ];
+
+        $this->computeMoveOutRefundPreview($lease);
+    }
+
+    /**
+     * Build a non-persistent refund preview so the modal can show what the
+     * tenant will actually receive (or whether the deposit is forfeited).
+     */
+    public function computeMoveOutRefundPreview(?Lease $lease = null): void
+    {
+        $lease = $lease ?? ($this->currentLeaseId ? Lease::find($this->currentLeaseId) : null);
+        if (!$lease) {
+            $this->moveOutRefundPreview = null;
+            return;
+        }
+
+        $originalEndDate = $lease->end_date;
+
+        // Simulate what confirmMoveOut() will do, without persisting.
+        $lease->move_out = \Carbon\Carbon::today();
+
+        $manual = trim((string) $this->depositInterestAmount);
+        $lease->deposit_interest_amount = ($manual !== '' && is_numeric($manual))
+            ? (float) $manual
+            : null;
+
+        $this->moveOutRefundPreview = $lease->calculateDepositRefund($originalEndDate);
+    }
+
+    public function updatedDepositInterestAmount(): void
+    {
+        $this->computeMoveOutRefundPreview();
     }
 
     public function confirmMoveOut(): void
@@ -1031,9 +1084,18 @@ class TenantDetail extends Component
                     'termination_reason'  => $terminationReason,
                 ]);
 
-                // Auto-compute deposit interest (RA 9653 IRR §7b)
-                $computedInterest = $lease->computeDepositInterest();
-                $lease->update(['deposit_interest_amount' => $computedInterest]);
+                // Deposit interest (RA 9653 IRR §7b) — manual entry overrides auto-computed.
+                // Early termination forfeits the entire deposit including any interest, per
+                // Contract Section 7, so we save 0 to keep the audit record consistent.
+                if ($terminationReason === 'early_termination') {
+                    $interest = 0.0;
+                } else {
+                    $manual = trim((string) $this->depositInterestAmount);
+                    $interest = ($manual !== '' && is_numeric($manual))
+                        ? (float) $manual
+                        : $lease->computeDepositInterest();
+                }
+                $lease->update(['deposit_interest_amount' => $interest]);
 
                 // Auto-calculate deposit refund with original end_date
                 $refundData = $lease->calculateDepositRefund($originalEndDate);

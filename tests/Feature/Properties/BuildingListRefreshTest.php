@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\n    Property;
+use App\Models\Property;
 use App\Models\User;
 use App\Livewire\Layouts\Properties\BuildingCardsSection;
 use Livewire\Livewire;
