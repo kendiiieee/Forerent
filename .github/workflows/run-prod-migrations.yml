@@ -24,6 +24,8 @@ jobs:
           DB_DATABASE: ${{ secrets.PROD_DB_DATABASE }}
           DB_USERNAME: ${{ secrets.PROD_DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          MYSQL_ATTR_SSL_CA: /etc/ssl/certs/ca-certificates.crt
+          MYSQL_ATTR_SSL_VERIFY_SERVER_CERT: 'false'
           APP_ENV: production
           APP_KEY: ${{ secrets.APP_KEY }}
         run: php artisan migrate --force
@@ -36,6 +38,8 @@ jobs:
           DB_DATABASE: ${{ secrets.PROD_DB_DATABASE }}
           DB_USERNAME: ${{ secrets.PROD_DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.PROD_DB_PASSWORD }}
+          MYSQL_ATTR_SSL_CA: /etc/ssl/certs/ca-certificates.crt
+          MYSQL_ATTR_SSL_VERIFY_SERVER_CERT: 'false'
           APP_ENV: production
           APP_KEY: ${{ secrets.APP_KEY }}
         run: php artisan migrate:status
