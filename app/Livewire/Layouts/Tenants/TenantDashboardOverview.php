@@ -82,6 +82,9 @@ class TenantDashboardOverview extends Component
     public $violationCounts = ['total' => 0, 'issued' => 0, 'acknowledged' => 0, 'resolved' => 0];
     public ?int $pendingAcknowledgeViolationId = null;
 
+    // Early-vacate decline note (when tenant declines a manager's early-vacate request)
+    public $earlyVacateDeclineNote = '';
+
     // Contract & E-Signature
     public $showSignatureModal = false;
     public $tenantSignature = null;
@@ -361,6 +364,85 @@ class TenantDashboardOverview extends Component
     {
         $this->pendingAcknowledgeViolationId = $violationId;
         $this->dispatch('open-modal', 'confirm-acknowledge-violation');
+    }
+
+    /**
+     * Tenant accepts the manager's early-vacate request. Locks in the proposed
+     * date as the new effective vacate date and unlocks the move-out gate.
+     */
+    public function acceptEarlyVacate(): void
+    {
+        $lease = $this->lease;
+        if (!$lease || $lease->early_vacate_status !== 'pending_tenant') return;
+        if ($lease->tenant_id !== Auth::id()) return; // safety: only the tenant on the lease
+
+        $lease->update([
+            'early_vacate_status'        => 'accepted',
+            'early_vacate_responded_at'  => now(),
+            'early_vacate_response_note' => null,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'early_vacate_accepted', [
+            'metadata' => [
+                'proposed_date' => $lease->early_vacate_proposed_date?->toDateString(),
+                'accepted_by'   => Auth::id(),
+            ],
+        ]);
+
+        // Notify the manager who filed the request
+        if ($lease->early_vacate_requested_by) {
+            Notification::create([
+                'user_id' => $lease->early_vacate_requested_by,
+                'type'    => 'early_vacate_accepted',
+                'title'   => 'Early Vacate Accepted',
+                'message' => 'Tenant accepted the early-vacate request. New vacate date: ' . $lease->early_vacate_proposed_date->format('M d, Y') . '. You can now initiate the move-out process.',
+                'link'    => '/manager/tenant',
+            ]);
+        }
+
+        $this->dispatch('notify', type: 'success', title: 'Early Vacate Accepted', description: 'Management has been notified. They will reach out to coordinate the move-out.');
+        $this->refreshContractData();
+    }
+
+    /**
+     * Tenant declines the manager's early-vacate request. The original
+     * vacate-by date stays in effect.
+     */
+    public function declineEarlyVacate(): void
+    {
+        $lease = $this->lease;
+        if (!$lease || $lease->early_vacate_status !== 'pending_tenant') return;
+        if ($lease->tenant_id !== Auth::id()) return;
+
+        $note = trim($this->earlyVacateDeclineNote ?? '');
+
+        $lease->update([
+            'early_vacate_status'        => 'declined',
+            'early_vacate_responded_at'  => now(),
+            'early_vacate_response_note' => $note ?: null,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'early_vacate_declined', [
+            'metadata' => [
+                'declined_by' => Auth::id(),
+                'note'        => $note,
+            ],
+        ]);
+
+        if ($lease->early_vacate_requested_by) {
+            Notification::create([
+                'user_id' => $lease->early_vacate_requested_by,
+                'type'    => 'early_vacate_declined',
+                'title'   => 'Early Vacate Declined',
+                'message' => 'Tenant declined the early-vacate request' . ($note ? ': "' . $note . '"' : '.') . ' Original vacate-by date (' . $lease->vacate_by_date->format('M d, Y') . ') remains in effect.',
+                'link'    => '/manager/tenant',
+            ]);
+        }
+
+        $this->earlyVacateDeclineNote = '';
+        $this->dispatch('close-modal', 'decline-early-vacate');
+        $this->dispatch('notify', type: 'success', title: 'Early Vacate Declined', description: 'Your original notice period stays in effect.');
+        $this->refreshContractData();
     }
 
     public function confirmAcknowledgeViolation(): void
