@@ -34,6 +34,8 @@ class TenantDashboardOverview extends Component
     public $paymentStatus = 'No Billing';
     public $outstandingBalance = 0;
     public $nextPaymentDate = null;
+    public $nextBillAmount = null;
+    public $nextBillDate = null;
     public $billingItems = [];
     public $billingStartDate = null;
     public $billingProgress = 0;
@@ -238,6 +240,18 @@ class TenantDashboardOverview extends Component
         if ($this->currentBilling && $this->currentBilling->next_billing) {
             $this->nextPaymentDate = $this->currentBilling->next_billing;
         }
+
+        // When the current bill is paid, surface the upcoming bill so the banner
+        // can show "Next bill: ₱X due Mon DD" alongside "Amount Paid This Month".
+        if ($this->paymentStatus === 'Paid' && $this->currentBilling) {
+            $this->nextBillDate = $this->currentBilling->next_billing;
+            $upcoming = Billing::where('lease_id', $this->lease->lease_id)
+                ->where('billing_id', '!=', $this->currentBilling->billing_id)
+                ->whereDate('billing_date', '>=', Carbon::today())
+                ->orderBy('billing_date', 'asc')
+                ->first();
+            $this->nextBillAmount = $upcoming?->to_pay ?? (float) $this->lease->contract_rate;
+        }
     }
 
     protected function loadUtilityData()
@@ -339,7 +353,7 @@ class TenantDashboardOverview extends Component
             ->get();
     }
 
-    protected function loadViolationData()
+    public function loadViolationData()
     {
         $leaseIds = Auth::user()->leases()->pluck('lease_id');
 
@@ -451,6 +465,7 @@ class TenantDashboardOverview extends Component
             $this->acknowledgeViolation($this->pendingAcknowledgeViolationId);
             $this->pendingAcknowledgeViolationId = null;
         }
+        $this->dispatch('close-modal', 'confirm-acknowledge-violation');
     }
 
     public function acknowledgeViolation(int $violationId): void
@@ -497,6 +512,67 @@ class TenantDashboardOverview extends Component
 
         $this->loadViolationData();
         $this->dispatch('notify', type: 'success', title: 'Violation Acknowledged', description: 'You have acknowledged this violation notice.');
+    }
+
+    /**
+     * Download the formal Notice of Termination PDF for the tenant's current lease.
+     * Mirrors TenantDetail::downloadTerminationNotice() but scoped to the authenticated
+     * tenant and their own lease.
+     */
+    public function downloadTerminationNotice()
+    {
+        $lease = Lease::with(['tenant', 'bed.unit.property', 'terminationNoticeViolation'])
+            ->find($this->lease?->lease_id);
+
+        if (!$lease || !$lease->termination_notice_issued_at) return;
+
+        $tenant = $lease->tenant;
+        if (!$tenant || $tenant->user_id !== Auth::id()) return; // tenant can only download their own notice
+
+        $unitNumber = $lease->bed?->unit?->unit_number ?? 'N-A';
+        $filename = 'Notice-of-Termination_' . $tenant->first_name . '-' . $tenant->last_name . '_Unit-' . $unitNumber . '.pdf';
+
+        // Serve cached file if the manager (or a previous download) already generated it
+        if ($lease->termination_notice_path && Storage::disk('public')->exists($lease->termination_notice_path)) {
+            return Storage::disk('public')->download($lease->termination_notice_path, $filename);
+        }
+
+        $property = $lease->bed?->unit?->property;
+        $managerId = $property ? DB::table('units')->where('unit_id', $lease->bed->unit_id)->value('manager_id') : null;
+        $manager = $managerId ? User::find($managerId) : null;
+
+        $noticePeriodDays = (int) ($property?->getContractSetting('termination_notice_period_days', 30) ?? 30);
+
+        $groundsViolations = \App\Models\Violation::where('lease_id', $lease->lease_id)
+            ->whereNull('deleted_at')
+            ->orderBy('violation_date')
+            ->get();
+
+        $referenceNumber = 'NOT-' . str_pad((string) $lease->lease_id, 5, '0', STR_PAD_LEFT)
+            . '-' . $lease->termination_notice_issued_at->format('Ymd');
+
+        $data = [
+            'tenant'             => $this->tenantContractData,
+            'lease'              => $lease,
+            'propertyName'       => $property?->building_name ?? '—',
+            'unitNumber'         => $unitNumber,
+            'bedNumber'          => $lease->bed?->bed_number,
+            'noticePeriodDays'   => $noticePeriodDays,
+            'issuedAt'           => $lease->termination_notice_issued_at,
+            'referenceNumber'    => $referenceNumber,
+            'groundsViolations'  => $groundsViolations,
+            'managerName'        => $manager ? ($manager->first_name . ' ' . $manager->last_name) : 'Property Manager',
+        ];
+
+        $pdf = Pdf::loadView('pdf.notice-of-termination', $data)
+            ->setPaper('a4')
+            ->setOption('isRemoteEnabled', false);
+
+        $cachePath = 'contracts/notice-of-termination-' . $lease->lease_id . '.pdf';
+        Storage::disk('public')->put($cachePath, $pdf->output());
+        $lease->update(['termination_notice_path' => $cachePath]);
+
+        return Storage::disk('public')->download($cachePath, $filename);
     }
 
     public function refreshContractData()
@@ -891,6 +967,8 @@ class TenantDashboardOverview extends Component
     {
         $this->lease->refresh();
         $this->loadItemsReturned();
+        // Also pull move-out signature state so owner/manager signatures appear live
+        $this->loadSignatureState($this->lease);
     }
 
     protected function loadItemsReturned()

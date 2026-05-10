@@ -82,16 +82,19 @@ trait WithContractData
                 'auto_renew'       => $lease?->auto_renew,
             ],
             'move_in_details' => [
-                'move_in_date'          => $lease?->move_in?->format('Y-m-d'),
-                'monthly_rate'          => $lease?->contract_rate,
-                'security_deposit'      => $lease?->security_deposit,
-                'advance_amount'        => $lease?->advance_amount,
-                'payment_status'        => $billing?->status ?? 'No billing',
-                'monthly_due_date'      => $lease?->monthly_due_date,
-                'late_payment_penalty'  => $lease?->late_payment_penalty,
-                'short_term_premium'    => $lease?->short_term_premium ?? 0,
-                'reservation_fee_paid'  => $lease?->reservation_fee_paid,
-                'early_termination_fee' => $lease?->early_termination_fee,
+                'move_in_date'           => $lease?->move_in?->format('Y-m-d'),
+                'monthly_rate'           => $lease?->contract_rate,
+                'security_deposit'       => $lease?->security_deposit,
+                'advance_amount'         => $lease?->advance_amount,
+                'payment_status'         => $billing?->status ?? 'No billing',
+                'monthly_due_date'       => $lease?->monthly_due_date,
+                'late_payment_penalty'   => $lease?->late_payment_penalty,
+                'short_term_premium'     => $lease?->short_term_premium ?? 0,
+                'reservation_fee_paid'   => $lease?->reservation_fee_paid,
+                'early_termination_fee'  => $lease?->early_termination_fee,
+                'move_in_payment_method' => $lease?->move_in_payment_method,
+                'move_in_or_number'      => $lease?->move_in_or_number,
+                'move_in_receipt_image'  => $lease?->move_in_receipt_image,
             ],
             'move_out_details' => [
                 'move_out_date'          => $lease?->move_out?->format('Y-m-d'),
@@ -356,6 +359,71 @@ trait WithContractData
         ]);
     }
 
+    /**
+     * Inform the tenant that the owner has signed and the signing chain has begun.
+     * Sent in addition to notifyManagerOfOwnerSign so all roles see progress.
+     */
+    protected function notifyTenantOfOwnerSignProgress(Lease $lease, string $contractType): void
+    {
+        if (!$lease->tenant_id) return;
+
+        $label = $contractType === 'move-out' ? 'move-out contract' : 'move-in contract';
+
+        Notification::create([
+            'user_id' => $lease->tenant_id,
+            'type' => 'contract_signed',
+            'title' => 'Owner Signed Your Contract',
+            'message' => 'The property owner has signed your ' . $label . '. The unit manager will sign next as witness, then it will be your turn.',
+            'link' => '/tenant?tab=inspection',
+        ]);
+    }
+
+    /**
+     * Inform the owner that the manager has witnessed and the chain has advanced.
+     */
+    protected function notifyOwnerOfManagerSignProgress(Lease $lease, string $contractType): void
+    {
+        $ownerId = $this->findOwnerIdForLease($lease);
+        if (!$ownerId) return;
+
+        $label = $contractType === 'move-out' ? 'move-out contract' : 'move-in contract';
+
+        Notification::create([
+            'user_id' => $ownerId,
+            'type' => 'contract_signed',
+            'title' => 'Witness Signed the Contract',
+            'message' => 'The unit manager has signed the ' . $label . ' as witness. The tenant has been notified to review and sign.',
+            'link' => '/landlord/tenant',
+        ]);
+    }
+
+    /**
+     * Notify all three parties (owner, manager, tenant) that the contract has been
+     * fully executed. Used after the third signature lands.
+     */
+    protected function notifyAllOfContractExecuted(Lease $lease, string $contractType): void
+    {
+        $label = $contractType === 'move-out' ? 'move-out contract' : 'move-in contract';
+
+        $recipients = [
+            $lease->tenant_id                    => '/tenant?tab=inspection',
+            $this->findManagerIdForLease($lease) => '/manager/tenant',
+            $this->findOwnerIdForLease($lease)   => '/landlord/tenant',
+        ];
+
+        foreach ($recipients as $userId => $link) {
+            if (!$userId) continue;
+
+            Notification::create([
+                'user_id' => $userId,
+                'type' => 'contract_executed',
+                'title' => 'Contract Fully Executed',
+                'message' => 'The ' . $label . ' has been signed by all parties (owner, manager, tenant) and is now active. The signed copy is available for download.',
+                'link' => $link,
+            ]);
+        }
+    }
+
     // =========================================================================
     // B — Shared inspection load/validate/save logic
     // =========================================================================
@@ -403,11 +471,27 @@ trait WithContractData
 
         $items = [];
         $isMoveOut = $itemType === 'item_returned';
+
+        // For move-out items, the issued quantity should always come from the move-in
+        // inspection (write-once at move-in). This makes the "All / None / Partial"
+        // control work correctly even before any move-out record has been saved.
+        $moveInQuantities = collect();
+        if ($isMoveOut && $lease) {
+            $moveInQuantities = $lease->moveInInspections
+                ->where('type', 'item_received')
+                ->keyBy('item_name')
+                ->map(fn($i) => (int) ($i->quantity ?? 0));
+        }
+
         foreach ($itemsList as $item) {
             $saved = $savedItems->firstWhere('item_name', $item);
+            $issuedQty = $isMoveOut
+                ? ($saved?->quantity ?? $moveInQuantities->get($item) ?? 1)
+                : ($saved?->quantity ?? '');
+
             $entry = [
                 'item_name'          => $item,
-                'quantity'           => $saved?->quantity ?? '',
+                'quantity'           => $issuedQty,
                 'condition'          => $saved?->remarks ?? '',
                 'tenant_confirmed'   => $saved?->tenant_confirmed ?? false,
                 'id'                 => $saved?->id,
@@ -417,7 +501,8 @@ trait WithContractData
             ];
             if ($isMoveOut) {
                 $entry['is_returned'] = $saved?->is_returned ?? false;
-                $entry['quantity_returned'] = $saved?->quantity_returned ?? '';
+                // Default to 0 (None) so the segmented control has a definite starting state.
+                $entry['quantity_returned'] = $saved?->quantity_returned ?? 0;
                 $entry['replacement_cost'] = $saved?->replacement_cost ?? '';
             }
             $items[] = $entry;

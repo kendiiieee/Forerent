@@ -42,6 +42,59 @@
     @endphp
     <div class="space-y-3 sm:space-y-4">
 
+        {{-- Notice of Termination Banner — visible while a notice is on file and the move-out hasn't been initiated yet. --}}
+        @php
+            $tn = $tenantContractData['termination_notice'] ?? null;
+            $hasTerminationNotice = $tn && ($tn['issued_at'] ?? null);
+            $moveOutInitiated = $tenantContractData['move_out_details']['move_out_initiated_at'] ?? null;
+        @endphp
+        @if($hasTerminationNotice && !$moveOutInitiated)
+            @php $daysRemaining = $tn['days_remaining'] ?? null; @endphp
+            <div id="termination-notice" class="rounded-2xl shadow-sm overflow-hidden border border-red-200 scroll-mt-24">
+                <div class="bg-gradient-to-r from-red-50 to-rose-50 p-5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <h5 class="font-bold text-sm text-red-700 uppercase tracking-wide">Notice of Termination Issued</h5>
+                                @if($tn['is_overdue'] ?? false)
+                                    <span class="text-[10px] font-bold uppercase tracking-wider bg-red-700 text-white px-2 py-0.5 rounded-full">Vacate date passed</span>
+                                @elseif($daysRemaining !== null && $daysRemaining <= 7)
+                                    <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-white px-2 py-0.5 rounded-full">{{ $daysRemaining }} day{{ $daysRemaining === 1 ? '' : 's' }} left</span>
+                                @endif
+                            </div>
+                            <p class="text-sm text-gray-800 mb-1">
+                                You must vacate the premises by
+                                <strong class="text-red-700">{{ $tn['vacate_by'] }}</strong>.
+                            </p>
+                            <p class="text-[11px] text-gray-600">
+                                Notice issued {{ $tn['issued_at'] }} ({{ $daysRemaining ?? '—' }}-day notice period remaining). Coordinate with management to schedule the move-out inspection, settle any outstanding bills, and complete clearance before the vacate-by date.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button
+                            type="button"
+                            wire:click="downloadTerminationNotice"
+                            wire:loading.attr="disabled"
+                            class="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-red-300 hover:bg-red-50 text-red-700 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg wire:loading.remove wire:target="downloadTerminationNotice" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                            </svg>
+                            <svg wire:loading wire:target="downloadTerminationNotice" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            <span wire:loading.remove wire:target="downloadTerminationNotice">Download Notice (PDF)</span>
+                            <span wire:loading wire:target="downloadTerminationNotice">Generating…</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         {{-- Early Vacate Request — visible only when manager has filed a pending request --}}
         @php $tnEarly = $tenantContractData['termination_notice']['early_vacate'] ?? null; @endphp
         @if($tnEarly && ($tnEarly['status'] ?? null) === 'pending_tenant')
@@ -337,11 +390,11 @@
         </div>
 
         {{-- Violation Records + Move Dates (bento row) --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4" wire:poll.15s="loadViolationData">
 
             {{-- Violation Records (70% = col-span-2) --}}
             @if($violationCounts['total'] > 0)
-            <div class="lg:col-span-2 bg-white rounded-xl sm:rounded-2xl border border-blue-100 p-3 sm:p-5">
+            <div id="violation-records" class="lg:col-span-2 bg-white rounded-xl sm:rounded-2xl border border-blue-100 p-3 sm:p-5 scroll-mt-24">
                 <div class="flex max-sm:flex-col sm:items-center justify-between mb-4 gap-2.5">
                     <div class="flex items-center gap-2.5">
                         <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#eef2ff">
@@ -575,7 +628,7 @@
                             @endif
                         </span>
                     </template>
-                    @if($moveOutDate)
+                    @if($moveOutDate || $moveOutInitiated)
                     <template x-if="activeTab === 'moveout'">
                         <span>
                             @if($moveOutContractAgreed)
@@ -716,7 +769,7 @@
             </div>
 
             {{-- ══════ MOVE-OUT TAB ══════ --}}
-            @if($moveOutDate)
+            @if($moveOutDate || $moveOutInitiated)
             <div x-show="activeTab === 'moveout'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 <div class="grid grid-cols-1 lg:grid-cols-2 border-t border-gray-50">
 
@@ -726,7 +779,7 @@
                         <div class="rounded-xl bg-[#F4F7FC] p-3.5 mb-4 space-y-2">
                             <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Move-Out Date</span>
-                                <span class="font-bold text-gray-700">{{ \Carbon\Carbon::parse($moveOutDate)->format('M d, Y') }}</span>
+                                <span class="font-bold text-gray-700">{{ $moveOutDate ? \Carbon\Carbon::parse($moveOutDate)->format('M d, Y') : 'Pending finalization' }}</span>
                             </div>
                             <div class="flex justify-between text-[13px]">
                                 <span class="text-gray-400">Security Deposit</span>

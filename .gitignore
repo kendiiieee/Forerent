@@ -23,6 +23,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/.claude
 /forerent
 
 __pycache__/
