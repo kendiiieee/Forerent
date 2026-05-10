@@ -71,6 +71,10 @@ class TenantDetail extends Component
     public $depositRefundMethod = '';
     public $depositRefundAccount = '';
 
+    // Early-vacate request form (manager initiates while a Notice of Termination is active)
+    public $earlyVacateProposedDate = '';
+    public $earlyVacateReason = '';
+
     // Move-in inspection form
     public $inspectionChecklist = [];
     public $itemsReceived = [];
@@ -522,9 +526,16 @@ class TenantDetail extends Component
     #[On('refresh-violation-list')]
     public function refreshViolations(): void
     {
-        if ($this->currentLeaseId) {
-            $lease = Lease::find($this->currentLeaseId);
-            $this->loadViolations($lease);
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        $this->loadViolations($lease);
+
+        // A 3rd-offense violation may have just issued a Notice of Termination
+        // on the lease — rebuild the full tenant array so the banner shows up
+        // without the manager needing to refresh the page.
+        if ($this->currentTenantId) {
+            $this->loadTenant($this->currentTenantId, $this->viewingTab);
         }
     }
 
@@ -749,6 +760,23 @@ class TenantDetail extends Component
             return;
         }
 
+        // Termination notice gate — if a notice is on file, the tenant is entitled
+        // to the full notice period. Block initiation until either:
+        //   (a) the vacate-by date has arrived, or
+        //   (b) an early-vacate request is on file AND the tenant has accepted it.
+        $leaseForGate = $this->currentLeaseId ? Lease::find($this->currentLeaseId) : null;
+        if ($leaseForGate?->termination_notice_issued_at && $leaseForGate->vacate_by_date) {
+            $vacateBy = $leaseForGate->vacate_by_date->startOfDay();
+            $hasAcceptedEarlyVacate = $leaseForGate->early_vacate_status === 'accepted';
+            if (now()->startOfDay()->lt($vacateBy) && !$hasAcceptedEarlyVacate) {
+                $this->notifyWarning(
+                    'Notice Period Still Active',
+                    'Tenant is entitled to the full notice period. Move-out can be initiated on or after ' . $vacateBy->format('M d, Y') . ', or earlier if the tenant accepts an early-vacate request.'
+                );
+                return;
+            }
+        }
+
         // Auto-derive reason from lease state. Precedence:
         //   1. Termination notice on file → reason = lease violation
         //   2. End date passed → reason = end of lease term
@@ -765,6 +793,127 @@ class TenantDetail extends Component
         $this->resetErrorBag('reasonForVacating');
 
         $this->dispatch('open-modal', 'initiate-move-out');
+    }
+
+    /**
+     * Open the modal for the manager to file an early-vacate request.
+     * Defaults the proposed date to today; tenant must still accept before
+     * the move-out gate unlocks.
+     */
+    public function openEarlyVacateModal(): void
+    {
+        if ($this->isLandlord()) return;
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease?->termination_notice_issued_at) return;
+
+        $this->earlyVacateProposedDate = now()->toDateString();
+        $this->earlyVacateReason = '';
+        $this->resetErrorBag(['earlyVacateProposedDate', 'earlyVacateReason']);
+        $this->dispatch('open-modal', 'request-early-vacate');
+    }
+
+    /**
+     * Manager files an early-vacate request. Writes the proposed date + reason
+     * to the lease, sets status=pending_tenant, and notifies the tenant.
+     * The tenant must accept (or decline) before the move-out gate unlocks.
+     */
+    public function requestEarlyVacate(): void
+    {
+        if ($this->isLandlord()) return;
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease?->termination_notice_issued_at) return;
+
+        $errors = [];
+        if (empty($this->earlyVacateProposedDate)) {
+            $errors['earlyVacateProposedDate'] = 'Proposed early vacate date is required.';
+        } else {
+            $proposed = \Carbon\Carbon::parse($this->earlyVacateProposedDate)->startOfDay();
+            if ($proposed->lt(now()->startOfDay())) {
+                $errors['earlyVacateProposedDate'] = 'Proposed date cannot be in the past.';
+            } elseif ($proposed->gte($lease->vacate_by_date->startOfDay())) {
+                $errors['earlyVacateProposedDate'] = 'Proposed date must be earlier than the original vacate-by date (' . $lease->vacate_by_date->format('M d, Y') . ').';
+            }
+        }
+        if (empty(trim($this->earlyVacateReason ?? '')) || strlen(trim($this->earlyVacateReason)) < 10) {
+            $errors['earlyVacateReason'] = 'Please provide a reason / agreement details (at least 10 characters).';
+        }
+
+        if (!empty($errors)) {
+            foreach ($errors as $key => $msg) $this->addError($key, $msg);
+            return;
+        }
+
+        $lease->update([
+            'early_vacate_requested_at'   => now(),
+            'early_vacate_proposed_date'  => $this->earlyVacateProposedDate,
+            'early_vacate_request_reason' => trim($this->earlyVacateReason),
+            'early_vacate_status'         => 'pending_tenant',
+            'early_vacate_requested_by'   => Auth::id(),
+            'early_vacate_responded_at'   => null,
+            'early_vacate_response_note'  => null,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'early_vacate_requested', [
+            'metadata' => [
+                'proposed_date' => $this->earlyVacateProposedDate,
+                'reason'        => trim($this->earlyVacateReason),
+                'requested_by'  => Auth::id(),
+            ],
+        ]);
+
+        Notification::create([
+            'user_id' => $lease->tenant_id,
+            'type'    => 'early_vacate_requested',
+            'title'   => 'Early Vacate Request — Action Required',
+            'message' => 'Management has proposed moving up your vacate date to ' . \Carbon\Carbon::parse($this->earlyVacateProposedDate)->format('M d, Y') . '. Please review and accept or decline on your dashboard.',
+            'link'    => '/tenant',
+        ]);
+
+        $this->dispatch('close-modal', 'request-early-vacate');
+        $this->notifySuccess('Early Vacate Request Sent', 'Awaiting tenant response.');
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
+    }
+
+    /**
+     * Manager withdraws an outstanding early-vacate request (e.g. tenant
+     * changed their mind, or the request was filed in error).
+     */
+    public function cancelEarlyVacateRequest(): void
+    {
+        if ($this->isLandlord()) return;
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease?->early_vacate_status) return;
+
+        // Don't allow cancellation after the tenant accepted — at that point
+        // the move-out flow may already be in motion.
+        if ($lease->early_vacate_status === 'accepted') {
+            $this->notifyWarning('Cannot Cancel', 'The tenant has already accepted this request.');
+            return;
+        }
+
+        $previousStatus = $lease->early_vacate_status;
+        $lease->update([
+            'early_vacate_requested_at'   => null,
+            'early_vacate_proposed_date'  => null,
+            'early_vacate_request_reason' => null,
+            'early_vacate_status'         => null,
+            'early_vacate_requested_by'   => null,
+            'early_vacate_responded_at'   => null,
+            'early_vacate_response_note'  => null,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'early_vacate_request_cancelled', [
+            'metadata' => ['previous_status' => $previousStatus, 'cancelled_by' => Auth::id()],
+        ]);
+
+        $this->notifySuccess('Request Cancelled', 'The early-vacate request was withdrawn.');
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
     }
 
     public function initiateMoveOut(): void
