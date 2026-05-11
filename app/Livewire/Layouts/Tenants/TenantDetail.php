@@ -13,6 +13,7 @@ use App\Models\Bed;
 use App\Models\Billing;
 use App\Models\BillingItem;
 use App\Models\ContractAuditLog;
+use App\Models\Transaction;
 use App\Models\Lease;
 use App\Models\MoveInInspection;
 use App\Models\MoveOutInspection;
@@ -70,6 +71,10 @@ class TenantDetail extends Component
     public $reasonForVacating = '';
     public $depositRefundMethod = '';
     public $depositRefundAccount = '';
+
+    // Early-vacate request form (manager initiates while a Notice of Termination is active)
+    public $earlyVacateProposedDate = '';
+    public $earlyVacateReason = '';
 
     // Move-in inspection form
     public $inspectionChecklist = [];
@@ -327,6 +332,27 @@ class TenantDetail extends Component
         $this->validateSkippedMoveOutChecklist();
     }
 
+    /**
+     * Set the returned-state for an item via the segmented control.
+     * Mode: 'all' (qty_returned = qty_issued), 'none' (= 0), or 'partial'
+     * (start at 1, user adjusts via the inline qty input).
+     */
+    public function setReturnedState(int $index, string $mode): void
+    {
+        $qtyIssued = (int) ($this->itemsReturned[$index]['quantity'] ?? 0);
+        $current   = (int) ($this->itemsReturned[$index]['quantity_returned'] ?? 0);
+
+        $this->itemsReturned[$index]['quantity_returned'] = match ($mode) {
+            'all'     => $qtyIssued,
+            'none'    => 0,
+            'partial' => ($current > 0 && $current < $qtyIssued) ? $current : max(1, $qtyIssued - 1),
+            default   => $current,
+        };
+
+        // Clear any stale qty_returned validation since the value just changed
+        $this->resetErrorBag("itemsReturned.{$index}.quantity_returned");
+    }
+
     private function validateSkippedMoveOutChecklist(): void
     {
         foreach ($this->moveOutChecklist as $i => $item) {
@@ -342,6 +368,15 @@ class TenantDetail extends Component
     public function saveMoveOutInspection(): void
     {
         if (!$this->currentLeaseId) return;
+
+        if (!$this->inspectionSaved) {
+            $this->dispatch('notify',
+                type: 'error',
+                title: 'Move-In Inspection Required',
+                description: 'Complete the move-in inspection before recording a move-out inspection.'
+            );
+            return;
+        }
 
         $errors = $this->validateInspection(
             $this->moveOutChecklist, 'moveOutChecklist',
@@ -367,9 +402,12 @@ class TenantDetail extends Component
             }
         }
         foreach ($this->itemsReturned as $index => $item) {
-            $isReturned = $item['is_returned'] ?? false;
             $qtyIssued = (int) ($item['quantity'] ?? 0);
             $qtyReturned = (int) ($item['quantity_returned'] ?? 0);
+            // Derive is_returned from qty_returned so the operator only fills one field.
+            // Normalize on $this->itemsReturned so upsertInspection persists the right flag.
+            $isReturned = $qtyReturned > 0;
+            $this->itemsReturned[$index]['is_returned'] = $isReturned;
             $isPartial = $isReturned && $qtyIssued > 0 && $qtyReturned < $qtyIssued;
             $replacementCost = $item['replacement_cost'] ?? null;
 
@@ -522,9 +560,16 @@ class TenantDetail extends Component
     #[On('refresh-violation-list')]
     public function refreshViolations(): void
     {
-        if ($this->currentLeaseId) {
-            $lease = Lease::find($this->currentLeaseId);
-            $this->loadViolations($lease);
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        $this->loadViolations($lease);
+
+        // A 3rd-offense violation may have just issued a Notice of Termination
+        // on the lease — rebuild the full tenant array so the banner shows up
+        // without the manager needing to refresh the page.
+        if ($this->currentTenantId) {
+            $this->loadTenant($this->currentTenantId, $this->viewingTab);
         }
     }
 
@@ -605,11 +650,35 @@ class TenantDetail extends Component
             return;
         }
 
-        $password = PasswordGenerator::generate();
-        $managerId = $lease->bed?->unit?->manager_id;
+        // Detect transfer: tenant already has another approved+active lease at a
+        // different bed. If so, this approval finalizes the bed move; otherwise
+        // it's a brand-new tenant being approved.
+        $previousLease = Lease::where('tenant_id', $tenant->user_id)
+            ->where('lease_id', '!=', $lease->lease_id)
+            ->where('status', 'Active')
+            ->where('approval_status', 'approved')
+            ->latest('lease_id')
+            ->first();
+        $isTransfer = (bool) $previousLease;
 
-        DB::transaction(function () use ($lease, $tenant, $password) {
-            $tenant->update(['password' => Hash::make($password)]);
+        $password   = $isTransfer ? null : PasswordGenerator::generate();
+        $managerId  = $lease->bed?->unit?->manager_id;
+        $tenantName = trim(($tenant->first_name ?? '') . ' ' . ($tenant->last_name ?? '')) ?: 'Tenant';
+
+        DB::transaction(function () use ($lease, $tenant, $password, $previousLease, $isTransfer) {
+            if ($isTransfer && $previousLease) {
+                // Expire old lease and free old bed now that the transfer is approved.
+                $previousLease->update([
+                    'status'   => 'Expired',
+                    'end_date' => Carbon::today(),
+                ]);
+                if ($previousLease->bed_id) {
+                    Bed::where('bed_id', $previousLease->bed_id)->update(['status' => 'Vacant']);
+                }
+            } else {
+                // New tenant: generate a fresh login password.
+                $tenant->update(['password' => Hash::make($password)]);
+            }
 
             $lease->update([
                 'approval_status' => 'approved',
@@ -617,7 +686,16 @@ class TenantDetail extends Component
                 'approved_at'     => now(),
             ]);
 
-            $this->createMoveInBilling($lease);
+            if ($isTransfer && $previousLease) {
+                // Transfers don't charge advance + a fresh full deposit — the old deposit
+                // carries over. Bill rent + premium + only the deposit shortfall (if any).
+                $this->createTransferBilling($lease, $previousLease);
+            } else {
+                // New tenant: standard move-in billing (advance + deposit + premium).
+                // Trait reads move_in_payment_method/move_in_or_number/move_in_receipt_image
+                // off the lease for the Transaction record + audit log entry.
+                $this->createMoveInBilling($lease, 'Paid');
+            }
 
             // Notify tenant if government ID is missing
             if (!$tenant->government_id_type || !$tenant->government_id_number || !$tenant->government_id_image) {
@@ -630,28 +708,50 @@ class TenantDetail extends Component
                 ]);
             }
 
-            ContractAuditLog::log($lease->lease_id, 'tenant_approved', [
-                'metadata' => ['approved_by' => Auth::id()],
+            ContractAuditLog::log($lease->lease_id, $isTransfer ? 'tenant_transfer_approved' : 'tenant_approved', [
+                'metadata' => array_filter([
+                    'approved_by'       => Auth::id(),
+                    'previous_lease_id' => $previousLease?->lease_id,
+                ]),
             ]);
         });
 
-        $this->attemptWelcomeEmailDelivery($tenant->fresh(), $password);
+        if (!$isTransfer) {
+            // Welcome email only for brand-new tenants — transferring tenants already have an account.
+            $this->attemptWelcomeEmailDelivery($tenant->fresh(), $password);
+        } else {
+            // Tell the tenant their transfer went through.
+            Notification::create([
+                'user_id' => $tenant->user_id,
+                'type'    => 'transfer_approved',
+                'title'   => 'Bed Transfer Approved',
+                'message' => 'Your bed transfer has been approved. Your new lease is now active.',
+                'link'    => '/tenant',
+            ]);
+        }
 
         // Notify the manager who created the request
         if ($managerId) {
-            $tenantName = trim(($tenant->first_name ?? '') . ' ' . ($tenant->last_name ?? '')) ?: 'Tenant';
             Notification::create([
                 'user_id' => $managerId,
-                'type'    => 'tenant_approved',
-                'title'   => 'Tenant Approved',
-                'message' => "{$tenantName} has been approved by the landlord. Move-in billing has been generated and the tenant has been emailed login details.",
+                'type'    => $isTransfer ? 'tenant_transfer_approved' : 'tenant_approved',
+                'title'   => $isTransfer ? 'Tenant Transfer Approved' : 'Tenant Approved',
+                'message' => $isTransfer
+                    ? "{$tenantName}'s bed transfer has been approved by the landlord. The previous bed is now vacant and move-in billing for the new lease has been generated."
+                    : "{$tenantName} has been approved by the landlord. Move-in billing has been generated and the tenant has been emailed login details.",
                 'link'    => '/manager/tenant',
             ]);
         }
 
         $this->loadTenant($this->currentTenantId, $this->viewingTab);
         $this->dispatch('refresh-tenant-list');
-        $this->dispatch('notify', type: 'success', title: 'Tenant Approved', description: 'The tenant has been approved and notified.');
+        $this->dispatch('notify',
+            type: 'success',
+            title: $isTransfer ? 'Transfer Approved' : 'Tenant Approved',
+            description: $isTransfer
+                ? 'The transfer is complete. The tenant has been notified.'
+                : 'The tenant has been approved and notified.'
+        );
     }
 
     public function openRejectModal(): void
@@ -685,7 +785,17 @@ class TenantDetail extends Component
         $managerId = $lease->bed?->unit?->manager_id;
         $tenantName = $lease->tenant ? trim($lease->tenant->first_name . ' ' . $lease->tenant->last_name) : 'Tenant';
 
-        DB::transaction(function () use ($lease, $reason) {
+        // Detect transfer rejection — the tenant has another approved+active lease
+        // that should be left untouched. Without this, rejecting just discards the
+        // pending lease (which is the right behavior either way).
+        $tenantId = $lease->tenant_id;
+        $isTransfer = $tenantId && Lease::where('tenant_id', $tenantId)
+            ->where('lease_id', '!=', $lease->lease_id)
+            ->where('status', 'Active')
+            ->where('approval_status', 'approved')
+            ->exists();
+
+        DB::transaction(function () use ($lease, $reason, $isTransfer) {
             $lease->update([
                 'approval_status'   => 'rejected',
                 'status'            => 'Expired',
@@ -699,7 +809,7 @@ class TenantDetail extends Component
                 Bed::where('bed_id', $lease->bed_id)->update(['status' => 'Vacant']);
             }
 
-            ContractAuditLog::log($lease->lease_id, 'tenant_rejected', [
+            ContractAuditLog::log($lease->lease_id, $isTransfer ? 'tenant_transfer_rejected' : 'tenant_rejected', [
                 'metadata' => ['rejected_by' => Auth::id(), 'reason' => $reason],
             ]);
         });
@@ -707,10 +817,22 @@ class TenantDetail extends Component
         if ($managerId) {
             Notification::create([
                 'user_id' => $managerId,
-                'type'    => 'tenant_rejected',
-                'title'   => 'Tenant Rejected',
-                'message' => "{$tenantName} was rejected by the landlord. Reason: {$reason}",
+                'type'    => $isTransfer ? 'tenant_transfer_rejected' : 'tenant_rejected',
+                'title'   => $isTransfer ? 'Tenant Transfer Rejected' : 'Tenant Rejected',
+                'message' => $isTransfer
+                    ? "{$tenantName}'s bed transfer was rejected by the landlord. The tenant remains on their current bed. Reason: {$reason}"
+                    : "{$tenantName} was rejected by the landlord. Reason: {$reason}",
                 'link'    => '/manager/tenant',
+            ]);
+        }
+
+        if ($isTransfer && $tenantId) {
+            Notification::create([
+                'user_id' => $tenantId,
+                'type'    => 'transfer_rejected',
+                'title'   => 'Bed Transfer Rejected',
+                'message' => "Your bed transfer was rejected by the landlord. You will remain on your current bed. Reason: {$reason}",
+                'link'    => '/tenant',
             ]);
         }
 
@@ -718,7 +840,13 @@ class TenantDetail extends Component
         $this->dispatch('close-modal', 'reject-tenant-confirmation');
         $this->resetTenantData();
         $this->dispatch('refresh-tenant-list');
-        $this->dispatch('notify', type: 'success', title: 'Tenant Rejected', description: 'The application has been rejected and the bed is vacant again.');
+        $this->dispatch('notify',
+            type: 'success',
+            title: $isTransfer ? 'Transfer Rejected' : 'Tenant Rejected',
+            description: $isTransfer
+                ? 'The transfer was rejected. The tenant remains on their current bed.'
+                : 'The application has been rejected and the bed is vacant again.'
+        );
     }
 
     public function editTenant(): void
@@ -732,9 +860,27 @@ class TenantDetail extends Component
     public function transferTenant(): void
     {
         if ($this->isLandlord()) return;
-        if ($this->currentTenantId) {
-            $this->dispatch('open-transfer-tenant-modal', tenantId: $this->currentTenantId);
+        if (!$this->currentTenantId || !$this->currentLeaseId) return;
+
+        $lease = Lease::with('moveInInspections')->find($this->currentLeaseId);
+        if (!$lease) return;
+
+        $hasInspection = $lease->moveInInspections->isNotEmpty();
+        $contractExecuted = $lease->contract_status === 'executed';
+
+        if (!$hasInspection || !$contractExecuted) {
+            $missing = [];
+            if (!$hasInspection)     $missing[] = 'move-in inspection';
+            if (!$contractExecuted)  $missing[] = 'move-in contract signing';
+
+            $this->notifyWarning(
+                'Complete Move-In First',
+                'Finish the ' . implode(' and ', $missing) . ' for this tenant before transferring them to another bed.'
+            );
+            return;
         }
+
+        $this->dispatch('open-transfer-tenant-modal', tenantId: $this->currentTenantId);
     }
 
     public function moveOutTenant(): void
@@ -747,6 +893,23 @@ class TenantDetail extends Component
             $this->computeMoveOutPrerequisites();
             $this->dispatch('open-modal', 'move-out-confirmation');
             return;
+        }
+
+        // Termination notice gate — if a notice is on file, the tenant is entitled
+        // to the full notice period. Block initiation until either:
+        //   (a) the vacate-by date has arrived, or
+        //   (b) an early-vacate request is on file AND the tenant has accepted it.
+        $leaseForGate = $this->currentLeaseId ? Lease::find($this->currentLeaseId) : null;
+        if ($leaseForGate?->termination_notice_issued_at && $leaseForGate->vacate_by_date) {
+            $vacateBy = $leaseForGate->vacate_by_date->startOfDay();
+            $hasAcceptedEarlyVacate = $leaseForGate->early_vacate_status === 'accepted';
+            if (now()->startOfDay()->lt($vacateBy) && !$hasAcceptedEarlyVacate) {
+                $this->notifyWarning(
+                    'Notice Period Still Active',
+                    'Tenant is entitled to the full notice period. Move-out can be initiated on or after ' . $vacateBy->format('M d, Y') . ', or earlier if the tenant accepts an early-vacate request.'
+                );
+                return;
+            }
         }
 
         // Auto-derive reason from lease state. Precedence:
@@ -765,6 +928,127 @@ class TenantDetail extends Component
         $this->resetErrorBag('reasonForVacating');
 
         $this->dispatch('open-modal', 'initiate-move-out');
+    }
+
+    /**
+     * Open the modal for the manager to file an early-vacate request.
+     * Defaults the proposed date to today; tenant must still accept before
+     * the move-out gate unlocks.
+     */
+    public function openEarlyVacateModal(): void
+    {
+        if ($this->isLandlord()) return;
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease?->termination_notice_issued_at) return;
+
+        $this->earlyVacateProposedDate = now()->toDateString();
+        $this->earlyVacateReason = '';
+        $this->resetErrorBag(['earlyVacateProposedDate', 'earlyVacateReason']);
+        $this->dispatch('open-modal', 'request-early-vacate');
+    }
+
+    /**
+     * Manager files an early-vacate request. Writes the proposed date + reason
+     * to the lease, sets status=pending_tenant, and notifies the tenant.
+     * The tenant must accept (or decline) before the move-out gate unlocks.
+     */
+    public function requestEarlyVacate(): void
+    {
+        if ($this->isLandlord()) return;
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease?->termination_notice_issued_at) return;
+
+        $errors = [];
+        if (empty($this->earlyVacateProposedDate)) {
+            $errors['earlyVacateProposedDate'] = 'Proposed early vacate date is required.';
+        } else {
+            $proposed = \Carbon\Carbon::parse($this->earlyVacateProposedDate)->startOfDay();
+            if ($proposed->lt(now()->startOfDay())) {
+                $errors['earlyVacateProposedDate'] = 'Proposed date cannot be in the past.';
+            } elseif ($proposed->gte($lease->vacate_by_date->startOfDay())) {
+                $errors['earlyVacateProposedDate'] = 'Proposed date must be earlier than the original vacate-by date (' . $lease->vacate_by_date->format('M d, Y') . ').';
+            }
+        }
+        if (empty(trim($this->earlyVacateReason ?? '')) || strlen(trim($this->earlyVacateReason)) < 10) {
+            $errors['earlyVacateReason'] = 'Please provide a reason / agreement details (at least 10 characters).';
+        }
+
+        if (!empty($errors)) {
+            foreach ($errors as $key => $msg) $this->addError($key, $msg);
+            return;
+        }
+
+        $lease->update([
+            'early_vacate_requested_at'   => now(),
+            'early_vacate_proposed_date'  => $this->earlyVacateProposedDate,
+            'early_vacate_request_reason' => trim($this->earlyVacateReason),
+            'early_vacate_status'         => 'pending_tenant',
+            'early_vacate_requested_by'   => Auth::id(),
+            'early_vacate_responded_at'   => null,
+            'early_vacate_response_note'  => null,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'early_vacate_requested', [
+            'metadata' => [
+                'proposed_date' => $this->earlyVacateProposedDate,
+                'reason'        => trim($this->earlyVacateReason),
+                'requested_by'  => Auth::id(),
+            ],
+        ]);
+
+        Notification::create([
+            'user_id' => $lease->tenant_id,
+            'type'    => 'early_vacate_requested',
+            'title'   => 'Early Vacate Request — Action Required',
+            'message' => 'Management has proposed moving up your vacate date to ' . \Carbon\Carbon::parse($this->earlyVacateProposedDate)->format('M d, Y') . '. Please review and accept or decline on your dashboard.',
+            'link'    => '/tenant',
+        ]);
+
+        $this->dispatch('close-modal', 'request-early-vacate');
+        $this->notifySuccess('Early Vacate Request Sent', 'Awaiting tenant response.');
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
+    }
+
+    /**
+     * Manager withdraws an outstanding early-vacate request (e.g. tenant
+     * changed their mind, or the request was filed in error).
+     */
+    public function cancelEarlyVacateRequest(): void
+    {
+        if ($this->isLandlord()) return;
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease?->early_vacate_status) return;
+
+        // Don't allow cancellation after the tenant accepted — at that point
+        // the move-out flow may already be in motion.
+        if ($lease->early_vacate_status === 'accepted') {
+            $this->notifyWarning('Cannot Cancel', 'The tenant has already accepted this request.');
+            return;
+        }
+
+        $previousStatus = $lease->early_vacate_status;
+        $lease->update([
+            'early_vacate_requested_at'   => null,
+            'early_vacate_proposed_date'  => null,
+            'early_vacate_request_reason' => null,
+            'early_vacate_status'         => null,
+            'early_vacate_requested_by'   => null,
+            'early_vacate_responded_at'   => null,
+            'early_vacate_response_note'  => null,
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'early_vacate_request_cancelled', [
+            'metadata' => ['previous_status' => $previousStatus, 'cancelled_by' => Auth::id()],
+        ]);
+
+        $this->notifySuccess('Request Cancelled', 'The early-vacate request was withdrawn.');
+        $this->loadTenant($this->currentTenantId, $this->viewingTab);
     }
 
     public function initiateMoveOut(): void
@@ -945,7 +1229,12 @@ class TenantDetail extends Component
         }
 
         $this->moveOutPrerequisites = [
-            ['label' => $unpaidCount === 0 ? 'All bills settled' : "Outstanding bills ({$unpaidCount}) — will be deducted from deposit", 'done' => true],
+            [
+                'label' => $unpaidCount === 0
+                    ? 'All bills settled'
+                    : "Outstanding bills ({$unpaidCount}) — must be paid before finalize, or use Forfeit Deposit",
+                'done'  => $unpaidCount === 0,
+            ],
             ['label' => 'Move-out inspection completed', 'done' => $inspectionDone],
             ['label' => 'Items returned recorded', 'done' => $itemsReturnedDone],
             ['label' => 'All repair/replacement costs confirmed (no TBD)', 'done' => $costsConfirmed],
@@ -988,6 +1277,21 @@ class TenantDetail extends Component
 
     public function confirmMoveOut(): void
     {
+        $this->finalizeMoveOutFlow(skipUnpaidGate: false);
+    }
+
+    /**
+     * Manager explicitly forfeits the deposit and blocks the tenant when there
+     * are unpaid bills they cannot collect (e.g. tenant abandoned the unit).
+     * Bypasses ONLY the outstanding-bills gate — other prerequisites still apply.
+     */
+    public function forfeitAndFinalizeMoveOut(): void
+    {
+        $this->finalizeMoveOutFlow(skipUnpaidGate: true);
+    }
+
+    private function finalizeMoveOutFlow(bool $skipUnpaidGate): void
+    {
         if (!$this->currentTenantId) return;
 
         $activeLeases = Lease::where('tenant_id', $this->currentTenantId)
@@ -996,6 +1300,7 @@ class TenantDetail extends Component
 
         if ($activeLeases->isEmpty()) {
             $this->dispatch('close-modal', 'move-out-confirmation');
+            $this->dispatch('close-modal', 'forfeit-deposit-confirmation');
             $this->dispatch('notify',
                 type: 'warning',
                 title: 'No Active Lease',
@@ -1004,9 +1309,12 @@ class TenantDetail extends Component
             return;
         }
 
-        // Check all prerequisites at once
+        // Check all prerequisites at once. Forfeit flow skips ONLY the unpaid-bills gate.
         $this->computeMoveOutPrerequisites();
         $blockers = collect($this->moveOutPrerequisites)->filter(fn($p) => !$p['done']);
+        if ($skipUnpaidGate) {
+            $blockers = $blockers->reject(fn($p) => str_contains($p['label'], 'Outstanding bills'));
+        }
 
         if ($blockers->isNotEmpty()) {
             $blockerList = $blockers->pluck('label')->implode(', ');
@@ -1104,11 +1412,14 @@ class TenantDetail extends Component
 
         $this->dispatch('refresh-tenant-list');
         $this->dispatch('close-modal', 'move-out-confirmation');
+        $this->dispatch('close-modal', 'forfeit-deposit-confirmation');
         $this->resetTenantData();
         $this->dispatch('notify',
             type: 'success',
-            title: 'Tenant Moved Out',
-            description: 'Lease marked as expired, deposit refund calculated, and bed status updated.'
+            title: $skipUnpaidGate ? 'Move-Out Finalized — Deposit Forfeited' : 'Tenant Moved Out',
+            description: $skipUnpaidGate
+                ? 'Lease expired, unpaid bills deducted from deposit, and the tenant has been blocked from new rentals.'
+                : 'Lease marked as expired, deposit refund calculated, and bed status updated.'
         );
     }
 
@@ -1215,6 +1526,35 @@ class TenantDetail extends Component
     }
 
     /**
+     * Re-pull the lease's signature state from DB so other parties' signatures
+     * appear without requiring a page reload. Wired up via wire:poll inside the
+     * contract modals so the cost is paid only while a modal is open.
+     */
+    public function refreshContractSignatures(): void
+    {
+        if (!$this->currentLeaseId) return;
+
+        $lease = Lease::find($this->currentLeaseId);
+        if (!$lease) return;
+
+        $this->loadSignatureState($lease);
+
+        if (is_array($this->currentTenant)) {
+            $this->currentTenant['signature_info'] = [
+                'tenant_signature'     => $lease->tenant_signature,
+                'tenant_signed_at'     => $lease->tenant_signed_at?->format('M d, Y h:i A'),
+                'owner_signature'      => $lease->owner_signature,
+                'owner_signed_at'      => $lease->owner_signed_at?->format('M d, Y h:i A'),
+                'manager_signature'    => $lease->manager_signature,
+                'manager_signed_at'    => $lease->manager_signed_at?->format('M d, Y h:i A'),
+                'contract_agreed'      => (bool) $lease->contract_agreed,
+                'signed_contract_path' => $lease->signed_contract_path,
+            ];
+            $this->currentTenant['contract_status'] = $lease->contract_status;
+        }
+    }
+
+    /**
      * Verify the authenticated manager is authorized for this lease's unit.
      */
     private function authorizedForLease(): bool
@@ -1232,25 +1572,33 @@ class TenantDetail extends Component
         })->where('manager_id', Auth::id())->exists();
     }
 
-    public function openSignatureModal(string $role = 'manager'): void
+    public function openSignatureModal(string $role = ''): void
     {
-        // Manager signs as witness
-        if ($role !== 'manager') return;
+        // Default to the role implied by the current user when called without args.
+        if (!in_array($role, ['owner', 'manager'], true)) {
+            $role = $this->isLandlord() ? 'owner' : 'manager';
+        }
 
         if ($this->isLeasePendingApproval()) {
             $this->dispatch('notify', type: 'warning', title: 'Awaiting Approval', description: 'Cannot sign contract until the landlord approves this tenant.');
             return;
         }
 
-        if (!$this->authorizedForLease()) {
-            $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
-            return;
-        }
-
-        // Owner must sign first
-        if (!$this->ownerSignature) {
-            $this->dispatch('notify', type: 'warning', title: 'Owner Must Sign First', description: 'The property owner must sign the contract before the manager can sign as witness.');
-            return;
+        if ($role === 'owner') {
+            if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'Only the property owner can sign as lessor.');
+                return;
+            }
+        } else {
+            if (!$this->authorizedForLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
+                return;
+            }
+            // Owner must sign first
+            if (!$this->ownerSignature) {
+                $this->dispatch('notify', type: 'warning', title: 'Owner Must Sign First', description: 'The property owner must sign the contract before the manager can sign as witness.');
+                return;
+            }
         }
 
         $this->signatureRole      = $role;
@@ -1265,40 +1613,49 @@ class TenantDetail extends Component
 
     public function saveSignature(string $signatureData): void
     {
-        // Manager signs as witness
-        if (!$this->currentLeaseId || $this->signatureRole !== 'manager') return;
+        if (!$this->currentLeaseId || !in_array($this->signatureRole, ['owner', 'manager'], true)) return;
 
-        if (!$this->authorizedForLease()) {
-            $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
-            return;
+        $role = $this->signatureRole;
+
+        if ($role === 'owner') {
+            if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'Only the property owner can sign as lessor.');
+                return;
+            }
+        } else {
+            if (!$this->authorizedForLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
+                return;
+            }
         }
 
         $lease = Lease::find($this->currentLeaseId);
         if (!$lease) return;
 
-        $result = $this->saveLeaseSignature($lease, $signatureData, 'manager', 'movein');
+        $result = $this->saveLeaseSignature($lease, $signatureData, $role, 'movein');
 
-        $this->managerSignature = $result['signature'];
-        $this->managerSignedAt = $result['signedAt'];
+        if ($role === 'owner') {
+            $this->ownerSignature = $result['signature'];
+            $this->ownerSignedAt  = $result['signedAt'];
+            // Notify manager next-in-line + tenant of progress
+            $this->notifyManagerOfOwnerSign($lease, 'move-in');
+            $this->notifyTenantOfOwnerSignProgress($lease, 'move-in');
+        } else {
+            $this->managerSignature = $result['signature'];
+            $this->managerSignedAt  = $result['signedAt'];
+            // Notify tenant next-in-line + owner of progress
+            $this->notifyTenantOfManagerSign($lease, 'move-in');
+            $this->notifyOwnerOfManagerSignProgress($lease, 'move-in');
+        }
+
         $this->contractAgreed = $result['agreed'];
 
-        // Notify tenant that manager (witness) signed → tenant's turn
-        $this->notifyTenantOfManagerSign($lease, 'move-in');
-
-        // If all three signatures exist, generate PDF and auto-generate billing
+        // If all three signatures exist, generate PDF, billing, and notify everyone
         if ($result['agreed']) {
             $lease->refresh();
             $this->generateSignedPdf($lease);
             $this->autoGenerateBillingOnExecution($lease);
-
-            // Notify tenant that contract is fully executed
-            Notification::create([
-                'user_id' => $lease->tenant_id,
-                'type' => 'contract_executed',
-                'title' => 'Contract Fully Executed',
-                'message' => 'Your move-in contract has been signed by all parties and is now active. You can download the signed copy from your dashboard.',
-                'link' => '/tenant?tab=inspection',
-            ]);
+            $this->notifyAllOfContractExecuted($lease, 'move-in');
         }
 
         // Update signature_info in currentTenant
@@ -1316,7 +1673,99 @@ class TenantDetail extends Component
 
         $this->closeSignatureModal();
         $this->dispatch('signature-saved');
-        $this->dispatch('notify', type: 'success', title: 'Witness Signature Saved', description: 'You have signed the move-in contract as witness.');
+
+        $title = $role === 'owner' ? 'Owner Signature Saved' : 'Witness Signature Saved';
+        $desc  = $role === 'owner'
+            ? 'You have signed the move-in contract as the property owner.'
+            : 'You have signed the move-in contract as witness.';
+        $this->dispatch('notify', type: 'success', title: $title, description: $desc);
+    }
+
+    /**
+     * Create the first billing when a transfer is approved by the landlord.
+     * Differs from createMoveInBilling: charges rent + premium + only the deposit
+     * shortfall (since the old deposit carries over from the previous lease).
+     */
+    private function createTransferBilling(Lease $lease, Lease $previousLease): void
+    {
+        if ($lease->billings()->exists()) return;
+
+        $rate = (float) $lease->contract_rate;
+        $premium = (float) ($lease->short_term_premium ?? 0);
+        $newDeposit = (float) $lease->security_deposit;
+        $oldDeposit = (float) ($previousLease->security_deposit ?? 0);
+        $depositShortfall = max(0, $newDeposit - $oldDeposit);
+
+        $startDate = Carbon::parse($lease->start_date ?? now());
+        $totalCharges = $rate + $premium + $depositShortfall;
+
+        $billing = Billing::create([
+            'lease_id'     => $lease->lease_id,
+            'billing_type' => 'monthly',
+            'billing_date' => $startDate->format('Y-m-d'),
+            'next_billing' => $startDate->copy()->addMonth()->format('Y-m-d'),
+            'due_date'     => $startDate->copy()->addDays(5)->format('Y-m-d'),
+            'to_pay'       => $totalCharges,
+            'amount'       => $totalCharges,
+            'status'       => 'Paid',
+        ]);
+
+        BillingItem::create([
+            'billing_id'      => $billing->billing_id,
+            'charge_category' => 'recurring',
+            'charge_type'     => 'rent',
+            'description'     => 'Monthly Rent',
+            'amount'          => $rate,
+        ]);
+
+        if ($premium > 0) {
+            BillingItem::create([
+                'billing_id'      => $billing->billing_id,
+                'charge_category' => 'conditional',
+                'charge_type'     => 'short_term_premium',
+                'description'     => 'Short-Term Premium (contract under 6 months)',
+                'amount'          => $premium,
+            ]);
+        }
+
+        if ($depositShortfall > 0) {
+            BillingItem::create([
+                'billing_id'      => $billing->billing_id,
+                'charge_category' => 'conditional',
+                'charge_type'     => 'security_deposit',
+                'description'     => 'Security Deposit Top-Up (transfer)',
+                'amount'          => $depositShortfall,
+            ]);
+        }
+
+        $txn = Transaction::create([
+            'billing_id'       => $billing->billing_id,
+            'reference_number' => 'placeholder',
+            'or_number'        => $lease->move_in_or_number,
+            'transaction_type' => 'Debit',
+            'category'         => 'Rent Payment',
+            'payment_method'   => $lease->move_in_payment_method ?: 'Cash',
+            'transaction_date' => today(),
+            'amount'           => $totalCharges,
+        ]);
+        $txn->update([
+            'reference_number' => 'TRF-' . now()->format('Ymd') . '-'
+                . str_pad((string) $txn->transaction_id, 6, '0', STR_PAD_LEFT),
+        ]);
+
+        ContractAuditLog::log($lease->lease_id, 'transfer_payment_recorded', [
+            'metadata' => [
+                'amount'             => $totalCharges,
+                'payment_method'     => $lease->move_in_payment_method,
+                'or_number'          => $lease->move_in_or_number,
+                'receipt_image'      => $lease->move_in_receipt_image,
+                'reference'          => $txn->reference_number,
+                'previous_lease_id'  => $previousLease->lease_id,
+                'previous_deposit'   => $oldDeposit,
+                'deposit_shortfall'  => $depositShortfall,
+                'recorded_by'        => Auth::id(),
+            ],
+        ]);
     }
 
     /**
@@ -1567,20 +2016,29 @@ class TenantDetail extends Component
         return null;
     }
 
-    public function openMoveOutSignatureModal(string $role = 'manager'): void
+    public function openMoveOutSignatureModal(string $role = ''): void
     {
-        // Manager signs as witness
-        if ($role !== 'manager') return;
-
-        if (!$this->authorizedForLease()) {
-            $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
-            return;
+        // Default to the role implied by the current user when called without args.
+        if (!in_array($role, ['owner', 'manager'], true)) {
+            $role = $this->isLandlord() ? 'owner' : 'manager';
         }
 
-        // Owner must sign first
-        if (!$this->moveOutOwnerSignature) {
-            $this->dispatch('notify', type: 'warning', title: 'Owner Must Sign First', description: 'The property owner must sign the move-out contract before the manager can sign as witness.');
-            return;
+        if ($role === 'owner') {
+            if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'Only the property owner can sign as lessor.');
+                return;
+            }
+        } else {
+            if (!$this->authorizedForLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
+                return;
+            }
+
+            // Owner must sign first
+            if (!$this->moveOutOwnerSignature) {
+                $this->dispatch('notify', type: 'warning', title: 'Owner Must Sign First', description: 'The property owner must sign the move-out contract before the manager can sign as witness.');
+                return;
+            }
         }
 
         // Refresh outstanding balances to ensure real-time accuracy before signing
@@ -1631,35 +2089,56 @@ class TenantDetail extends Component
 
     public function saveMoveOutSignature(string $signatureData): void
     {
-        // Manager signs as witness
-        if (!$this->currentLeaseId || $this->moveOutSignatureRole !== 'manager') return;
+        if (!$this->currentLeaseId || !in_array($this->moveOutSignatureRole, ['owner', 'manager'], true)) return;
 
-        if (!$this->authorizedForLease()) {
-            $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
-            return;
+        $role = $this->moveOutSignatureRole;
+
+        if ($role === 'owner') {
+            if (!$this->isLandlord() || !$this->landlordOwnsCurrentLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'Only the property owner can sign as lessor.');
+                return;
+            }
+        } else {
+            if (!$this->authorizedForLease()) {
+                $this->dispatch('notify', type: 'error', title: 'Unauthorized', description: 'You are not authorized to sign this contract.');
+                return;
+            }
         }
 
         $lease = Lease::find($this->currentLeaseId);
         if (!$lease) return;
 
-        $result = $this->saveLeaseSignature($lease, $signatureData, 'manager', 'moveout');
+        $result = $this->saveLeaseSignature($lease, $signatureData, $role, 'moveout');
 
-        $this->moveOutManagerSignature = $result['signature'];
-        $this->moveOutManagerSignedAt = $result['signedAt'];
+        if ($role === 'owner') {
+            $this->moveOutOwnerSignature = $result['signature'];
+            $this->moveOutOwnerSignedAt  = $result['signedAt'];
+            $this->notifyManagerOfOwnerSign($lease, 'move-out');
+            $this->notifyTenantOfOwnerSignProgress($lease, 'move-out');
+        } else {
+            $this->moveOutManagerSignature = $result['signature'];
+            $this->moveOutManagerSignedAt  = $result['signedAt'];
+            $this->notifyTenantOfManagerSign($lease, 'move-out');
+            $this->notifyOwnerOfManagerSignProgress($lease, 'move-out');
+        }
+
         $this->moveOutContractAgreed = $result['agreed'];
 
-        // Notify tenant that manager (witness) signed → tenant's turn
-        $this->notifyTenantOfManagerSign($lease, 'move-out');
-
-        // If all three signatures exist, generate PDF
+        // If all three signatures exist, generate PDF and notify everyone
         if ($result['agreed']) {
             $lease->refresh();
             $this->generateMoveOutSignedPdf($lease);
+            $this->notifyAllOfContractExecuted($lease, 'move-out');
         }
 
         $this->closeMoveOutSignatureModal();
         $this->dispatch('moveout-signature-saved');
-        $this->dispatch('notify', type: 'success', title: 'Witness Signature Saved', description: 'You have signed the move-out contract as witness.');
+
+        $title = $role === 'owner' ? 'Owner Signature Saved' : 'Witness Signature Saved';
+        $desc  = $role === 'owner'
+            ? 'You have signed the move-out contract as the property owner.'
+            : 'You have signed the move-out contract as witness.';
+        $this->dispatch('notify', type: 'success', title: $title, description: $desc);
     }
 
     private function generateMoveOutSignedPdf(Lease $lease): void

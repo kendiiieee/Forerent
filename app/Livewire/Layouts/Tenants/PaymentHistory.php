@@ -29,6 +29,8 @@ class PaymentHistory extends Component
     public $dueDate = null;
     public $daysUntilDue = 0;
     public $paymentStatus = 'No Billing';
+    public $nextBillAmount = null;
+    public $nextBillDate = null;
     public $pendingPaymentRequests = [];
     public $rejectedPaymentRequests = [];
 
@@ -88,6 +90,15 @@ class PaymentHistory extends Component
             if ($paidBilling) {
                 $this->amountDue = $paidBilling->to_pay;
                 $this->paymentStatus = 'Paid';
+
+                // Surface the upcoming bill so the banner can show what's next.
+                $this->nextBillDate = $paidBilling->next_billing;
+                $upcoming = Billing::where('lease_id', $lease->lease_id)
+                    ->where('billing_id', '!=', $paidBilling->billing_id)
+                    ->whereDate('billing_date', '>=', Carbon::today())
+                    ->orderBy('billing_date', 'asc')
+                    ->first();
+                $this->nextBillAmount = $upcoming?->to_pay ?? (float) $lease->contract_rate;
             }
         }
 
@@ -339,7 +350,7 @@ class PaymentHistory extends Component
             ->join('users as manager', 'units.manager_id', '=', 'manager.user_id')
             ->leftJoin('transactions', function ($join) {
                 $join->on('transactions.billing_id', '=', 'billings.billing_id')
-                    ->whereIn('transactions.category', ['Rent Payment', 'Advance', 'Deposit']);
+                    ->whereIn('transactions.category', ['Rent Payment', 'Advance', 'Deposit', 'Move-In Payment']);
             })
             ->where('billings.billing_id', $billingId)
             ->where('leases.tenant_id', Auth::user()->user_id)
@@ -361,6 +372,7 @@ class PaymentHistory extends Component
                 'leases.start_date',
                 'leases.end_date',
                 'leases.term',
+                'leases.move_in_receipt_image',
                 'tenant.first_name as tenant_first_name',
                 'tenant.last_name as tenant_last_name',
                 'tenant.contact as tenant_contact',
@@ -427,6 +439,7 @@ class PaymentHistory extends Component
                     : 'Pending',
                 'reference_no'    => $record->txn_reference ?? 'Pending',
                 'or_number'       => $record->txn_or_number ?? 'Pending',
+                'receipt_image'   => ($record->billing_type === 'move_in') ? $record->move_in_receipt_image : null,
                 'period'          => $billingDate->format('F Y'),
             ],
             'recipient' => [

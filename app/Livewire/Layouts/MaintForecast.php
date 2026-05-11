@@ -118,6 +118,7 @@ class MaintForecast extends Component
             }
 
             $this->forecast['monthly_forecasts'] = $this->addPreviousYearCosts($this->forecast['monthly_forecasts']);
+            $this->logForecastSummary($this->forecast['monthly_forecasts']);
             $this->insights = $this->buildInsights($this->forecast['monthly_forecasts']);
 
             Log::info('✅ FORECAST GENERATED SUCCESSFULLY');
@@ -163,6 +164,37 @@ class MaintForecast extends Component
         }
 
         return $forecasts;
+    }
+
+    private function logForecastSummary(array $forecasts): void
+    {
+        if (empty($forecasts)) {
+            return;
+        }
+
+        $forecastZeroMonths = count(array_filter($forecasts, function ($forecast) {
+            return (float) ($forecast['forecasted_cost'] ?? 0) <= 0;
+        }));
+
+        $previousZeroMonths = count(array_filter($forecasts, function ($forecast) {
+            return (float) ($forecast['previous_year_cost'] ?? 0) <= 0;
+        }));
+
+        $sample = array_map(function ($forecast) {
+            return [
+                'month' => $forecast['month'] ?? null,
+                'forecasted_cost' => (float) ($forecast['forecasted_cost'] ?? 0),
+                'previous_year_cost' => (float) ($forecast['previous_year_cost'] ?? 0),
+                'actual_cost' => (float) ($forecast['actual_cost'] ?? 0),
+            ];
+        }, array_slice($forecasts, 0, 3));
+
+        Log::info('Maintenance forecast summary', [
+            'year' => (int) $this->year,
+            'forecasted_zero_months' => $forecastZeroMonths,
+            'previous_year_zero_months' => $previousZeroMonths,
+            'sample' => $sample,
+        ]);
     }
 
     private function getMonthlyActualCostsForYear(int $year): array

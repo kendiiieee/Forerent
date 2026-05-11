@@ -165,13 +165,28 @@ class ViolationEscalationService
 
         $lease->refresh();
 
+        // Tenant: formal notice with vacate-by date.
         Notification::create([
             'user_id' => $lease->tenant_id,
             'type'    => 'termination_notice_issued',
             'title'   => 'Notice of Lease Termination',
             'message' => "A formal Notice of Termination has been issued ({$noticePeriodDays}-day notice period). You must vacate the premises by " . $lease->vacate_by_date->format('M d, Y') . " and coordinate with management for the move-out inspection and settlement.",
-            'link'    => '/tenant',
+            'link'    => '/tenant#termination-notice',
         ]);
+
+        // Landlord/owner: same termination event, framed for the property owner.
+        $ownerId = $property?->owner_id;
+        if ($ownerId) {
+            $tenantName = trim(($lease->tenant?->first_name ?? '') . ' ' . ($lease->tenant?->last_name ?? ''));
+            $unitNumber = $lease->bed?->unit?->unit_number ?? '—';
+            Notification::create([
+                'user_id' => $ownerId,
+                'type'    => 'termination_notice_issued',
+                'title'   => 'Termination Notice Issued — Unit ' . $unitNumber,
+                'message' => "A formal Notice of Termination has been issued for {$tenantName} (Unit {$unitNumber}) following 3 documented violations. Vacate-by date: " . $lease->vacate_by_date->format('M d, Y') . ". Reference: {$violation->violation_number}.",
+                'link'    => '/landlord/property',
+            ]);
+        }
 
         return $lease;
     }

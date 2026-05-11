@@ -1,6 +1,6 @@
-<div>
+<div class="h-full">
     @if($propertyId && $buildingName)
-        <div
+        <div class="h-full"
             x-data="{
                 lightbox: false,
                 lightboxIndex: 0,
@@ -34,10 +34,10 @@
             @keydown.right.window="if(lightbox) nextPhoto()"
             @keydown.left.window="if(lightbox) prevPhoto()"
         >
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-full flex flex-col">
 
                 {{-- ─── HERO SECTION: Photo + Info side by side ─── --}}
-                <div class="flex flex-col sm:flex-row sm:items-stretch">
+                <div class="flex flex-col sm:flex-row sm:items-stretch flex-1">
 
                     {{-- Left: Photo Gallery Area --}}
                     @if(count($photos) > 0)

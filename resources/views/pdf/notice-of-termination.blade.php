@@ -7,15 +7,12 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Times New Roman', Times, serif;
-            font-size: 11pt;
+            font-size: 10pt;
             color: #000;
             background: #fff;
+            padding: 14mm;
         }
         .page {
-            width: 210mm;
-            min-height: 297mm;
-            margin: 0 auto;
-            padding: 18mm 20mm 20mm 20mm;
             background: #fff;
             position: relative;
         }
@@ -26,147 +23,153 @@
             border-top: 0.5pt solid #999;
             border-bottom: 0.5pt solid #999;
             padding: 2px 0;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             letter-spacing: 0.3px;
         }
         .doc-header-banner {
             background: #1a2744;
             color: #fff;
-            padding: 14px 20px;
+            padding: 12px 16px;
             margin-bottom: 4px;
             border-bottom: 3px solid #B91C1C;
         }
-        .doc-header-banner table { width: 100%; }
+        .doc-header-banner table {
+            width: 100%;
+            border-collapse: collapse;
+        }
         .doc-header-banner td { vertical-align: middle; }
-        .doc-title-main {
-            font-size: 15pt;
+        .doc-header-banner .banner-left { width: 65%; }
+        .doc-header-banner .banner-right {
+            width: 35%;
+            text-align: right;
+            font-size: 9.5pt;
             font-weight: bold;
-            letter-spacing: 2px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #fff;
+            line-height: 1.4;
+        }
+        .doc-title-main {
+            font-size: 14pt;
+            font-weight: bold;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
             color: #fff;
         }
         .republic {
             font-size: 8.5pt;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             color: #ccc;
             margin-top: 2px;
         }
-        .banner-right {
-            font-size: 11pt;
-            font-weight: bold;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #fff;
-            text-align: right;
-        }
         .intro {
-            font-size: 9.5pt;
+            font-size: 9pt;
             text-align: justify;
-            line-height: 1.55;
-            margin: 12px 0;
+            line-height: 1.45;
+            margin: 8px 0;
             color: #222;
         }
         .section-heading {
-            font-size: 10pt;
+            font-size: 9.5pt;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
             color: #070589;
             background: #EEF2FF;
-            padding: 4px 8px;
-            margin: 14px 0 8px;
+            padding: 3px 8px;
+            margin: 9px 0 5px;
             border-left: 3px solid #2360E8;
         }
-        .field-table {
+        table.parties-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 6px;
-            font-size: 9.5pt;
+            font-size: 9pt;
+            margin: 4px 0 6px;
         }
-        .field-table td {
-            padding: 2px 0;
-            vertical-align: bottom;
+        table.parties-table td {
+            padding: 3px 4px;
+            vertical-align: top;
         }
-        .field-label {
+        table.parties-table td.label {
+            color: #555;
             white-space: nowrap;
-            color: #333;
-            padding-right: 6px;
-            width: 1%;
+            width: 16%;
+            font-weight: normal;
         }
-        .field-value {
-            border-bottom: 0.75pt solid #333;
-            padding-bottom: 1px;
+        table.parties-table td.value {
             font-weight: bold;
             color: #000;
-            font-size: 9.5pt;
+            width: 34%;
+            border-bottom: 0.5pt solid #999;
         }
         .vacate-callout {
             background: #FEE2E2;
             border: 1pt solid #B91C1C;
             border-left: 4pt solid #B91C1C;
-            padding: 10px 14px;
-            margin: 12px 0;
+            padding: 6px 12px;
+            margin: 6px 0;
             text-align: center;
         }
         .vacate-callout .label {
-            font-size: 8.5pt;
+            font-size: 8pt;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
             color: #B91C1C;
             font-weight: bold;
         }
         .vacate-callout .date {
-            font-size: 18pt;
+            font-size: 14pt;
             font-weight: bold;
             color: #7F1D1D;
-            margin-top: 4px;
-            letter-spacing: 1px;
+            margin-top: 1px;
+            letter-spacing: 0.5px;
         }
         .vacate-callout .meta {
-            font-size: 8.5pt;
+            font-size: 8pt;
             color: #7F1D1D;
-            margin-top: 2px;
+            margin-top: 0;
         }
         .grounds-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt;
-            margin: 6px 0;
+            font-size: 8.5pt;
+            margin: 4px 0;
+            table-layout: fixed;
         }
         .grounds-table th {
             background: #070589;
             color: #fff;
-            padding: 5px 8px;
+            padding: 4px 6px;
             text-align: left;
-            font-size: 8.5pt;
+            font-size: 8pt;
         }
         .grounds-table td {
-            padding: 6px 8px;
+            padding: 5px 6px;
             border: 0.5pt solid #ccc;
             vertical-align: top;
             color: #111;
-            font-size: 9pt;
+            font-size: 8.5pt;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         .grounds-table tr:nth-child(even) td {
             background: #f9f9ff;
         }
+        .legal-block, .rights-block {
+            font-size: 8pt;
+            line-height: 1.4;
+            padding: 6px 8px;
+            margin: 6px 0;
+        }
         .legal-block {
-            font-size: 8.5pt;
             color: #444;
-            line-height: 1.5;
             background: #FFFBEB;
             border: 0.5pt solid #FCD34D;
-            padding: 8px 10px;
-            margin: 8px 0;
         }
         .rights-block {
-            font-size: 8.5pt;
             color: #1F2937;
-            line-height: 1.5;
             background: #ECFDF5;
             border: 0.5pt solid #10B981;
-            padding: 8px 10px;
-            margin: 8px 0;
         }
         .rights-block .title {
             font-weight: bold;
@@ -177,24 +180,34 @@
             margin-bottom: 4px;
         }
         ul.tight {
-            margin: 4px 0 0 18px;
+            margin: 4px 0 0 16px;
+            font-size: 8.5pt;
+            line-height: 1.5;
         }
-        ul.tight li {
-            margin-bottom: 2px;
+        ul.tight li { margin-bottom: 2px; }
+
+        p.steps-intro {
+            font-size: 9pt;
+            line-height: 1.5;
+            margin-bottom: 4px;
         }
+        ul.tight.steps li {
+            font-size: 8.75pt;
+        }
+
         .signature-table {
             width: 100%;
-            margin-top: 22px;
+            margin-top: 10px;
             border-collapse: collapse;
         }
         .signature-table td {
             width: 50%;
-            padding: 0 14px;
+            padding: 0 12px;
             vertical-align: top;
         }
         .signature-line {
             border-bottom: 0.75pt solid #000;
-            height: 32px;
+            height: 24px;
         }
         .signature-name {
             font-weight: bold;
@@ -208,10 +221,10 @@
             text-align: center;
         }
         .footer {
-            margin-top: 18px;
+            margin-top: 8px;
             border-top: 0.5pt solid #999;
-            padding-top: 6px;
-            font-size: 7.5pt;
+            padding-top: 4px;
+            font-size: 7pt;
             color: #666;
             text-align: center;
         }
@@ -226,7 +239,6 @@
             <tr>
                 <td class="banner-left">
                     <div class="doc-title-main">Notice of Lease Termination</div>
-                    <div class="republic">Republic of the Philippines</div>
                 </td>
                 <td class="banner-right">
                     Issued: {{ $issuedAt->format('M d, Y') }}<br>
@@ -244,34 +256,34 @@
     </p>
 
     {{-- ═══════════════════════════════════════════════
-         PARTIES
+         PARTIES & PREMISES
          ═══════════════════════════════════════════════ --}}
     <div class="section-heading">Section 1 — Parties &amp; Premises</div>
 
-    <table class="field-table">
+    <table class="parties-table">
         <tr>
-            <td class="field-label">Lessee:</td>
-            <td class="field-value">{{ $tenant['personal_info']['first_name'] }} {{ $tenant['personal_info']['last_name'] }}</td>
-            <td class="field-label" style="padding-left:18px;">Contact:</td>
-            <td class="field-value">{{ $tenant['contact_info']['contact_number'] ?? '—' }}</td>
+            <td class="label">Lessee:</td>
+            <td class="value">{{ $tenant['personal_info']['first_name'] }} {{ $tenant['personal_info']['last_name'] }}</td>
+            <td class="label">Contact:</td>
+            <td class="value">{{ $tenant['contact_info']['contact_number'] ?? '—' }}</td>
         </tr>
         <tr>
-            <td class="field-label">Email:</td>
-            <td class="field-value">{{ $tenant['contact_info']['email'] ?? '—' }}</td>
-            <td class="field-label" style="padding-left:18px;">Lease ID:</td>
-            <td class="field-value">{{ $lease->lease_id }}</td>
+            <td class="label">Email:</td>
+            <td class="value">{{ $tenant['contact_info']['email'] ?? '—' }}</td>
+            <td class="label">Lease ID:</td>
+            <td class="value">{{ $lease->lease_id }}</td>
         </tr>
         <tr>
-            <td class="field-label">Property:</td>
-            <td class="field-value">{{ $propertyName }}</td>
-            <td class="field-label" style="padding-left:18px;">Unit / Bed:</td>
-            <td class="field-value">{{ $unitNumber }}{{ $bedNumber ? ' / ' . $bedNumber : '' }}</td>
+            <td class="label">Property:</td>
+            <td class="value">{{ $propertyName }}</td>
+            <td class="label">Unit / Bed:</td>
+            <td class="value">{{ $unitNumber }}{{ $bedNumber ? ' / ' . $bedNumber : '' }}</td>
         </tr>
         <tr>
-            <td class="field-label">Lease Start:</td>
-            <td class="field-value">{{ $lease->start_date?->format('M d, Y') ?? '—' }}</td>
-            <td class="field-label" style="padding-left:18px;">Original End:</td>
-            <td class="field-value">{{ $lease->end_date?->format('M d, Y') ?? '—' }}</td>
+            <td class="label">Lease Start:</td>
+            <td class="value">{{ $lease->start_date?->format('M d, Y') ?? '—' }}</td>
+            <td class="label">Original End:</td>
+            <td class="value">{{ $lease->end_date?->format('M d, Y') ?? '—' }}</td>
         </tr>
     </table>
 
@@ -280,19 +292,26 @@
          ═══════════════════════════════════════════════ --}}
     <div class="section-heading">Section 2 — Grounds for Termination</div>
 
-    <p style="font-size:9.5pt; line-height:1.5; margin-bottom:6px;">
+    <p class="steps-intro">
         Termination is hereby effected on the basis of the following documented violation(s) of the
         Lease Agreement, in accordance with the agreed escalation schedule (1st offense — written
         warning; 2nd offense — fine; 3rd offense — grounds for termination):
     </p>
 
     <table class="grounds-table">
+        <colgroup>
+            <col style="width: 14%">
+            <col style="width: 13%">
+            <col style="width: 18%">
+            <col style="width: 9%">
+            <col style="width: 46%">
+        </colgroup>
         <thead>
             <tr>
-                <th style="width:14%">Reference</th>
-                <th style="width:13%">Date</th>
-                <th style="width:18%">Category</th>
-                <th style="width:10%">Offense</th>
+                <th>Reference</th>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Offense</th>
                 <th>Description</th>
             </tr>
         </thead>
@@ -314,7 +333,7 @@
          ═══════════════════════════════════════════════ --}}
     <div class="section-heading">Section 3 — Notice Period &amp; Vacate-By Date</div>
 
-    <p style="font-size:9.5pt; line-height:1.5;">
+    <p class="steps-intro">
         Pursuant to this Notice and the {{ $noticePeriodDays }}-day notice period agreed in the
         Lease Agreement, the Lessee is required to vacate the leased premises on or before:
     </p>
@@ -330,10 +349,10 @@
          ═══════════════════════════════════════════════ --}}
     <div class="section-heading">Section 4 — Settlement, Turnover &amp; Clearance</div>
 
-    <p style="font-size:9.5pt; line-height:1.55;">
+    <p class="steps-intro">
         Prior to vacating, the Lessee shall coordinate with management to complete the following:
     </p>
-    <ul class="tight" style="font-size:9pt; line-height:1.55;">
+    <ul class="tight steps">
         <li><strong>Final billing settlement</strong> — outstanding rent, utilities, fines, and any other charges as of the move-out date.</li>
         <li><strong>Move-out inspection</strong> — joint walkthrough to assess room condition and verify return of furnished items / keys / IDs.</li>
         <li><strong>Security deposit reconciliation</strong> — return of the deposit (less lawful deductions) per the Lease Agreement and RA 9653 IRR Section 7.</li>
@@ -387,11 +406,6 @@
             </td>
         </tr>
     </table>
-
-    <div class="footer">
-        Generated electronically by ForeRent on {{ now()->format('M d, Y h:i A') }}.
-        Reference: {{ $referenceNumber }}.
-    </div>
 </div>
 </body>
 </html>

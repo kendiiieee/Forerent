@@ -405,6 +405,6 @@ class RevenueForecastService
         // Exclude security deposit related categories from revenue forecasting inflows
         return Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%']);
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%']);
     }
 }

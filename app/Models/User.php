@@ -31,6 +31,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'gender',
+        'birthdate',
         'email',
         'contact',
         'password',
@@ -68,6 +69,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'terms_accepted_at' => 'datetime',
             'eligibility_changed_at' => 'datetime',
+            'birthdate' => 'date',
         ];
     }
 

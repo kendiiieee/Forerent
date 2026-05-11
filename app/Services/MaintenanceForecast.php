@@ -53,9 +53,7 @@ class MaintenanceForecast
             }
         } catch (\Exception $e) {
             Log::error('Maintenance forecast service error: ' . $e->getMessage());
-
-            // Return a fallback response so the UI remains usable during API outages.
-            return $this->buildFallbackForecast((int)$year, (array)$maintenanceData, $e->getMessage());
+            throw $e;
         }
     }
 

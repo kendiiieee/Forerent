@@ -139,18 +139,93 @@
                                     <span wire:loading wire:target="downloadTerminationNotice">Generating…</span>
                                 </button>
                                 @if(auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') === 'approved')
-                                    <button
-                                        type="button"
-                                        wire:click="moveOutTenant"
-                                        class="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
-                                        </svg>
-                                        Initiate Move-Out Process
-                                    </button>
+                                    @php
+                                        $ev = $tn['early_vacate'] ?? [];
+                                        $evStatus = $ev['status'] ?? null;
+                                        $canInitiate = ($tn['is_overdue'] ?? false)
+                                            || (($tn['days_remaining'] ?? null) === 0)
+                                            || $evStatus === 'accepted';
+                                    @endphp
+                                    @if($canInitiate)
+                                        <button
+                                            type="button"
+                                            wire:click="moveOutTenant"
+                                            class="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
+                                            </svg>
+                                            Initiate Move-Out Process
+                                        </button>
+                                    @else
+                                        <flux:tooltip content="The tenant has the full notice period to vacate. Move-out can be initiated on or after {{ $tn['vacate_by'] }}, or earlier if the tenant accepts an early-vacate request." position="top">
+                                            <div class="flex-1 inline-flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2.5 px-4 rounded-xl text-xs cursor-not-allowed select-none">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                Available {{ $tn['vacate_by'] }}
+                                            </div>
+                                        </flux:tooltip>
+                                    @endif
                                 @endif
                             </div>
+
+                            {{-- Early-vacate state row — only when notice is active and within the notice period --}}
+                            @if(auth()->user()?->role !== 'landlord' && ($currentTenant['approval']['status'] ?? 'approved') === 'approved' && !($tn['is_overdue'] ?? false) && (($tn['days_remaining'] ?? null) > 0))
+                                @php
+                                    $ev = $tn['early_vacate'] ?? [];
+                                    $evStatus = $ev['status'] ?? null;
+                                @endphp
+                                <div class="mt-3 pt-3 border-t border-red-200/60">
+                                    @if($evStatus === null || $evStatus === 'declined')
+                                        @if($evStatus === 'declined')
+                                            <div class="flex items-start gap-2 mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg>
+                                                <div class="text-[11px] text-amber-800">
+                                                    <strong>Tenant declined the early-vacate request</strong>
+                                                    @if(!empty($ev['response_note']))
+                                                        — "{{ $ev['response_note'] }}"
+                                                    @endif
+                                                    {{ $ev['responded_at'] ? '(' . $ev['responded_at'] . ')' : '' }}
+                                                </div>
+                                            </div>
+                                        @endif
+                                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                                            <p class="text-[10px] text-gray-600 italic flex-1">
+                                                Tenant entitled to full {{ $tn['days_remaining'] }}-day notice period.
+                                                If they want to vacate earlier, file a request &mdash; tenant must accept before move-out unlocks.
+                                            </p>
+                                            <button type="button" wire:click="openEarlyVacateModal"
+                                                class="text-[11px] font-semibold text-red-700 hover:text-red-900 underline whitespace-nowrap">
+                                                {{ $evStatus === 'declined' ? 'Try a new request →' : 'Request early vacate →' }}
+                                            </button>
+                                        </div>
+                                    @elseif($evStatus === 'pending_tenant')
+                                        <div class="flex items-start gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <div class="flex-1 text-[11px] text-blue-800">
+                                                <strong>Early-vacate request pending tenant acceptance.</strong>
+                                                Proposed vacate date: <strong>{{ $ev['proposed_date'] }}</strong>.
+                                                Sent {{ $ev['requested_at'] }}.
+                                            </div>
+                                            <button type="button" wire:click="cancelEarlyVacateRequest"
+                                                wire:confirm="Withdraw the early-vacate request?"
+                                                class="text-[11px] font-semibold text-blue-700 hover:text-blue-900 underline whitespace-nowrap">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    @elseif($evStatus === 'accepted')
+                                        <div class="flex items-start gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                            <svg class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <div class="text-[11px] text-emerald-800">
+                                                <strong>Tenant accepted early-vacate</strong> on {{ $ev['responded_at'] }}.
+                                                New effective vacate date: <strong>{{ $ev['proposed_date'] }}</strong>.
+                                                You can now initiate the move-out process.
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @endif
@@ -399,6 +474,69 @@
                     </div>
                 </div>
 
+                {{-- Move-In Payment Record (audit trail: method, OR/reference, receipt image) --}}
+                @php
+                    $movePaymentMethod = $currentTenant['move_in_details']['move_in_payment_method'] ?? null;
+                    $moveOrNumber      = $currentTenant['move_in_details']['move_in_or_number'] ?? null;
+                    $moveReceiptImage  = $currentTenant['move_in_details']['move_in_receipt_image'] ?? null;
+                    $hasMoveInProof    = $movePaymentMethod || $moveOrNumber || $moveReceiptImage;
+                @endphp
+                @if($hasMoveInProof)
+                <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h5 class="font-bold text-sm text-[#070589] uppercase tracking-wide">Move-In Payment Record</h5>
+                            <p class="text-[11px] text-gray-400">Audit trail of the advance + deposit collected at lease creation</p>
+                        </div>
+                    </div>
+
+                    @php
+                        $isCashPayment = $movePaymentMethod && strcasecmp(trim($movePaymentMethod), 'Cash') === 0;
+                    @endphp
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">Payment Method</p>
+                            @if($movePaymentMethod)
+                                <p class="text-sm font-bold text-gray-800">{{ $movePaymentMethod }}</p>
+                            @else
+                                <p class="text-sm font-medium text-gray-400 italic">Not recorded</p>
+                            @endif
+                        </div>
+                        <div class="bg-[#F8FAFF] rounded-xl p-3.5 border border-blue-50">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-1">OR / Reference No.</p>
+                            @if($moveOrNumber)
+                                <p class="text-sm font-bold text-gray-800 break-all">{{ $moveOrNumber }}</p>
+                            @elseif($isCashPayment)
+                                <p class="text-sm font-medium text-gray-400 italic">Not applicable for cash payments</p>
+                            @elseif($movePaymentMethod)
+                                <p class="text-sm font-medium text-gray-400 italic">No reference number provided</p>
+                            @else
+                                <p class="text-sm font-medium text-gray-400 italic">Not recorded</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if($moveReceiptImage)
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-[#2360E8]/60 mb-2">Receipt</p>
+                            <a href="{{ asset('storage/' . $moveReceiptImage) }}" target="_blank" rel="noopener" class="block rounded-xl border border-blue-100 bg-[#F8FAFF] overflow-hidden hover:border-[#2360E8] transition-colors">
+                                <img src="{{ asset('storage/' . $moveReceiptImage) }}" alt="Move-in payment receipt" class="w-full max-h-72 object-contain bg-white">
+                                <p class="text-[11px] text-[#2360E8] font-medium px-3 py-2">Click to open full-size in a new tab</p>
+                            </a>
+                        </div>
+                    @else
+                        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-[11px] text-amber-700">
+                            No receipt image was uploaded for this move-in payment.
+                        </div>
+                    @endif
+                </div>
+                @endif
+
                 {{-- Violation Records --}}
                 @if($viewingTab === 'current')
                 <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -500,11 +638,24 @@
 
                 {{-- Action Buttons (manager only — landlord cannot transfer/move-out) --}}
                 @if($viewingTab === 'current' && auth()->user()?->role !== 'landlord' && $approvalStatus === 'approved')
+                    @php
+                        $contractStatus = $currentTenant['contract_status'] ?? 'draft';
+                        $moveInReady    = $inspectionSaved && $contractStatus === 'executed';
+                        $transferHint   = $moveInReady
+                            ? 'Transfer this tenant to another bed'
+                            : (!$inspectionSaved && $contractStatus !== 'executed'
+                                ? 'Complete the move-in inspection and contract signing before transferring.'
+                                : (!$inspectionSaved
+                                    ? 'Complete the move-in inspection before transferring.'
+                                    : 'Complete the move-in contract signing before transferring.'));
+                    @endphp
                     <div class="grid grid-cols-2 gap-3 pt-2">
                         <button
                             type="button"
                             wire:click="transferTenant"
-                            class="group py-3 px-5 rounded-xl font-bold text-sm text-white transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0"
+                            @disabled(!$moveInReady)
+                            title="{{ $transferHint }}"
+                            class="group py-3 px-5 rounded-xl font-bold text-sm text-white transition-all duration-200 {{ $moveInReady ? 'hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5 active:translate-y-0' : 'opacity-60 cursor-not-allowed' }}"
                             style="background: linear-gradient(135deg, #2360E8 0%, #1080FC 100%);"
                         >
                             <div class="flex items-center justify-center gap-2">
@@ -937,7 +1088,20 @@
                         iconPath="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
                     >
 
-                                @if($moveOutInspectionSaved)
+                                @if(!$inspectionSaved)
+                                    {{-- ===== LOCKED: Move-In Inspection prerequisite ===== --}}
+                                    <div class="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                                        <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                        <div class="text-xs">
+                                            <p class="font-bold text-amber-800 mb-1">Move-In Inspection Required</p>
+                                            <p class="text-amber-700 leading-relaxed">
+                                                You must complete the <span class="font-semibold">Move-In Inspection</span> before recording a move-out inspection. Without a baseline of the room's condition and items issued at move-in, there's nothing to compare against at move-out.
+                                            </p>
+                                        </div>
+                                    </div>
+                                @elseif($moveOutInspectionSaved)
                                     {{-- ===== READ-ONLY VIEW ===== --}}
 
                                     {{-- Room Condition Checklist (read-only) --}}
@@ -1154,15 +1318,13 @@
                                             <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
                                             Items Returned by Tenant
                                         </h4>
-                                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                                        <div class="rounded-xl border border-gray-200">
                                             <table class="w-full text-xs">
                                                 <thead>
                                                     <tr class="bg-gray-50 border-b border-gray-200">
-                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-1/5">Item</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Qty Issued</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-14">Qty Returned</th>
+                                                        <th class="text-left p-2.5 font-semibold text-gray-600 w-1/4">Item</th>
+                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-44">Returned?</th>
                                                         <th class="text-left p-2.5 font-semibold text-gray-600">Condition</th>
-                                                        <th class="text-center p-2.5 font-semibold text-gray-600 w-16">Returned</th>
                                                         <th class="text-right p-2.5 font-semibold text-gray-600 w-24">Replacement</th>
                                                     </tr>
                                                 </thead>
@@ -1171,25 +1333,53 @@
                                                         <tr wire:key="moveout-item-{{ $index }}" class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors {{ $errors->has("itemsReturned.{$index}.quantity") || $errors->has("itemsReturned.{$index}.condition") ? 'bg-red-50/50' : '' }}">
                                                             <td class="p-2.5 text-gray-700 font-medium">
                                                                 {{ $item['item_name'] }}
+                                                                @if(!empty($item['quantity']))
+                                                                    <span class="text-[11px] text-gray-400 font-normal ml-1">({{ $item['quantity'] }} issued)</span>
+                                                                @endif
                                                                 @if($errors->has("itemsReturned.{$index}.condition") || $errors->has("itemsReturned.{$index}.quantity"))
                                                                     <p class="text-[11px] text-red-500 font-normal mt-0.5">Required</p>
                                                                 @endif
                                                             </td>
                                                             <td class="p-2.5 text-center">
-                                                                <input type="number" min="1" step="1"
-                                                                       wire:model.live.debounce.300ms="itemsReturned.{{ $index }}.quantity"
-                                                                       placeholder="1"
-                                                                       onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
-                                                                       oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
-                                                                       class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.quantity") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
-                                                            </td>
-                                                            <td class="p-2.5 text-center">
-                                                                <input type="number" min="0" step="1"
-                                                                       wire:model.live.debounce.300ms="itemsReturned.{{ $index }}.quantity_returned"
-                                                                       placeholder="0"
-                                                                       onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
-                                                                       oninput="this.value=this.value.replace(/^0+/,'').replace(/[^0-9]/g,'');if(this.value==='')this.value=''"
-                                                                       class="w-14 text-xs text-center border rounded-lg px-1.5 py-1.5 focus:ring-1 transition-colors placeholder:text-gray-300 {{ $errors->has("itemsReturned.{$index}.quantity_returned") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
+                                                                @php
+                                                                    $qtyIssuedCell = (int) ($item['quantity'] ?? 0);
+                                                                    $qtyReturnedCell = (int) ($item['quantity_returned'] ?? 0);
+                                                                    $returnState = match (true) {
+                                                                        $qtyReturnedCell <= 0 => 'none',
+                                                                        $qtyReturnedCell >= $qtyIssuedCell => 'all',
+                                                                        default => 'partial',
+                                                                    };
+                                                                @endphp
+                                                                <div class="inline-flex flex-col items-center gap-1">
+                                                                    <button type="button"
+                                                                            wire:click="setReturnedState({{ $index }}, '{{ $returnState === 'all' ? 'none' : 'all' }}')"
+                                                                            role="switch"
+                                                                            aria-checked="{{ $returnState === 'all' ? 'true' : 'false' }}"
+                                                                            title="{{ $returnState === 'all' ? 'Returned' : ($returnState === 'partial' ? 'Partially returned' : 'Not returned') }}"
+                                                                            style="position:relative;display:inline-flex;align-items:center;height:24px;width:44px;border-radius:9999px;cursor:pointer;transition:background-color 200ms ease;background-color:{{ $returnState === 'all' ? '#10b981' : ($returnState === 'partial' ? '#f59e0b' : '#d1d5db') }};border:none;padding:0;">
+                                                                        <span style="position:absolute;top:2px;left:2px;display:inline-block;height:20px;width:20px;border-radius:9999px;background-color:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);transition:transform 200ms ease;transform:translateX({{ $returnState === 'none' ? '0' : '20px' }});"></span>
+                                                                    </button>
+                                                                    <span class="text-[10px] font-semibold uppercase tracking-wide {{ $returnState === 'all' ? 'text-emerald-600' : ($returnState === 'partial' ? 'text-amber-600' : 'text-gray-400') }}">
+                                                                        {{ $returnState === 'all' ? 'Returned' : ($returnState === 'partial' ? 'Partial' : 'Not returned') }}
+                                                                    </span>
+                                                                    @if($qtyIssuedCell > 1 && $returnState !== 'partial')
+                                                                        <button type="button"
+                                                                                wire:click="setReturnedState({{ $index }}, 'partial')"
+                                                                                class="text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                                                                            Set partial
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
+                                                                @if($returnState === 'partial' && $qtyIssuedCell > 1)
+                                                                    <div class="mt-1.5 flex items-center justify-center gap-1.5">
+                                                                        <input type="number" min="1" max="{{ $qtyIssuedCell - 1 }}" step="1"
+                                                                               wire:model.live.debounce.300ms="itemsReturned.{{ $index }}.quantity_returned"
+                                                                               onkeydown="if(!/[0-9]|Backspace|Tab|ArrowLeft|ArrowRight|Delete/.test(event.key))event.preventDefault()"
+                                                                               oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'')"
+                                                                               class="w-12 text-xs text-center border rounded-lg px-1.5 py-1 focus:ring-1 transition-colors {{ $errors->has("itemsReturned.{$index}.quantity_returned") ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400' }}">
+                                                                        <span class="text-[11px] text-gray-400">of {{ $qtyIssuedCell }}</span>
+                                                                    </div>
+                                                                @endif
                                                                 @error("itemsReturned.{$index}.quantity_returned") <p class="text-[10px] text-red-500 mt-0.5">{{ $message }}</p> @enderror
                                                             </td>
                                                             <td class="p-2.5">
@@ -1239,12 +1429,6 @@
                                                                         @endforeach
                                                                     </div>
                                                                 </div>
-                                                            </td>
-                                                            <td class="p-2.5 text-center">
-                                                                <label class="cursor-pointer">
-                                                                    <input type="checkbox" wire:model.defer="itemsReturned.{{ $index }}.is_returned"
-                                                                           class="w-4 h-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-400">
-                                                                </label>
                                                             </td>
                                                             <td class="p-2.5">
                                                                 <input type="number" min="0" step="0.01"
@@ -1343,6 +1527,7 @@
              MOVE-IN CONTRACT MODAL (Full 14-Section Template)
         ═══════════════════════════════════════════════ --}}
         @if($showMoveInContract)
+            <div wire:poll.5s="refreshContractSignatures"></div>
             @php
                 $t = $currentTenant;
                 $rate = $t['move_in_details']['monthly_rate'];
@@ -1351,16 +1536,26 @@
                 $dueDay = $t['move_in_details']['monthly_due_date'];
                 $dueSfx = match((int) $dueDay) { 1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th' };
                 $totalMoveIn = $rate + $deposit;
+                $isLandlordRole = auth()->user()?->role === 'landlord';
+                $moveInSigMode  = $isLandlordRole ? 'owner' : 'manager';
+                $moveInNeedsSig = $isLandlordRole
+                    ? !$ownerSignature
+                    : (!$managerSignature && $ownerSignature);
+                $moveInStatusText = $contractAgreed
+                    ? 'Contract fully signed'
+                    : ($isLandlordRole
+                        ? (!$ownerSignature ? 'Sign this contract as property owner' : 'Waiting for other parties to sign')
+                        : (!$managerSignature && $ownerSignature ? 'Sign this contract as unit manager' : 'Waiting for other parties to sign'));
             @endphp
             <x-inspection.contract-viewer-modal
                 :show="true"
                 title="Move-In Contract"
                 wireCloseMethod="closeMoveInContract"
-                contractId="move-in-contract-manager"
+                :contractId="'move-in-contract-' . $moveInSigMode"
                 :hasSignatures="(bool) ($ownerSignature || $managerSignature || $tenantSignature)"
                 :contractAgreed="(bool) $contractAgreed"
-                :needsSignature="!$managerSignature && $ownerSignature"
-                :statusText="$contractAgreed ? 'Contract fully signed' : (!$managerSignature && $ownerSignature ? 'Sign this contract as unit manager' : 'Waiting for other parties to sign')"
+                :needsSignature="$moveInNeedsSig"
+                :statusText="$moveInStatusText"
             >
                 @include('partials.move-in-contract-body', [
                     't' => $t,
@@ -1379,7 +1574,7 @@
                     'ownerSignedAt' => $ownerSignedAt,
                     'managerSignedAt' => $managerSignedAt,
                     'contractAgreed' => $contractAgreed,
-                    'signatureMode' => 'manager',
+                    'signatureMode' => $moveInSigMode,
                 ])
 
                 <x-slot:footer>
@@ -1397,19 +1592,30 @@
              MOVE-OUT CONTRACT MODAL
         ═══════════════════════════════════════════════ --}}
         @if($showMoveOutContract)
+            <div wire:poll.5s="refreshContractSignatures"></div>
             @php
                 $t = $currentTenant;
                 $deposit = $t['move_in_details']['security_deposit'];
+                $isLandlordRole  = auth()->user()?->role === 'landlord';
+                $moveOutSigMode  = $isLandlordRole ? 'owner' : 'manager';
+                $moveOutNeedsSig = $isLandlordRole
+                    ? !$moveOutOwnerSignature
+                    : (!$moveOutManagerSignature && $moveOutOwnerSignature);
+                $moveOutStatusText = $moveOutContractAgreed
+                    ? 'Contract fully signed'
+                    : ($isLandlordRole
+                        ? (!$moveOutOwnerSignature ? 'Sign this contract as property owner' : 'Waiting for other parties to sign')
+                        : (!$moveOutManagerSignature && $moveOutOwnerSignature ? 'Sign this contract as unit manager' : 'Waiting for other parties to sign'));
             @endphp
             <x-inspection.contract-viewer-modal
                 :show="true"
                 title="Move-Out Clearance & Deposit Settlement"
                 wireCloseMethod="closeMoveOutContract"
-                contractId="move-out-contract-manager"
+                :contractId="'move-out-contract-' . $moveOutSigMode"
                 :hasSignatures="(bool) ($moveOutOwnerSignature || $moveOutManagerSignature || $moveOutTenantSignature)"
                 :contractAgreed="(bool) $moveOutContractAgreed"
-                :needsSignature="!$moveOutManagerSignature && $moveOutOwnerSignature"
-                :statusText="$moveOutContractAgreed ? 'Contract fully signed' : (!$moveOutManagerSignature && $moveOutOwnerSignature ? 'Sign this contract as unit manager' : 'Waiting for other parties to sign')"
+                :needsSignature="$moveOutNeedsSig"
+                :statusText="$moveOutStatusText"
             >
                 @include('partials.move-out-contract-body', [
                     't' => $t,
@@ -1426,7 +1632,7 @@
                     'moveOutContractAgreed' => $moveOutContractAgreed,
                     'outstandingBalances' => $t['outstanding_balances'] ?? [],
                     'depositRefund' => $t['deposit_refund'] ?? [],
-                    'signatureMode' => 'manager',
+                    'signatureMode' => $moveOutSigMode,
                 ])
 
                 <x-slot:footer>
@@ -1546,6 +1752,18 @@
 
             {{-- Refund Preview --}}
             @if($moveOutRefundPreview)
+                @php
+                    // When early termination forfeits the full deposit, the only deduction
+                    // that meaningfully affects the refund is the forfeiture itself. Other
+                    // deductions (violation fines, unpaid rent, etc.) are billed separately
+                    // and shouldn't pile on top of the forfeiture in the preview.
+                    $shownDeductions = $isForfeit
+                        ? array_values(array_filter($moveOutRefundPreview['deductions'], fn($d) => str_contains($d['label'], 'Early Termination')))
+                        : $moveOutRefundPreview['deductions'];
+                    $separateCharges = $isForfeit
+                        ? array_values(array_filter($moveOutRefundPreview['deductions'], fn($d) => !str_contains($d['label'], 'Early Termination') && (float) $d['amount'] > 0))
+                        : [];
+                @endphp
                 <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
                     <h4 class="text-xs font-semibold text-gray-700 mb-2">Deposit Refund Preview</h4>
                     <div class="space-y-1 text-xs">
@@ -1553,7 +1771,7 @@
                             <span class="text-gray-600">Security Deposit</span>
                             <span class="font-medium text-gray-800">PHP {{ number_format($moveOutRefundPreview['deposit'], 2) }}</span>
                         </div>
-                        @foreach($moveOutRefundPreview['deductions'] as $d)
+                        @foreach($shownDeductions as $d)
                             <div class="flex justify-between">
                                 <span class="text-red-600 truncate pr-2">− {{ $d['label'] }}</span>
                                 <span class="font-medium text-red-600 whitespace-nowrap">PHP {{ number_format(abs((float) $d['amount']), 2) }}</span>
@@ -1571,7 +1789,15 @@
                             <span class="{{ $refundAmt > 0 ? 'text-emerald-700' : 'text-red-600' }}">PHP {{ number_format($refundAmt, 2) }}</span>
                         </div>
                         @if($isForfeit)
-                            <p class="text-[11px] text-red-600 italic mt-1.5">Full deposit forfeited — early termination per Contract Section 7. No refund or interest will be issued.</p>
+                            <p class="text-[11px] text-red-600 italic mt-1.5">Full deposit forfeited per Contract Section 7.</p>
+                            @if(count($separateCharges) > 0)
+                                @php
+                                    $separateLabels = collect($separateCharges)->map(fn($d) => $d['label'] . ' (₱' . number_format(abs((float) $d['amount']), 2) . ')')->implode(', ');
+                                @endphp
+                                <p class="text-[11px] text-gray-600 italic mt-1">Note: Outstanding {{ $separateLabels }}, and any unpaid bills remain payable through the regular billing system.</p>
+                            @else
+                                <p class="text-[11px] text-gray-600 italic mt-1">Note: Any unpaid bills remain payable through the regular billing system.</p>
+                            @endif
                         @elseif($refundAmt <= 0)
                             <p class="text-[11px] text-amber-600 italic mt-1.5">Deductions equal or exceed the deposit. No cash refund will be issued.</p>
                         @else
@@ -1581,11 +1807,20 @@
                 </div>
             @endif
 
+            @php
+                $allDone = collect($moveOutPrerequisites)->every(fn($p) => $p['done']);
+                $unpaidBlocker = collect($moveOutPrerequisites)
+                    ->first(fn($p) => !$p['done'] && str_contains($p['label'], 'Outstanding bills'));
+                $otherBlockers = collect($moveOutPrerequisites)
+                    ->filter(fn($p) => !$p['done'] && !str_contains($p['label'], 'Outstanding bills'));
+                // Forfeit only offered when unpaid bills is the SOLE remaining blocker.
+                $canForfeit = $unpaidBlocker && $otherBlockers->isEmpty();
+            @endphp
+
             <div class="flex justify-center gap-4 px-2">
                 <button @click="show = false" class="flex-1 bg-[#D6E6FF] hover:bg-[#c3daff] text-[#0C0B50] font-bold py-3 rounded-xl transition-colors text-sm">
                     Cancel
                 </button>
-                @php $allDone = collect($moveOutPrerequisites)->every(fn($p) => $p['done']); @endphp
                 <button
                     wire:click="confirmMoveOut"
                     wire:loading.attr="disabled"
@@ -1596,8 +1831,34 @@
                     <span wire:loading wire:target="confirmMoveOut">Processing...</span>
                 </button>
             </div>
+
+            @if($canForfeit)
+                <div class="mt-3 pt-3 border-t border-gray-200 px-2">
+                    <p class="text-[11px] text-gray-500 italic mb-2 text-center">
+                        Tenant abandoned the unit or refuses to pay? You can still finalize by forfeiting the deposit and blocking them from new rentals.
+                    </p>
+                    <button
+                        type="button"
+                        @click="show = false; $dispatch('open-modal', 'forfeit-deposit-confirmation')"
+                        class="w-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold py-2.5 rounded-xl transition-colors text-xs"
+                    >
+                        Forfeit Deposit & Block Tenant
+                    </button>
+                </div>
+            @endif
         </div>
     </div>
+
+    {{-- Forfeit Deposit & Block Tenant Confirmation --}}
+    <x-ui.modal-confirm
+        name="forfeit-deposit-confirmation"
+        title="Forfeit Deposit & Block Tenant?"
+        description="The lease will be marked as Expired with termination_reason=non_payment. Unpaid bills will be deducted from the deposit, and the tenant will be permanently blocked from new rentals until the landlord reinstates them. This action cannot be undone."
+        confirmText="Yes, Forfeit & Block"
+        cancelText="Cancel"
+        confirmAction="forfeitAndFinalizeMoveOut"
+    />
+
 
     {{-- Reject Tenant Confirmation Modal (landlord only) --}}
     @if(auth()->user()?->role === 'landlord')
@@ -1653,6 +1914,41 @@
             </div>
         </x-ui.modal-confirm>
     @endif
+
+    {{-- Request Early Vacate Modal — manager files an override request, tenant must accept --}}
+    <x-ui.modal-confirm
+        name="request-early-vacate"
+        title="Request Early Vacate"
+        description="The tenant must accept this request before the move-out gate unlocks. Both sides will see the agreement details."
+        confirmText="Send Request to Tenant"
+        cancelText="Cancel"
+        confirmAction="requestEarlyVacate"
+    >
+        <div class="space-y-4 text-left">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p class="text-[11px] text-amber-800 leading-relaxed">
+                    <strong>Heads up:</strong> The notice period exists to protect the tenant. Only file an early-vacate request when the tenant has expressly agreed to leave earlier. The tenant must accept on their dashboard before move-out unlocks.
+                </p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Proposed Vacate Date <span class="text-red-500">*</span></label>
+                <input type="date" wire:model="earlyVacateProposedDate"
+                    min="{{ now()->format('Y-m-d') }}"
+                    max="{{ \Carbon\Carbon::parse($currentTenant['termination_notice']['vacate_by_iso'] ?? now())->subDay()->format('Y-m-d') }}"
+                    class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] {{ $errors->has('earlyVacateProposedDate') ? 'border-red-400' : 'border-gray-200' }}">
+                @error('earlyVacateProposedDate') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                <p class="text-[11px] text-gray-500 mt-1">Must be earlier than the original vacate-by date ({{ $currentTenant['termination_notice']['vacate_by'] ?? '—' }}).</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Reason / Agreement Details <span class="text-red-500">*</span></label>
+                <textarea wire:model="earlyVacateReason" rows="3"
+                    placeholder="e.g. Tenant verbally requested early vacate on May 15, 2026. They've secured new accommodation and want to leave before the notice period ends."
+                    class="w-full text-sm border rounded-xl px-3 py-2 focus:border-[#070589] focus:ring-1 focus:ring-[#070589] placeholder:text-gray-300 {{ $errors->has('earlyVacateReason') ? 'border-red-400' : 'border-gray-200' }}"></textarea>
+                @error('earlyVacateReason') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                <p class="text-[11px] text-gray-500 mt-1">This is recorded in the audit log and shown to the tenant when they review the request.</p>
+            </div>
+        </div>
+    </x-ui.modal-confirm>
 
     {{-- Initiate Move-Out Form Modal --}}
     <x-ui.modal-confirm

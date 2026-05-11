@@ -52,11 +52,11 @@
             </div>
 
             {{-- Property Details + Bed Status --}}
-            <div class="mt-6 flex flex-col lg:flex-row gap-6">
-                <div class="w-full lg:w-[70%]">
+            <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-stretch w-full">
+                <div class="w-full h-full self-stretch lg:col-span-2">
                     <livewire:layouts.properties.property-details />
                 </div>
-                <div class="w-full lg:w-[30%]">
+                <div class="w-full h-full self-stretch lg:col-span-1">
                     <livewire:layouts.property-widgets :initial-building-id="optional($properties->first())->property_id" />
                 </div>
             </div>

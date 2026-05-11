@@ -1,7 +1,7 @@
-<div class="flex flex-col gap-6 w-full max-w-sm shrink-0">
+<div class="flex flex-col gap-6 w-full h-full">
 
-    {{-- Bed Status Card (Interactive Donut Chart) --}}
-    <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100"
+        {{-- Property Status Card (Interactive Donut Chart) --}}
+        <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-100 h-full flex flex-col"
          x-data="{
             hoveredSegment: null,
             tooltipX: 0,
@@ -43,7 +43,7 @@
             }
          }"
     >
-        <h3 class="text-lg sm:text-xl font-bold text-[#070642] leading-tight mb-4 sm:mb-6">Bed Status</h3>
+        <h3 class="text-lg sm:text-xl font-bold text-[#070642] leading-tight mb-4 sm:mb-6">Property Status</h3>
 
         {{-- Donut Chart --}}
         <div class="flex flex-col items-center justify-center">
@@ -205,8 +205,8 @@
                 <p class="font-bold text-gray-900">{{ $totalUnits }}</p>
             </div>
             <div>
-                <p class="text-xs text-gray-500">Available Beds</p>
-                <p class="font-bold text-gray-900">{{ $availableBeds }}</p>
+                <p class="text-xs text-gray-500">Total Floors</p>
+                <p class="font-bold text-gray-900">{{ $totalFloors }}</p>
             </div>
         </div>
     </div>

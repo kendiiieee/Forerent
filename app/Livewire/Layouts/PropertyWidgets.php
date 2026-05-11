@@ -11,13 +11,14 @@ class PropertyWidgets extends Component
     // Bed Status Data
     public int $totalBeds = 0;
     public int $occupiedBeds = 0;
-    public int $occupiedPercent = 0;
     public int $availableBeds = 0;
+    public int $occupiedPercent = 0;
     public int $availablePercent = 0;
     public float $occupancyRate = 0.0;
 
-    // Unit count for reference
+    // Unit + floor counts for reference
     public int $totalUnits = 0;
+    public int $totalFloors = 0;
 
     public ?int $selectedBuildingId = null;
 
@@ -49,6 +50,8 @@ class PropertyWidgets extends Component
         $units = $query->get();
 
         $this->totalUnits = $units->count();
+        $this->totalFloors = $units->pluck('floor_number')->filter(fn($f) => $f !== null)->unique()->count();
+
         $totalBeds = 0;
         $occupiedBeds = 0;
 

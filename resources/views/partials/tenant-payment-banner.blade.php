@@ -8,16 +8,36 @@
 
     <div class="relative z-10 px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-3">
         <div>
-            <p class="text-[10px] sm:text-xs font-bold text-blue-300/80 uppercase tracking-[0.2em] mb-1 sm:mb-2">Amount Due This Month</p>
+            @php
+                $bannerLabel = match($paymentStatus) {
+                    'Paid'       => 'Amount Paid This Month',
+                    'No Billing' => "This Month's Billing",
+                    default      => 'Amount Due This Month',
+                };
+            @endphp
+            <p class="text-[10px] sm:text-xs font-bold text-blue-300/80 uppercase tracking-[0.2em] mb-1 sm:mb-2">{{ $bannerLabel }}</p>
             <p class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
                 <span class="text-base sm:text-lg font-bold text-white/70 mr-0.5">&#8369;</span>{{ number_format($amountDue, 2) }}
             </p>
             <div class="mt-1.5 sm:mt-2.5">
                 @if($paymentStatus === 'Paid')
-                    <span class="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold text-blue-200">
-                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                        Paid in full
-                    </span>
+                    @if(!empty($nextBillDate))
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 ring-1 ring-white/15 backdrop-blur-sm">
+                            <svg class="w-3.5 h-3.5 text-white/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="text-xs sm:text-[13px] font-semibold text-white whitespace-nowrap">
+                                Next bill:
+                                @if(!empty($nextBillAmount))
+                                    <span class="font-bold">&#8369; {{ number_format($nextBillAmount, 2) }}</span>
+                                @endif
+                                <span class="font-medium text-white/80">due {{ \Carbon\Carbon::parse($nextBillDate)->format('M d, Y') }}</span>
+                            </span>
+                        </div>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold text-blue-200">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            Paid in full
+                        </span>
+                    @endif
                 @elseif($paymentStatus === 'No Billing')
                     <span class="text-xs sm:text-[13px] font-medium text-white/40">No billing issued yet</span>
                 @elseif($daysUntilDue > 0)

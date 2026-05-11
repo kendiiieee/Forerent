@@ -71,6 +71,22 @@
                 </div>
             </div>
 
+            {{-- Overview notice --}}
+            @php
+                $prevInsight = collect($insights ?? [])->first(fn($i) => str_contains($i['label'] ?? '', 'Previous Year'));
+                $baselineInsight = collect($insights ?? [])->first(fn($i) => str_contains($i['label'] ?? '', 'Forecast Baseline'));
+                $periodLabel = $year === now()->year ? 'year-to-date (YTD)' : 'full-year';
+                $trendDirection = ($prevInsight['tone'] ?? 'neutral') === 'positive'
+                    ? 'up'
+                    : (($prevInsight['tone'] ?? 'neutral') === 'negative' ? 'down' : 'flat');
+                $trendValue = $prevInsight['value_text'] ?? 'N/A';
+                $baselineValue = $baselineInsight['value_text'] ?? 'N/A';
+            @endphp
+            <div class="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+                <span class="font-semibold">Overview:</span>
+                This chart compares actual maintenance spending with the forecast, using last year as a reference point. For {{ $periodLabel }}, costs are {{ $trendDirection }} {{ $trendValue }} versus last year. The baseline comparison ({{ $baselineValue }}) shows whether spending is above or below the plan.
+            </div>
+
             <div class="flex items-center gap-5 mb-4">
                 <div class="flex items-center gap-2">
                     <span class="w-3 h-3 rounded-sm" style="background-color: #8CC5FF;"></span>
@@ -95,7 +111,14 @@
                 <div class="lg:col-span-1 rounded-xl border border-gray-100 p-4 flex flex-col" wire:ignore>
                     <div class="flex items-center justify-between mb-3">
                         <div>
-                            <h4 class="text-lg font-bold text-[#070642]">Job Count Forecast</h4>
+                            <div class="flex items-center gap-1">
+                                <h4 class="text-lg font-bold text-[#070642]">Job Count Forecast</h4>
+                                <flux:tooltip :content="'Monthly forecasted vs actual maintenance jobs.'" position="top">
+                                    <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                    </svg>
+                                </flux:tooltip>
+                            </div>
                             <p class="text-sm text-gray-500">Forecast vs actual jobs per month</p>
                         </div>
                     </div>
@@ -140,9 +163,24 @@
                                     'negative' => 'text-rose-600/80',
                                     'neutral' => 'text-gray-500',
                                 ];
+                                $labelText = $insight['label'] ?? 'Insight';
+                                $tooltipText = trim((string) ($insight['detail'] ?? ''));
+                                if ($tooltipText === '') {
+                                    $tooltipText = 'Comparison versus previous year or forecast baseline.';
+                                }
+                                if (str_contains((string) $labelText, 'Peak Month Share')) {
+                                    $tooltipText = 'Share of the total forecasted annual maintenance cost that comes from the single highest-forecast month.';
+                                }
                             @endphp
                             <div class="rounded-xl border p-4 {{ $cardClasses[$tone] ?? $cardClasses['neutral'] }}">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ $insight['label'] ?? 'Insight' }}</p>
+                                <div class="flex items-center gap-1 mb-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $labelText }}</span>
+                                    <flux:tooltip :content="$tooltipText" position="top">
+                                        <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                        </svg>
+                                    </flux:tooltip>
+                                </div>
                                 <p class="text-2xl font-bold {{ $valueClasses[$tone] ?? $valueClasses['neutral'] }}">{{ $insight['value_text'] ?? 'N/A' }}</p>
                                 <p class="text-xs mt-1 {{ $detailClasses[$tone] ?? $detailClasses['neutral'] }}">{{ $insight['detail'] ?? '' }}</p>
                             </div>
