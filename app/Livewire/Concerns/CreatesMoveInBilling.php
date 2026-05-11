@@ -67,18 +67,28 @@ trait CreatesMoveInBilling
         }
 
         if ($isPaid) {
-            $txn = Transaction::create([
+            // Create separate transactions for advance (rent) and security deposit
+            $advanceTxn = Transaction::createWithSequenceRetry([
                 'billing_id'       => $billing->billing_id,
                 'reference_number' => 'placeholder',
-                'transaction_type' => 'Debit',
-                'category'         => 'Rent Payment',
+                'transaction_type' => 'Credit',
+                'category'         => 'Advance',
                 'transaction_date' => today(),
-                'amount'           => $billing->amount,
+                'amount'           => $rate,
             ]);
-            $txn->update([
-                'reference_number' => 'MOVEIN-' . now()->format('Ymd') . '-'
-                    . str_pad((string) $txn->transaction_id, 6, '0', STR_PAD_LEFT),
-            ]);
+            $advanceTxn->update(['reference_number' => 'ADV' . now()->format('Ymd') . '-' . str_pad($advanceTxn->transaction_id, 6, '0', STR_PAD_LEFT)]);
+
+            if ($deposit > 0) {
+                $depositTxn = Transaction::createWithSequenceRetry([
+                    'billing_id'       => $billing->billing_id,
+                    'reference_number' => 'placeholder',
+                    'transaction_type' => 'Credit',
+                    'category'         => 'Deposit',
+                    'transaction_date' => today(),
+                    'amount'           => $deposit,
+                ]);
+                $depositTxn->update(['reference_number' => 'DEP' . now()->format('Ymd') . '-' . str_pad($depositTxn->transaction_id, 6, '0', STR_PAD_LEFT)]);
+            }
         }
 
         return $billing;

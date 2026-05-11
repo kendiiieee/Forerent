@@ -12,6 +12,8 @@ class RevenueForecast extends Component
 {
     public $forecastYear;
     public $monthlyForecasts = [];
+    public $monthlyExpenses = [];
+    public $revenueBreakdown = [];
     public $totalAnnualRevenue = 0;
     public $totalRemainingRevenue = 0;
     public $averageMonthlyRevenue = 0;
@@ -87,6 +89,9 @@ class RevenueForecast extends Component
             }
 
             $this->monthlyForecasts = $this->addPreviousYearRevenue($this->monthlyForecasts);
+            // Compute monthly expenses and a revenue breakdown for the selected year
+            $this->monthlyExpenses = $this->getMonthlyExpensesForYear((int) $this->forecastYear);
+            $this->revenueBreakdown = $this->getRevenueBreakdownForYear((int) $this->forecastYear);
             $this->insights = $this->buildInsights($this->monthlyForecasts);
             
         } catch (\Exception $e) {
@@ -106,6 +111,7 @@ class RevenueForecast extends Component
         $monthExpr = $this->transactionMonthExpression();
         $actualByMonth = Transaction::query()
             ->creditInflows()
+            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $this->forecastYear)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -152,6 +158,7 @@ class RevenueForecast extends Component
 
         $rows = Transaction::query()
             ->creditInflows()
+            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -299,6 +306,47 @@ class RevenueForecast extends Component
         }
 
         return 'MONTH(transaction_date)';
+    }
+
+    private function getMonthlyExpensesForYear(int $year): array
+    {
+        $monthExpr = $this->transactionMonthExpression();
+
+        $rows = Transaction::query()
+            ->whereRaw('UPPER(COALESCE(transaction_type, "")) = ?', ['DEBIT'])
+            ->whereYear('transaction_date', $year)
+            ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
+            ->groupBy('month')
+            ->pluck('total', 'month');
+
+        $totals = [];
+        foreach ($rows as $month => $total) {
+            $totals[(int) $month] = (float) $total;
+        }
+
+        return $totals;
+    }
+
+    private function getRevenueBreakdownForYear(int $year): array
+    {
+        $rows = Transaction::query()
+            ->creditInflows()
+            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+            ->whereYear('transaction_date', $year)
+            ->selectRaw('COALESCE(category, "Uncategorized") as category, SUM(amount) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->get();
+
+        $breakdown = [];
+        foreach ($rows as $row) {
+            $breakdown[] = [
+                'category' => (string) $row->category,
+                'amount' => (float) $row->total,
+            ];
+        }
+
+        return $breakdown;
     }
 
     public function render()

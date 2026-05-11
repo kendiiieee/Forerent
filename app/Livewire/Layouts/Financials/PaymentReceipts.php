@@ -79,11 +79,9 @@ class PaymentReceipts extends Component
 
         if (!$record) return;
 
-        // Always 'Rent Payment' in seeder/markAsPaid regardless of billing_type,
-        // filter by transaction_type Credit to avoid pulling wrong records
+        // Find the latest credit transaction for this billing (don't force 'Rent Payment' category)
         $txn = Transaction::where('billing_id', $billingId)
-            ->where('transaction_type', 'Credit')
-            ->where('category', 'Rent Payment')
+            ->whereRaw('UPPER(transaction_type) = ?', ['CREDIT'])
             ->orderByDesc('transaction_date')
             ->orderByDesc('created_at')
             ->first();
