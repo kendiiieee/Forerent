@@ -64,9 +64,9 @@ class RevenueForecastService
             // Call FastAPI endpoint
             /** @var Response $response */
             $response = $this->postWithRetry('/api/forecast/revenue', [
-                    'csv_data' => $csvData,
-                    'year' => $year
-                ]);
+                'csv_data' => $csvData,
+                'year' => $year
+            ]);
 
             if (!$response->successful()) {
                 $fallbackReason = $this->formatApiError($response->status(), $response->body());
@@ -405,6 +405,6 @@ class RevenueForecastService
         // Exclude security deposit related categories from revenue forecasting inflows
         return Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%']);
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%']);
     }
 }

@@ -72,13 +72,15 @@ class RevenueReports extends Component
     {
         $now = Carbon::now();
 
-        $logs = MaintenanceLog::with(['request:request_id,category'])
+        $logs = MaintenanceLog::join('maintenance_requests', 'maintenance_logs.request_id', '=', 'maintenance_requests.request_id')
             ->when($this->maintenanceBreakdownScope === 'month', function ($query) use ($now) {
-                $query->whereYear('completion_date', $now->year)
-                    ->whereMonth('completion_date', $now->month);
+                $query->whereYear('maintenance_logs.completion_date', $now->year)
+                    ->whereMonth('maintenance_logs.completion_date', $now->month);
             }, function ($query) use ($now) {
-                $query->whereYear('completion_date', $now->year);
+                $query->whereYear('maintenance_logs.completion_date', $now->year);
             })
+            ->selectRaw('maintenance_requests.category, SUM(maintenance_logs.cost)::numeric as total')
+            ->groupBy('maintenance_requests.category')
             ->get();
 
         $amountByCategory = [];
@@ -87,9 +89,9 @@ class RevenueReports extends Component
         }
 
         foreach ($logs as $log) {
-            $category = $log->request->category ?? null;
+            $category = $log->category ?? null;
             if ($category && array_key_exists($category, $amountByCategory)) {
-                $amountByCategory[$category] += (float) $log->cost;
+                $amountByCategory[$category] = (float) ($log->total ?? 0);
             }
         }
 

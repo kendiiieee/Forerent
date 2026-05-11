@@ -74,7 +74,7 @@ class RevenueForecast extends Component
 
         try {
             $result = $this->revenueForecastService->generateMonthlyForecast($this->forecastYear);
-            
+
             $this->monthlyForecasts = $result['monthly_forecasts'];
             $this->totalAnnualRevenue = $result['total_annual_revenue'];
             $this->totalRemainingRevenue = $result['total_remaining_revenue'];
@@ -82,7 +82,7 @@ class RevenueForecast extends Component
             $this->dataPointsUsed = $result['data_points_used'] ?? 0;
             $this->isFallback = (bool)($result['is_fallback'] ?? false);
             $this->warning = $result['warning'] ?? null;
-            
+
             // Add actual earnings data to each month
             if (!$this->isFallback) {
                 $this->monthlyForecasts = $this->enrichForecastWithActualEarnings($this->monthlyForecasts);
@@ -93,7 +93,6 @@ class RevenueForecast extends Component
             $this->monthlyExpenses = $this->getMonthlyExpensesForYear((int) $this->forecastYear);
             $this->revenueBreakdown = $this->getRevenueBreakdownForYear((int) $this->forecastYear);
             $this->insights = $this->buildInsights($this->monthlyForecasts);
-            
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
         } finally {
@@ -111,7 +110,7 @@ class RevenueForecast extends Component
         $monthExpr = $this->transactionMonthExpression();
         $actualByMonth = Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $this->forecastYear)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -158,7 +157,7 @@ class RevenueForecast extends Component
 
         $rows = Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -313,7 +312,7 @@ class RevenueForecast extends Component
         $monthExpr = $this->transactionMonthExpression();
 
         $rows = Transaction::query()
-            ->whereRaw('UPPER(COALESCE(transaction_type, "")) = ?', ['DEBIT'])
+            ->whereRaw('UPPER(COALESCE(transaction_type, \'\')) = ?', ['DEBIT'])
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -331,9 +330,9 @@ class RevenueForecast extends Component
     {
         $rows = Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $year)
-            ->selectRaw('COALESCE(category, "Uncategorized") as category, SUM(amount) as total')
+            ->selectRaw('COALESCE(category, \'Uncategorized\') as category, SUM(amount) as total')
             ->groupBy('category')
             ->orderByDesc('total')
             ->get();
