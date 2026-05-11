@@ -418,6 +418,9 @@ class RevenueForecastService
 
     private function baseCreditInflowQuery(): Builder
     {
-        return Transaction::query()->creditInflows();
+        // Exclude security deposit related categories from revenue forecasting inflows
+        return Transaction::query()
+            ->creditInflows()
+            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%']);
     }
 }

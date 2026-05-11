@@ -704,14 +704,14 @@ Artisan::command('test:tricia-move-in {--reset : Remove existing active lease fi
 
             $advTx = Transaction::createWithSequenceRetry([
                 'billing_id' => $billing->billing_id, 'reference_number' => 'placeholder',
-                'transaction_type' => 'Debit', 'category' => 'Advance',
+                'transaction_type' => 'Credit', 'category' => 'Advance',
                 'transaction_date' => today(), 'amount' => $monthlyRate,
             ]);
             $advTx->update(['reference_number' => 'ADV'.now()->format('Ymd').'-'.str_pad($advTx->transaction_id, 6, '0', STR_PAD_LEFT)]);
 
             $depTx = Transaction::createWithSequenceRetry([
                 'billing_id' => $depBilling->billing_id, 'reference_number' => 'placeholder',
-                'transaction_type' => 'Debit', 'category' => 'Deposit',
+                'transaction_type' => 'Credit', 'category' => 'Deposit',
                 'transaction_date' => today(), 'amount' => $securityDeposit,
             ]);
             $depTx->update(['reference_number' => 'DEP'.now()->format('Ymd').'-'.str_pad($depTx->transaction_id, 6, '0', STR_PAD_LEFT)]);

@@ -18,6 +18,8 @@
     <script type="application/json" id="revenueForecastPayload">{!! json_encode([
         'forecastYear' => $forecastYear,
         'monthlyForecasts' => $monthlyForecasts,
+        'monthlyExpenses' => $monthlyExpenses ?? [],
+        'revenueBreakdown' => $revenueBreakdown ?? [],
     ]) !!}</script>
 
     @if(!empty($monthlyForecasts))
@@ -78,11 +80,33 @@
                     <span class="w-3 h-3 rounded-sm" style="background-color: #F59E0B;"></span>
                     <span class="text-sm text-gray-500 font-medium">Previous Year</span>
                 </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-sm" style="background-color: #EF4444;"></span>
+                    <span class="text-sm text-gray-500 font-medium">Expenses (Current Year)</span>
+                </div>
             </div>
 
             <div class="relative flex-1 min-h-80" wire:ignore>
                 <canvas id="revenueChart"></canvas>
             </div>
+
+            {{-- Revenue breakdown cards (exclude deposits) --}}
+            @if(!empty($revenueBreakdown))
+                <div class="mt-6 border-t border-gray-100 pt-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-[0.15em]">Revenue Breakdown ({{ $forecastYear }})</h4>
+                        <span class="text-xs text-gray-400">Excluding security deposits</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        @foreach($revenueBreakdown as $rb)
+                            <div class="rounded-xl border p-4 bg-white">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ $rb['category'] }}</p>
+                                <p class="text-2xl font-bold text-gray-700">₱{{ number_format($rb['amount'], 2) }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             @if(!empty($insights))
                 <div class="mt-6 border-t border-gray-100 pt-5">
@@ -173,6 +197,12 @@
             const actualData = monthlyForecasts.map(f => Number(f.actual_revenue || 0));
             const forecastData = monthlyForecasts.map(f => Number(f.forecasted_revenue || 0));
             const previousYearData = monthlyForecasts.map(f => Number(f.previous_year_revenue || 0));
+            // monthlyExpenses passed alongside payload (may be keyed by month)
+            const payloadNode = document.getElementById('revenueForecastPayload');
+            let rawPayload = {};
+            try { rawPayload = JSON.parse(payloadNode.textContent || '{}'); } catch(e) { rawPayload = {}; }
+            const monthlyExpensesMap = rawPayload.monthlyExpenses || {};
+            const expensesData = monthlyForecasts.map(f => Number(monthlyExpensesMap[(f.month || 0)] || 0));
             const chartCtx = chartElement.getContext('2d');
 
             const actualGradient = chartCtx.createLinearGradient(0, 0, 0, chartElement.parentElement.offsetHeight || 320);
@@ -241,6 +271,25 @@
                             pointRadius: 0,
                             pointHoverRadius: 6,
                             pointHoverBackgroundColor: '#F59E0B',
+                            pointHoverBorderColor: '#FFFFFF',
+                            pointHoverBorderWidth: 3,
+                            tension: 0.35,
+                            fill: false
+                        }
+                        ,
+                        {
+                            label: 'Expenses (Current Year)',
+                            data: expensesData,
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.06)',
+                            borderWidth: 2,
+                            borderDash: [2,4],
+                            pointBackgroundColor: '#EF4444',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: '#EF4444',
                             pointHoverBorderColor: '#FFFFFF',
                             pointHoverBorderWidth: 3,
                             tension: 0.35,
@@ -345,9 +394,11 @@
 
             if (monthlyForecasts.length === 0) return;
 
-            let csv = 'Month,Actual Earnings,Forecasted Revenue,Previous Year Revenue\n';
+            let csv = 'Month,Actual Earnings,Forecasted Revenue,Previous Year Revenue,Expenses\n';
             monthlyForecasts.forEach(f => {
-                csv += `"${f.month_name}",${f.actual_revenue || 0},${f.forecasted_revenue},${f.previous_year_revenue || 0}\n`;
+                const month = f.month || 0;
+                const expense = (rawPayload.monthlyExpenses && rawPayload.monthlyExpenses[month]) ? rawPayload.monthlyExpenses[month] : 0;
+                csv += `"${f.month_name}",${f.actual_revenue || 0},${f.forecasted_revenue},${f.previous_year_revenue || 0},${expense}\n`;
             });
 
             const link = document.createElement('a');
