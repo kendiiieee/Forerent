@@ -106,6 +106,34 @@ class LandlordContractViewer extends Component
         $this->contractType = $type;
     }
 
+    /**
+     * Re-pull signature state so the manager's and tenant's signatures appear
+     * live without a page reload. Wired up via wire:poll inside the modal.
+     */
+    public function refreshContractSignatures(): void
+    {
+        if (!$this->leaseId) return;
+
+        $lease = Lease::find($this->leaseId);
+        if (!$lease) return;
+
+        $this->loadSignatureState($lease);
+
+        if (is_array($this->contractData)) {
+            $this->contractData['signature_info'] = [
+                'tenant_signature'     => $lease->tenant_signature,
+                'tenant_signed_at'     => $lease->tenant_signed_at?->format('M d, Y h:i A'),
+                'owner_signature'      => $lease->owner_signature,
+                'owner_signed_at'      => $lease->owner_signed_at?->format('M d, Y h:i A'),
+                'manager_signature'    => $lease->manager_signature,
+                'manager_signed_at'    => $lease->manager_signed_at?->format('M d, Y h:i A'),
+                'contract_agreed'      => (bool) $lease->contract_agreed,
+                'signed_contract_path' => $lease->signed_contract_path,
+            ];
+            $this->contractData['contract_status'] = $lease->contract_status;
+        }
+    }
+
     // ===== OWNER SIGNING (Move-in) =====
 
     public function openSignatureModal(): void

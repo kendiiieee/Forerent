@@ -239,7 +239,6 @@
             <tr>
                 <td class="banner-left">
                     <div class="doc-title-main">Notice of Lease Termination</div>
-                    <div class="republic">Republic of the Philippines</div>
                 </td>
                 <td class="banner-right">
                     Issued: {{ $issuedAt->format('M d, Y') }}<br>

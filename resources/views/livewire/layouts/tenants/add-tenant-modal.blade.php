@@ -303,6 +303,59 @@
                                         <input type="hidden" wire:model="paymentStatus" value="Paid">
                                     </div>
                                 </div>
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                                    <div>
+                                        <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Payment Method</label>
+                                        <select wire:model="paymentMethod" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
+                                            <option value="Cash">Cash</option>
+                                            <option value="GCash">GCash</option>
+                                            <option value="Maya">Maya</option>
+                                            <option value="Bank Transfer">Bank Transfer</option>
+                                        </select>
+                                        @error('paymentMethod') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div class="lg:col-span-2">
+                                        <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">OR / Reference No. <span class="font-normal text-gray-400 normal-case">(optional)</span></label>
+                                        <input wire:model="orNumber" type="text" maxlength="50" placeholder="e.g. OR-00123 / GCash ref" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-[#2360E8] focus:ring-[#2360E8]">
+                                        <p class="text-[11px] text-gray-400 mt-0.5">Recorded on the transaction receipt for audit purposes.</p>
+                                        @error('orNumber') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+
+                                {{-- Receipt Upload --}}
+                                <div class="mt-4"
+                                     x-data="{ trReceiptUploading: false, trReceiptProgress: 0 }"
+                                     x-on:livewire-upload-start="trReceiptUploading = true; trReceiptProgress = 0"
+                                     x-on:livewire-upload-finish="trReceiptUploading = false; trReceiptProgress = 100"
+                                     x-on:livewire-upload-cancel="trReceiptUploading = false"
+                                     x-on:livewire-upload-error="trReceiptUploading = false"
+                                     x-on:livewire-upload-progress="trReceiptProgress = $event.detail.progress"
+                                >
+                                    <label class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Payment Receipt <span class="text-red-500">*</span> <span class="font-normal text-gray-400 normal-case">(cash OR or online screenshot)</span></label>
+                                    <div class="mt-1">
+                                        @if ($receiptImage)
+                                            <div class="relative inline-block w-full">
+                                                <img src="{{ $receiptImage->temporaryUrl() }}" class="w-full max-h-48 object-contain rounded-lg border border-gray-200">
+                                                <button type="button" wire:click="$set('receiptImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                            </div>
+                                        @endif
+
+                                        <div x-show="trReceiptUploading" x-cloak class="mt-2">
+                                            <div class="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                <div class="h-full bg-[#2360E8] rounded-full transition-all duration-200" :style="'width: ' + trReceiptProgress + '%'"></div>
+                                            </div>
+                                            <p class="text-[11px] text-[#2360E8] mt-0.5 font-medium">Uploading... <span x-text="trReceiptProgress + '%'"></span></p>
+                                        </div>
+
+                                        <label class="mt-2 flex items-center gap-2 cursor-pointer text-sm text-[#2360E8] hover:text-[#070589] font-medium" x-show="!trReceiptUploading">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                                            {{ $receiptImage ? 'Change receipt' : 'Upload receipt' }}
+                                            <input type="file" wire:model="receiptImage" class="hidden" accept="image/*">
+                                        </label>
+                                        <p class="text-[11px] text-gray-400 mt-1" x-show="!trReceiptUploading">Photo of the cash OR, or screenshot of the GCash / Maya / bank transfer confirmation (max 10MB).</p>
+                                        @error('receiptImage') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -365,7 +418,7 @@
                                             <input wire:model="lastName" type="text" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
                                             @error('lastName') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                         </div>
-                                        <div class="col-span-2">
+                                        <div>
                                             <label class="text-xs font-semibold text-gray-700">Gender</label>
                                             <select wire:model="gender" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
                                                 <option value="">Select Gender</option>
@@ -373,6 +426,11 @@
                                                 <option value="Female">Female</option>
                                             </select>
                                             @error('gender') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-semibold text-gray-700">Birthdate</label>
+                                            <input wire:model="birthdate" type="date" max="{{ now()->subDay()->toDateString() }}" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
+                                            @error('birthdate') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                         </div>
                                     </div>
                                 </div>
@@ -656,6 +714,62 @@
                                         <input type="hidden" wire:model="paymentStatus" value="Paid">
                                         <p class="text-[11px] text-gray-500 mt-1">Advance + deposit must be paid before move-in (RA 9653 Section 6).</p>
                                     </div>
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-700">Payment Method</label>
+                                        <select wire:model="paymentMethod" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
+                                            <option value="Cash">Cash</option>
+                                            <option value="GCash">GCash</option>
+                                            <option value="Maya">Maya</option>
+                                            <option value="Bank Transfer">Bank Transfer</option>
+                                        </select>
+                                        @error('paymentMethod') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-semibold text-gray-700">OR / Reference No. <span class="font-normal text-gray-400">(optional)</span></label>
+                                        <input wire:model="orNumber" type="text" maxlength="50" placeholder="e.g. OR-00123 / GCash ref" class="w-full mt-1 border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500">
+                                        <p class="text-[11px] text-gray-400 mt-0.5">Recorded on the transaction receipt for audit purposes.</p>
+                                        @error('orNumber') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+
+                                {{-- Receipt Upload --}}
+                                <div class="mb-6"
+                                     x-data="{ receiptUploading: false, receiptProgress: 0 }"
+                                     x-on:livewire-upload-start="receiptUploading = true; receiptProgress = 0"
+                                     x-on:livewire-upload-finish="receiptUploading = false; receiptProgress = 100"
+                                     x-on:livewire-upload-cancel="receiptUploading = false"
+                                     x-on:livewire-upload-error="receiptUploading = false"
+                                     x-on:livewire-upload-progress="receiptProgress = $event.detail.progress"
+                                >
+                                    <label class="text-xs font-semibold text-gray-700">Payment Receipt <span class="text-red-500">*</span> <span class="font-normal text-gray-400">(cash OR or online screenshot)</span></label>
+                                    <div class="mt-1">
+                                        @if ($receiptImage)
+                                            <div class="relative inline-block w-full">
+                                                <img src="{{ $receiptImage->temporaryUrl() }}" class="w-full max-h-48 object-contain rounded-lg border border-gray-200">
+                                                <button type="button" wire:click="$set('receiptImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                            </div>
+                                        @elseif ($existingReceiptImage)
+                                            <div class="relative inline-block w-full">
+                                                <img src="{{ asset('storage/' . $existingReceiptImage) }}" class="w-full max-h-48 object-contain rounded-lg border border-gray-200">
+                                                <button type="button" wire:click="$set('existingReceiptImage', null)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 shadow-md border-2 border-white z-10">&times;</button>
+                                            </div>
+                                        @endif
+
+                                        <div x-show="receiptUploading" x-cloak class="mt-2">
+                                            <div class="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                <div class="h-full bg-[#2360E8] rounded-full transition-all duration-200" :style="'width: ' + receiptProgress + '%'"></div>
+                                            </div>
+                                            <p class="text-[11px] text-[#2360E8] mt-0.5 font-medium">Uploading... <span x-text="receiptProgress + '%'"></span></p>
+                                        </div>
+
+                                        <label class="mt-2 flex items-center gap-2 cursor-pointer text-sm text-[#2360E8] hover:text-[#070589] font-medium" x-show="!receiptUploading">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                                            {{ $receiptImage || $existingReceiptImage ? 'Change receipt' : 'Upload receipt' }}
+                                            <input type="file" wire:model="receiptImage" class="hidden" accept="image/*">
+                                        </label>
+                                        <p class="text-[11px] text-gray-400 mt-1" x-show="!receiptUploading">Photo of the cash OR, or screenshot of the GCash / Maya / bank transfer confirmation (max 10MB).</p>
+                                        @error('receiptImage') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                    </div>
                                 </div>
 
                                 {{-- Total Move-In Cost Summary --}}
@@ -674,7 +788,7 @@
                                 @endif
 
                                 <h3 class="text-base font-bold text-[#070589] mb-4">Fixed Contract Terms</h3>
-                                <div class="grid grid-cols-3 gap-3">
+                                <div class="grid grid-cols-2 gap-3">
                                     <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                         <p class="text-xs font-semibold text-gray-700">Late Payment Penalty</p>
                                         <p class="text-sm font-bold text-[#070589] mt-1">1% of monthly rent / day</p>
@@ -683,10 +797,6 @@
                                     <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                         <p class="text-xs font-semibold text-gray-700">Early Termination Policy</p>
                                         <p class="text-xs text-gray-600 mt-1">Deposit is <span class="font-bold text-red-600">forfeited in full</span> if tenant moves out before lease end. No additional fee.</p>
-                                    </div>
-                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                        <p class="text-xs font-semibold text-gray-700">Reservation Policy</p>
-                                        <p class="text-xs text-gray-600 mt-1">No reservation fee. Slot held for <span class="font-bold">3 calendar days</span>. Auto-released if unpaid.</p>
                                     </div>
                                 </div>
                             </div>

@@ -1,5 +1,6 @@
 <div>
     @if($showModal && $contractData)
+        <div wire:poll.5s="refreshContractSignatures"></div>
         @php
             $hasAnySignature = $ownerSignature || $managerSignature || $tenantSignature
                 || $moveOutOwnerSignature || $moveOutManagerSignature || $moveOutTenantSignature;

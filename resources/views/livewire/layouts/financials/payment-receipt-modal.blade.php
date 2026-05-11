@@ -356,10 +356,19 @@
                                             <span class="detail-label text-[14px] font-normal" style="color: #6E6E73;">Reference Number</span>
                                             <span class="detail-value flex-1 font-semibold text-[14px] text-right" style="color: {{ $data['payment']['reference_no'] === 'Pending' ? '#FF9F0A' : '#1D1D1F' }};">{{ $data['payment']['reference_no'] }}</span>
                                         </div>
-                                        <div class="detail-row flex items-center">
+                                        <div class="detail-row flex items-center {{ !empty($data['payment']['receipt_image']) ? 'pb-3 mb-3 border-b border-[#E2E2E2]' : '' }}">
                                             <span class="detail-label text-[14px] font-normal" style="color: #6E6E73;">OR Number (BIR)</span>
                                             <span class="detail-value flex-1 font-semibold text-[14px] text-right" style="color: {{ $data['payment']['or_number'] === 'Pending' ? '#FF9F0A' : '#1D1D1F' }};">{{ $data['payment']['or_number'] }}</span>
                                         </div>
+                                        @if(!empty($data['payment']['receipt_image']))
+                                            <div class="detail-row no-print">
+                                                <span class="detail-label text-[14px] font-normal block mb-2" style="color: #6E6E73;">Receipt</span>
+                                                <a href="{{ asset('storage/' . $data['payment']['receipt_image']) }}" target="_blank" rel="noopener" class="block rounded-xl border border-[#E2E2E2] overflow-hidden hover:border-[#1D4ED8] transition-colors">
+                                                    <img src="{{ asset('storage/' . $data['payment']['receipt_image']) }}" alt="Payment receipt" class="w-full max-h-56 object-contain bg-white">
+                                                    <p class="text-[11px] text-[#1D4ED8] font-medium px-3 py-2 bg-blue-50">Click to open full-size in a new tab</p>
+                                                </a>
+                                            </div>
+                                        @endif
                                     </div>
                                 @else
                                     {{-- UNPAID/OVERDUE: Show payment instructions --}}

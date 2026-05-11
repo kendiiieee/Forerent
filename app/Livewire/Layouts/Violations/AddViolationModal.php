@@ -207,7 +207,7 @@ class AddViolationModal extends Component
                 'type' => 'violation_issued',
                 'title' => 'Violation Notice — ' . $violation->violation_number,
                 'message' => "A {$this->severity} violation ({$this->category}) has been recorded. {$penaltyLabel}.",
-                'link' => route('tenant.dashboard'),
+                'link' => route('tenant.dashboard') . '#violation-records',
             ]);
 
             // Notify the property owner (landlord) so they have visibility into
