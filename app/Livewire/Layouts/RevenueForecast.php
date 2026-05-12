@@ -7,6 +7,7 @@ use App\Models\MaintenanceLog;
 use App\Models\Transaction;
 use App\Services\RevenueForecastService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -109,6 +110,7 @@ class RevenueForecast extends Component
             // Compute monthly expenses and a revenue breakdown for the selected year
             $this->monthlyExpenses = $this->getMonthlyExpensesForYear((int) $this->forecastYear);
             $this->revenueBreakdown = $this->getRevenueBreakdownForYear((int) $this->forecastYear);
+            $this->activeLeaseDepositsTotal = $this->getActiveLeaseDepositsTotal();
             $this->insights = $this->buildInsights($this->monthlyForecasts);
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
@@ -124,14 +126,23 @@ class RevenueForecast extends Component
             return $forecasts;
         }
 
-        $monthExpr = $this->transactionMonthExpression();
-        $actualByMonth = Transaction::query()
-            ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
-            ->whereYear('transaction_date', $this->forecastYear)
-            ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
-            ->groupBy('month')
-            ->pluck('total', 'month');
+        try {
+            $monthExpr = $this->transactionMonthExpression();
+            $actualByMonth = Transaction::query()
+                ->creditInflows()
+                ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
+                ->whereYear('transaction_date', $this->forecastYear)
+                ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
+                ->groupBy('month')
+                ->pluck('total', 'month');
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue forecast actual earnings query failed; using zeros.', [
+                'year' => $this->forecastYear,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $actualByMonth = collect();
+        }
 
         foreach ($forecasts as &$monthForecast) {
             $monthNumber = $monthForecast['month'] ?? null;
@@ -170,15 +181,24 @@ class RevenueForecast extends Component
 
     private function getMonthlyTotalsForYear(int $year): array
     {
-        $monthExpr = $this->transactionMonthExpression();
+        try {
+            $monthExpr = $this->transactionMonthExpression();
 
-        $rows = Transaction::query()
-            ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
-            ->whereYear('transaction_date', $year)
-            ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
-            ->groupBy('month')
-            ->pluck('total', 'month');
+            $rows = Transaction::query()
+                ->creditInflows()
+                ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
+                ->whereYear('transaction_date', $year)
+                ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
+                ->groupBy('month')
+                ->pluck('total', 'month');
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue forecast monthly totals query failed; using empty totals.', [
+                'year' => $year,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $rows = collect();
+        }
 
         $totals = [];
         foreach ($rows as $month => $total) {
@@ -326,14 +346,23 @@ class RevenueForecast extends Component
 
     private function getMonthlyExpensesForYear(int $year): array
     {
-        $monthExpr = $this->transactionMonthExpression('transaction_date');
+        try {
+            $monthExpr = $this->transactionMonthExpression('transaction_date');
 
-        $rows = Transaction::query()
-            ->whereRaw('UPPER(COALESCE(transaction_type, \'\')) = ?', ['DEBIT'])
-            ->whereYear('transaction_date', $year)
-            ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
-            ->groupBy('month')
-            ->pluck('total', 'month');
+            $rows = Transaction::query()
+                ->whereRaw('UPPER(COALESCE(transaction_type, \'\')) = ?', ['DEBIT'])
+                ->whereYear('transaction_date', $year)
+                ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
+                ->groupBy('month')
+                ->pluck('total', 'month');
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue forecast expense query failed; using empty expenses.', [
+                'year' => $year,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $rows = collect();
+        }
 
         $totals = [];
         foreach ($rows as $month => $total) {
@@ -370,14 +399,23 @@ class RevenueForecast extends Component
             : "LOWER(COALESCE(reference_number, '')) LIKE 'adv%'";
         $categoryExpr = "CASE WHEN {$advanceMatch} THEN 'Advance Payment' ELSE COALESCE(NULLIF(category, ''), 'Uncategorized') END";
 
-        $rows = Transaction::query()
-            ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
-            ->whereYear('transaction_date', $year)
-            ->selectRaw('COALESCE(category, \'Uncategorized\') as category, SUM(amount) as total')
-            ->groupBy('category')
-            ->orderByDesc('total')
-            ->get();
+        try {
+            $rows = Transaction::query()
+                ->creditInflows()
+                ->whereRaw("LOWER({$categoryExpr}) NOT LIKE ?", ['%deposit%'])
+                ->whereYear('transaction_date', $year)
+                ->selectRaw("{$monthExpr} as month, {$categoryExpr} as category, SUM(amount) as total")
+                ->groupByRaw("{$monthExpr}, {$categoryExpr}")
+                ->orderByRaw($monthExpr)
+                ->get();
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue forecast breakdown query failed; using empty breakdown.', [
+                'year' => $year,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $rows = collect();
+        }
 
         // Build a month-indexed table-like structure: [ monthNumber => [ 'month' => int, 'categories' => [category => amount] ] ]
         $table = [];
@@ -405,11 +443,19 @@ class RevenueForecast extends Component
 
     private function getActiveLeaseDepositsTotal(): float
     {
-        $total = Lease::query()
-            ->where('status', 'Active')
-            ->sum('security_deposit');
+        try {
+            $total = Lease::query()
+                ->where('status', 'Active')
+                ->sum('security_deposit');
 
-        return (float) $total;
+            return (float) $total;
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue forecast active lease deposits query failed; using zero.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return 0.0;
+        }
     }
 
     public function render()
