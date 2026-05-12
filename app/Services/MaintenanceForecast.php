@@ -85,7 +85,7 @@ class MaintenanceForecast
                 throw new \Exception($error);
             }
         } catch (\Exception $e) {
-            Log::error('Maintenance forecast service error: ' . $e->getMessage());
+            Log::error('Maintenance forecast service error: '.$e->getMessage());
             throw $e;
         }
     }
