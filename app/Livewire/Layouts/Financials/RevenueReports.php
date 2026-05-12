@@ -5,6 +5,7 @@ namespace App\Livewire\Layouts\Financials;
 use App\Models\MaintenanceLog;
 use App\Models\Transaction;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class RevenueReports extends Component
@@ -29,6 +30,10 @@ class RevenueReports extends Component
 
     public function getInflowOutflowData(): array
     {
+        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        $income = array_fill(0, 12, 0);
+        $expenses = array_fill(0, 12, 0);
+
         $year = Carbon::now()->year;
         $driver = Transaction::query()->getConnection()->getDriverName();
         $transactionMonthExpr = $driver === 'pgsql'
@@ -38,31 +43,31 @@ class RevenueReports extends Component
             ? 'EXTRACT(MONTH FROM completion_date)::int'
             : 'CAST(MONTH(completion_date) AS UNSIGNED)';
 
-        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        $income = array_fill(0, 12, 0);
-        $expenses = array_fill(0, 12, 0);
+        try {
+            // Revenue/inflow source: all credit inflow transactions.
+            $monthlyIncome = Transaction::query()
+                ->creditInflows()
+                ->whereYear('transaction_date', $year)
+                ->selectRaw("{$transactionMonthExpr} as month, SUM(amount) as total")
+                ->groupBy('month')
+                ->get();
 
-        // Revenue/inflow source: all credit inflow transactions.
-        $monthlyIncome = Transaction::query()
-            ->creditInflows()
-            ->whereYear('transaction_date', $year)
-            ->selectRaw("{$transactionMonthExpr} as month, SUM(amount) as total")
-            ->groupBy('month')
-            ->get();
+            foreach ($monthlyIncome as $row) {
+                $income[(int) $row->month - 1] = (float) $row->total;
+            }
 
-        foreach ($monthlyIncome as $row) {
-            $income[(int) $row->month - 1] = (float) $row->total;
-        }
+            $monthlyExpenses = MaintenanceLog::whereYear('completion_date', $year)
+                ->selectRaw("{$maintenanceMonthExpr} as month, SUM(cost) as total")
+                ->groupBy('month')
+                ->get();
 
-        // 2. Expenses - USE THE DYNAMIC VARIABLE HERE
-        $monthlyExpenses = MaintenanceLog::whereYear('completion_date', $year)
-            // Use double quotes so PHP injects the correct version for the current DB
-            ->selectRaw("$maintenanceMonthExpr as month, SUM(cost) as total")
-            ->groupBy('month')
-            ->get();
-
-        foreach ($monthlyExpenses as $row) {
-            $expenses[(int) $row->month - 1] = (float) $row->total;
+            foreach ($monthlyExpenses as $row) {
+                $expenses[(int) $row->month - 1] = (float) $row->total;
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue reports inflow/outflow query failed; returning empty dataset.', [
+                'error' => $exception->getMessage(),
+            ]);
         }
 
         return [
@@ -76,16 +81,24 @@ class RevenueReports extends Component
     {
         $now = Carbon::now();
 
-        $logs = MaintenanceLog::join('maintenance_requests', 'maintenance_logs.request_id', '=', 'maintenance_requests.request_id')
-            ->when($this->maintenanceBreakdownScope === 'month', function ($query) use ($now) {
-                $query->whereYear('maintenance_logs.completion_date', $now->year)
-                    ->whereMonth('maintenance_logs.completion_date', $now->month);
-            }, function ($query) use ($now) {
-                $query->whereYear('maintenance_logs.completion_date', $now->year);
-            })
-            ->selectRaw('maintenance_requests.category, SUM(maintenance_logs.cost)::numeric as total')
-            ->groupBy('maintenance_requests.category')
-            ->get();
+        try {
+            $logs = MaintenanceLog::join('maintenance_requests', 'maintenance_logs.request_id', '=', 'maintenance_requests.request_id')
+                ->when($this->maintenanceBreakdownScope === 'month', function ($query) use ($now) {
+                    $query->whereYear('maintenance_logs.completion_date', $now->year)
+                        ->whereMonth('maintenance_logs.completion_date', $now->month);
+                }, function ($query) use ($now) {
+                    $query->whereYear('maintenance_logs.completion_date', $now->year);
+                })
+                ->selectRaw('maintenance_requests.category, SUM(maintenance_logs.cost) as total')
+                ->groupBy('maintenance_requests.category')
+                ->get();
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue reports maintenance breakdown query failed; returning empty dataset.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            $logs = collect();
+        }
 
         $amountByCategory = [];
         foreach ($this->maintenanceCategories as $category) {
@@ -112,16 +125,26 @@ class RevenueReports extends Component
         $monthExpr = $driver === 'pgsql'
             ? 'EXTRACT(MONTH FROM transaction_date)::int'
             : 'MONTH(transaction_date)';
-        $categoryExpr = "CASE WHEN COALESCE(reference_number, '') ILIKE 'ADV%' THEN 'Advance Payment' ELSE COALESCE(NULLIF(category, ''), 'Uncategorized') END";
+        $categoryExpr = $driver === 'pgsql'
+            ? "CASE WHEN COALESCE(reference_number, '') ILIKE 'ADV%' THEN 'Advance Payment' ELSE COALESCE(NULLIF(category, ''), 'Uncategorized') END"
+            : "CASE WHEN LOWER(COALESCE(reference_number, '')) LIKE 'adv%' THEN 'Advance Payment' ELSE COALESCE(NULLIF(category, ''), 'Uncategorized') END";
 
-        $rows = Transaction::query()
-            ->creditInflows()
-            ->whereRaw("LOWER({$categoryExpr}) NOT LIKE ?", ['%deposit%'])
-            ->whereYear('transaction_date', $year)
-            ->selectRaw("{$monthExpr} as month, {$categoryExpr} as category, SUM(amount) as total")
-            ->groupByRaw("{$monthExpr}, {$categoryExpr}")
-            ->orderByRaw($monthExpr)
-            ->get();
+        try {
+            $rows = Transaction::query()
+                ->creditInflows()
+                ->whereRaw("LOWER({$categoryExpr}) NOT LIKE ?", ['%deposit%'])
+                ->whereYear('transaction_date', $year)
+                ->selectRaw("{$monthExpr} as month, {$categoryExpr} as category, SUM(amount) as total")
+                ->groupByRaw("{$monthExpr}, {$categoryExpr}")
+                ->orderByRaw($monthExpr)
+                ->get();
+        } catch (\Throwable $exception) {
+            Log::warning('Revenue reports breakdown query failed; returning empty dataset.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            $rows = collect();
+        }
 
         $monthNames = [
             1 => 'Jan',
