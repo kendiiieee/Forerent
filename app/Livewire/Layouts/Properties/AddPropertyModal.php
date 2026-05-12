@@ -208,7 +208,6 @@ class AddPropertyModal extends Component
                     'category' => $doc->category,
                     'name' => $doc->original_name,
                     'url' => route('file.public', ['path' => $doc->file_path]),
-                    'isPrivate' => ($doc->visibility ?? '') !== 'all',
                 ])->values()->toArray();
 
             $this->isOpen = true;

@@ -3,7 +3,6 @@
 namespace App\Livewire\Layouts\Settings;
 
 use App\Models\Lease;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
@@ -82,11 +81,10 @@ class TenantPropertyDetails extends Component
                 ->values()
                 ->toArray();
 
-            // Only documents marked public (visibility = 'all') are visible to tenants
-            // Skip documents where the file no longer exists on disk
+            // Show all property documents uploaded by landlord/manager.
+            // Skip documents where the file no longer exists on disk.
             $this->documents = $property->documents
                 ->where('category', '!=', 'property_photo')
-                ->where('visibility', 'all')
                 ->filter(fn ($doc) => Storage::disk('public')->exists($doc->file_path))
                 ->map(fn ($doc) => [
                     'id' => $doc->id,

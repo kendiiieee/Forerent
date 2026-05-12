@@ -120,7 +120,6 @@ class PropertyDetails extends Component
                 'name' => $doc->original_name,
                 'category' => $doc->category,
                 'visibility' => $doc->visibility,
-                'isPrivate' => ($doc->visibility ?? '') !== 'all',
             ])
             ->values()
             ->toArray();
