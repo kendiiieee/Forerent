@@ -94,31 +94,18 @@ trait CreatesMoveInBilling
                 'transaction_date' => today(),
                 'amount' => $rate,
             ]);
-            $advanceTxn->update(['reference_number' => 'ADV' . now()->format('Ymd') . '-' . str_pad($advanceTxn->transaction_id, 6, '0', STR_PAD_LEFT)]);
-
-            $depositTxn = null;
-            if ($deposit > 0) {
-                $depositTxn = Transaction::createWithSequenceRetry([
-                    'billing_id'       => $billing->billing_id,
-                    'reference_number' => 'placeholder',
-                    'or_number'        => $resolvedOrNumber,
-                    'transaction_type' => 'Credit',
-                    'category'         => 'Deposit',
-                    'payment_method'   => $resolvedMethod,
-                    'transaction_date' => today(),
-                    'amount'           => $deposit,
-                ]);
-                $depositTxn->update(['reference_number' => 'DEP' . now()->format('Ymd') . '-' . str_pad($depositTxn->transaction_id, 6, '0', STR_PAD_LEFT)]);
-            }
+            $advanceTxn->update([
+                'reference_number' => 'MOVEIN-' . now()->format('Ymd') . '-'
+                    . str_pad((string) $advanceTxn->transaction_id, 6, '0', STR_PAD_LEFT),
+            ]);
 
             ContractAuditLog::log($lease->lease_id, 'move_in_payment_recorded', [
                 'metadata' => [
-                    'amount' => $billing->amount,
+                    'amount'         => $billing->amount,
                     'payment_method' => $resolvedMethod,
                     'or_number'      => $resolvedOrNumber,
                     'receipt_image'  => $resolvedReceipt,
                     'reference'      => $advanceTxn->reference_number,
-                    'deposit_reference' => $depositTxn?->reference_number,
                     'recorded_by'    => Auth::id(),
                 ],
             ]);

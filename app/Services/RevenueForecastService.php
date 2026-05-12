@@ -78,9 +78,9 @@ class RevenueForecastService
             // Call FastAPI endpoint
             /** @var Response $response */
             $response = $this->postWithRetry('/api/forecast/revenue', [
-                'csv_data' => $csvData,
-                'year' => $year,
-            ]);
+                    'csv_data' => $csvData,
+                    'year' => $year
+                ]);
 
             if (! $response->successful()) {
                 $fallbackReason = $this->formatApiError($response->status(), $response->body());

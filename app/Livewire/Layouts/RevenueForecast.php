@@ -2,33 +2,47 @@
 
 namespace App\Livewire\Layouts;
 
-use Livewire\Component;
-use Livewire\Attributes\On;
-use App\Services\RevenueForecastService;
-use App\Models\Transaction;
 use App\Models\Lease;
 use App\Models\MaintenanceLog;
+use App\Models\Transaction;
+use App\Services\RevenueForecastService;
 use Carbon\Carbon;
+use Livewire\Attributes\On;
+use Livewire\Component;
 
 class RevenueForecast extends Component
 {
-    public $forecastYear;
-    public $monthlyForecasts = [];
-    public $monthlyExpenses = [];
-    public $revenueBreakdown = [];
-    public $totalAnnualRevenue = 0;
-    public $totalRemainingRevenue = 0;
-    public $averageMonthlyRevenue = 0;
-    public $loading = false;
-    public $error = null;
-    public $warning = null;
-    public $isFallback = false;
-    public $dataPointsUsed = 0;
-    public $forecastLoaded = false;
-    public $insights = [];
-    public $activeLeaseDepositsTotal = 0;
+    public int $forecastYear;
 
-    protected $revenueForecastService;
+    public array $monthlyForecasts = [];
+
+    public array $monthlyExpenses = [];
+
+    public array $revenueBreakdown = [];
+
+    public float $totalAnnualRevenue = 0.0;
+
+    public float $totalRemainingRevenue = 0.0;
+
+    public float $averageMonthlyRevenue = 0.0;
+
+    public bool $loading = false;
+
+    public ?string $error = null;
+
+    public ?string $warning = null;
+
+    public bool $isFallback = false;
+
+    public int $dataPointsUsed = 0;
+
+    public bool $forecastLoaded = false;
+
+    public array $insights = [];
+
+    public float $activeLeaseDepositsTotal = 0.0;
+
+    protected RevenueForecastService $revenueForecastService;
 
     public function boot(RevenueForecastService $revenueForecastService)
     {
@@ -51,11 +65,11 @@ class RevenueForecast extends Component
     }
 
     #[On('updateYear')]
-    public function updateYear($year)
+    public function updateYear(int $year): void
     {
         $this->forecastYear = $year;
 
-        if (!$this->forecastLoaded) {
+        if (! $this->forecastLoaded) {
             $this->forecastLoaded = true;
         }
 
@@ -77,17 +91,17 @@ class RevenueForecast extends Component
 
         try {
             $result = $this->revenueForecastService->generateMonthlyForecast($this->forecastYear);
-            
+
             $this->monthlyForecasts = $result['monthly_forecasts'];
             $this->totalAnnualRevenue = $result['total_annual_revenue'];
             $this->totalRemainingRevenue = $result['total_remaining_revenue'];
             $this->averageMonthlyRevenue = $result['average_monthly_revenue'];
             $this->dataPointsUsed = $result['data_points_used'] ?? 0;
-            $this->isFallback = (bool)($result['is_fallback'] ?? false);
+            $this->isFallback = (bool) ($result['is_fallback'] ?? false);
             $this->warning = $result['warning'] ?? null;
-            
+
             // Add actual earnings data to each month
-            if (!$this->isFallback) {
+            if (! $this->isFallback) {
                 $this->monthlyForecasts = $this->enrichForecastWithActualEarnings($this->monthlyForecasts);
             }
 
@@ -96,8 +110,6 @@ class RevenueForecast extends Component
             $this->monthlyExpenses = $this->getMonthlyExpensesForYear((int) $this->forecastYear);
             $this->revenueBreakdown = $this->getRevenueBreakdownForYear((int) $this->forecastYear);
             $this->insights = $this->buildInsights($this->monthlyForecasts);
-            $this->activeLeaseDepositsTotal = $this->getActiveLeaseDepositsTotal();
-            
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
         } finally {
@@ -106,7 +118,7 @@ class RevenueForecast extends Component
         }
     }
 
-    private function enrichForecastWithActualEarnings($forecasts)
+    private function enrichForecastWithActualEarnings(array $forecasts): array
     {
         if (empty($forecasts)) {
             return $forecasts;
@@ -115,7 +127,7 @@ class RevenueForecast extends Component
         $monthExpr = $this->transactionMonthExpression();
         $actualByMonth = Transaction::query()
             ->creditInflows()
-                ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $this->forecastYear)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -162,7 +174,7 @@ class RevenueForecast extends Component
 
         $rows = Transaction::query()
             ->creditInflows()
-                ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -208,25 +220,25 @@ class RevenueForecast extends Component
             [
                 'label' => "Vs Forecast Baseline ({$periodLabel})",
                 'value_text' => $this->formatSignedPercent($baselineDelta),
-                'detail' => $this->formatCurrency($currentTotal) . ' vs ' . $this->formatCurrency($forecastBaseline),
+                'detail' => $this->formatCurrency($currentTotal).' vs '.$this->formatCurrency($forecastBaseline),
                 'tone' => $this->toneFromDelta($baselineDelta),
             ],
             [
                 'label' => "Vs Previous Year ({$periodLabel})",
                 'value_text' => $this->formatSignedPercent($previousDelta),
-                'detail' => $this->formatCurrency($currentTotal) . ' vs ' . $this->formatCurrency($previousTotal),
+                'detail' => $this->formatCurrency($currentTotal).' vs '.$this->formatCurrency($previousTotal),
                 'tone' => $this->toneFromDelta($previousDelta),
             ],
             [
                 'label' => 'Year-End Forecast vs Last Year',
                 'value_text' => $this->formatSignedPercent($yearEndDelta),
-                'detail' => $this->formatCurrency($annualForecast) . ' vs ' . $this->formatCurrency($previousYearFull),
+                'detail' => $this->formatCurrency($annualForecast).' vs '.$this->formatCurrency($previousYearFull),
                 'tone' => $this->toneFromDelta($yearEndDelta),
             ],
             [
                 'label' => 'Peak Month Share',
-                'value_text' => $peakShare === null ? 'N/A' : number_format($peakShare, 1) . '%',
-                'detail' => $peak['month_name'] ? $peak['month_name'] . ' forecast' : 'No data',
+                'value_text' => $peakShare === null ? 'N/A' : number_format($peakShare, 1).'%',
+                'detail' => $peak['month_name'] ? $peak['month_name'].' forecast' : 'No data',
                 'tone' => 'neutral',
             ],
         ];
@@ -284,12 +296,12 @@ class RevenueForecast extends Component
 
         $sign = $value > 0 ? '+' : '';
 
-        return $sign . number_format($value, 1) . '%';
+        return $sign.number_format($value, 1).'%';
     }
 
     private function formatCurrency(float $value): string
     {
-        return '₱' . number_format($value, 0);
+        return '₱'.number_format($value, 0);
     }
 
     private function toneFromDelta(?float $delta): string
@@ -360,11 +372,11 @@ class RevenueForecast extends Component
 
         $rows = Transaction::query()
             ->creditInflows()
-                ->whereRaw("LOWER({$categoryExpr}) NOT LIKE ?", ['%deposit%'])
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $year)
-            ->selectRaw("{$monthExpr} as month, {$categoryExpr} as category, SUM(amount) as total")
-            ->groupByRaw("{$monthExpr}, {$categoryExpr}")
-            ->orderByRaw($monthExpr)
+            ->selectRaw('COALESCE(category, \'Uncategorized\') as category, SUM(amount) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
             ->get();
 
         // Build a month-indexed table-like structure: [ monthNumber => [ 'month' => int, 'categories' => [category => amount] ] ]
