@@ -38,4 +38,4 @@ foreach ($leases as $lease) {
     ])->save();
 }
 
-echo "Cleared signatures on {$leases->count()} lease(s) for {$user->email} (id {$user->user_id}).\n"; -->
+echo "Cleared signatures on {$leases->count()} lease(s) for {$user->email} (id {$user->user_id}).\n"; ?>

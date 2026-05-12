@@ -11,19 +11,7 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <link rel="preload" href="/images/Landing_Page_Bg.webp" as="image" type="image/webp">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Open Sans', 'sans-serif'],
-                    },
-                    opacity: { '85': '0.85' },
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full font-sans overflow-x-hidden">
 
@@ -273,9 +261,6 @@
                     if (this.priceValue) {
                         const found = allPriceRanges.find(r => r.value === this.priceValue);
                         if (found) this.priceLabel = found.label;
-                    }
-                    if (this.address) this.updateOptions();
-                },
 
                 toggle(name) {
                     if (name !== 'city' && !this.address) return;

@@ -1175,14 +1175,16 @@ def create_forecast_schedule(monthly_data_clean, features, forecast_year):
     forecast_df['month'] = forecast_df['date_column'].dt.month
     
     # --- Re-create all features ---
-    
-    # --- THIS IS THE FIX ---
+
     # Create historical averages for each specific month
     monthly_avg_lookup = monthly_data_clean.groupby('month')[[
-        'maintenance_count', 
+        'maintenance_count',
         'urgency_score',
-        'cost_lag_12' # Use this as a fallback
+        'cost_lag_12'
     ]].mean().reset_index()
+
+    monthly_cost_lookup = monthly_data_clean.groupby('month')['monthly_maintenance_cost'].mean().to_dict()
+    overall_cost_mean = monthly_data_clean['monthly_maintenance_cost'].mean()
     
     # Merge these month-specific averages into the forecast
     forecast_df = forecast_df.merge(monthly_avg_lookup, on='month', how='left')
@@ -1190,8 +1192,6 @@ def create_forecast_schedule(monthly_data_clean, features, forecast_year):
     # Fill any missing months (e.g., if no historical data for Dec) with the overall mean
     forecast_df['maintenance_count'] = forecast_df['maintenance_count'].fillna(monthly_data_clean['maintenance_count'].mean())
     forecast_df['urgency_score'] = forecast_df['urgency_score'].fillna(monthly_data_clean['urgency_score'].mean())
-    # --- END OF FIX ---
-
     # We need to create lag features based on the *last* known data
     last_known_month = monthly_data_clean.iloc[-1]
     
@@ -1199,24 +1199,31 @@ def create_forecast_schedule(monthly_data_clean, features, forecast_year):
     forecast_df['month_sin'] = np.sin(2 * np.pi * forecast_df['month']/12)
     forecast_df['month_cos'] = np.cos(2 * np.pi * forecast_df['month']/12)
     
-    # Set default values for features that will be filled
     forecast_df['cost_lag_1'] = 0.0
     forecast_df['cost_rolling_3'] = 0.0
-    
-    # Fill lag features from the last row of historical data
-    forecast_df.loc[0, 'cost_lag_1'] = last_known_month['monthly_maintenance_cost']
-    forecast_df.loc[0, 'cost_rolling_3'] = monthly_data_clean['monthly_maintenance_cost'].iloc[-3:].mean()
-    
-    # Get lag_12 from 12 months ago (if available)
-    last_year_match = monthly_data_clean[
-        (monthly_data_clean['year'] == forecast_year - 1) &
-        (monthly_data_clean['month'] == 1)
-    ]
-    if not last_year_match.empty:
-        forecast_df.loc[0, 'cost_lag_12'] = last_year_match.iloc[0]['monthly_maintenance_cost']
-    else:
-        # Use the historical average for January
-        forecast_df.loc[0, 'cost_lag_12'] = forecast_df.loc[0, 'cost_lag_12'] # Use the value from the lookup
+
+    history_tail = monthly_data_clean['monthly_maintenance_cost'].iloc[-3:].tolist()
+    if len(history_tail) < 3:
+        history_tail = ([overall_cost_mean] * (3 - len(history_tail))) + history_tail
+
+    seed = history_tail.copy()
+
+    for idx, month in enumerate(forecast_df['month'].tolist()):
+        lag1 = seed[-1]
+        rolling3 = sum(seed[-3:]) / 3
+
+        forecast_df.loc[idx, 'cost_lag_1'] = lag1
+        forecast_df.loc[idx, 'cost_rolling_3'] = rolling3
+
+        expected_cost = monthly_cost_lookup.get(month, overall_cost_mean)
+        seed.append(expected_cost)
+
+        last_year_match = monthly_data_clean[
+            (monthly_data_clean['year'] == forecast_year - 1) &
+            (monthly_data_clean['month'] == month)
+        ]
+        if not last_year_match.empty:
+            forecast_df.loc[idx, 'cost_lag_12'] = last_year_match.iloc[0]['monthly_maintenance_cost']
 
     # Set cluster
     forecast_df['cluster'] = last_known_month['cluster']

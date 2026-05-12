@@ -1,5 +1,14 @@
-<div class="space-y-6">
-    <h3 class="text-2xl font-bold text-gray-900">Maintenance</h3>
+<div class="space-y-3">
+    <div>
+        <h3 class="text-2xl font-bold text-gray-900">Maintenance</h3>
+        <p class="mt-1 text-sm text-gray-500">
+            @if($costDeltaPercent !== null)
+                This summary compares maintenance spending so far this year with the same period last year. Costs are {{ $costTrendLabel }} {{ $costDeltaPercent }}% year-to-date.
+            @else
+                This summary compares maintenance spending year-to-date, but last year’s data is not enough for a fair comparison.
+            @endif
+        </p>
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 

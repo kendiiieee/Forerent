@@ -15,7 +15,7 @@ use Throwable;
 
 class RevenueForecastService
 {
-    private $fastApiUrl;
+    private string $fastApiUrl;
 
     private int $timeoutSeconds;
 
@@ -44,7 +44,7 @@ class RevenueForecastService
         );
     }
 
-    public function generateMonthlyForecast($year = null)
+    public function generateMonthlyForecast(?int $year = null): array
     {
         if (! $year) {
             $year = Carbon::now()->year;
@@ -344,7 +344,7 @@ class RevenueForecastService
         return $averages;
     }
 
-    private function exportMonthlyInflowDataAsCsv()
+    private function exportMonthlyInflowDataAsCsv(): string
     {
         $yearExpr = $this->yearExpression('transaction_date');
         $monthExpr = $this->monthExpression('transaction_date');
@@ -421,6 +421,6 @@ class RevenueForecastService
         // Exclude security deposit related categories from revenue forecasting inflows
         return Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%']);
+            ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%']);
     }
 }

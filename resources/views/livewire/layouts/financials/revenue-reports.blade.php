@@ -5,23 +5,63 @@
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        {{-- Financial Inflows and Outflows --}}
-        <div class="xl:col-span-2 bg-white rounded-2xl p-6 shadow-lg flex flex-col min-w-0" wire:ignore>
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-[#070642]">Financial Inflows and Outflows</h3>
-                <div class="flex items-center gap-5">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-sm" style="background-color: #8CC5FF;"></span>
-                        <span class="text-sm text-gray-500 font-medium">Revenue</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-sm" style="background-color: #1E1B4B;"></span>
-                        <span class="text-sm text-gray-500 font-medium">Expenses</span>
-                    </div>
+        {{-- Revenue Breakdown (monthly) --}}
+        <div class="xl:col-span-2 bg-white rounded-2xl p-4 sm:p-6 shadow-lg flex flex-col">
+            <div class="flex items-start justify-between gap-2 sm:gap-3 mb-4">
+                <div class="min-w-0">
+                    <h3 class="text-lg sm:text-xl font-bold text-[#070642] leading-tight">Revenue Breakdown</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Monthly totals (excluding security deposits)</p>
                 </div>
             </div>
-            <div class="relative flex-1 min-h-80">
-                <canvas id="inflowOutflowChart"></canvas>
+
+            @php
+                $monthlyRows = $revenueBreakdown ?? [];
+                $categories = [];
+                foreach ($monthlyRows as $row) {
+                    if (!isset($row['categories']) || !is_array($row['categories'])) {
+                        continue;
+                    }
+                    foreach ($row['categories'] as $cat => $amt) {
+                        $categories[$cat] = true;
+                    }
+                }
+                $categoryList = array_keys($categories);
+            @endphp
+
+            <div class="overflow-x-auto">
+                <table id="revenue-breakdown-table" class="w-full text-sm text-left">
+                    <thead>
+                        <tr class="text-xs text-gray-500 uppercase tracking-wide">
+                            <th class="py-2 pr-4">Month</th>
+                            @foreach($categoryList as $cat)
+                                <th class="py-2 pr-4 text-right whitespace-nowrap">{{ $cat }}</th>
+                            @endforeach
+                            <th class="py-2 pr-4 text-right whitespace-nowrap">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(empty($categoryList))
+                            <tr>
+                                <td colspan="1" class="py-3 text-sm text-gray-500">No revenue data available.</td>
+                            </tr>
+                        @else
+                            @foreach($monthlyRows as $monthEntry)
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 pr-4 text-gray-600">{{ $monthEntry['month_name'] ?? '' }}</td>
+                                    @php $rowTotal = 0; @endphp
+                                    @foreach($categoryList as $cat)
+                                        @php
+                                            $amt = $monthEntry['categories'][$cat] ?? 0;
+                                            $rowTotal += $amt;
+                                        @endphp
+                                        <td class="py-2 pr-4 text-right font-semibold">₱ {{ number_format($amt, 2) }}</td>
+                                    @endforeach
+                                    <td class="py-2 text-right font-semibold">₱ {{ number_format($rowTotal, 2) }}</td>
+                                </tr>
+                            @endforeach
+                        @endif
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -103,135 +143,13 @@
     </div>
 
     <script type="application/json" id="revenueReportsPayload">{!! json_encode([
-        'inflowOutflowData' => $inflowOutflowData,
         'maintenanceCostData' => $maintenanceCostData,
     ]) !!}</script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
-        function initInflowOutflowChart(payload) {
-            const ctx = document.getElementById('inflowOutflowChart');
-            if (!ctx) return;
-
-            if (window.myInflowOutflowChart) {
-                window.myInflowOutflowChart.destroy();
-            }
-
-            const data = payload?.inflowOutflowData;
-            if (!data) return;
-
-            const chartCtx = ctx.getContext('2d');
-
-            // Revenue gradient fill
-            const revenueGradient = chartCtx.createLinearGradient(0, 0, 0, ctx.parentElement.offsetHeight || 320);
-            revenueGradient.addColorStop(0, 'rgba(140, 197, 255, 0.25)');
-            revenueGradient.addColorStop(0.6, 'rgba(140, 197, 255, 0.05)');
-            revenueGradient.addColorStop(1, 'rgba(140, 197, 255, 0)');
-
-            // Expenses gradient fill
-            const expensesGradient = chartCtx.createLinearGradient(0, 0, 0, ctx.parentElement.offsetHeight || 320);
-            expensesGradient.addColorStop(0, 'rgba(30, 27, 75, 0.2)');
-            expensesGradient.addColorStop(0.6, 'rgba(30, 27, 75, 0.03)');
-            expensesGradient.addColorStop(1, 'rgba(30, 27, 75, 0)');
-
-            window.myInflowOutflowChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [
-                        {
-                            label: 'Revenue',
-                            data: data.income,
-                            borderColor: '#8CC5FF',
-                            backgroundColor: revenueGradient,
-                            borderWidth: 2.5,
-                            pointBackgroundColor: '#8CC5FF',
-                            pointBorderColor: '#FFFFFF',
-                            pointBorderWidth: 2,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            pointHoverBackgroundColor: '#8CC5FF',
-                            pointHoverBorderColor: '#FFFFFF',
-                            pointHoverBorderWidth: 3,
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Expenses',
-                            data: data.expenses,
-                            borderColor: '#1E1B4B',
-                            backgroundColor: expensesGradient,
-                            borderWidth: 2.5,
-                            pointBackgroundColor: '#1E1B4B',
-                            pointBorderColor: '#FFFFFF',
-                            pointBorderWidth: 2,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            pointHoverBackgroundColor: '#1E1B4B',
-                            pointHoverBorderColor: '#FFFFFF',
-                            pointHoverBorderWidth: 3,
-                            tension: 0.4,
-                            fill: true
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1E1B4B',
-                            titleColor: '#FFFFFF',
-                            bodyColor: '#FFFFFF',
-                            titleFont: { size: 11, weight: '400' },
-                            bodyFont: { size: 13, weight: '600' },
-                            padding: { top: 8, bottom: 8, left: 14, right: 14 },
-                            cornerRadius: 8,
-                            displayColors: false,
-                            caretSize: 6,
-                            callbacks: {
-                                title: function(tooltipItems) {
-                                    return tooltipItems[0].label;
-                                },
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    label += '₱' + new Intl.NumberFormat('en-PH').format(context.parsed.y);
-                                    return label;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            border: { display: false },
-                            grid: { color: 'rgba(0, 0, 0, 0.04)', drawBorder: false },
-                            ticks: {
-                                color: '#9CA3AF',
-                                font: { size: 12 },
-                                padding: 8,
-                                callback: function(value) {
-                                    if (value >= 1000000) return '₱' + (value / 1000000).toFixed(1) + 'M';
-                                    return '₱' + (value / 1000).toFixed(0) + 'k';
-                                }
-                            }
-                        },
-                        x: {
-                            border: { display: false },
-                            grid: { display: false },
-                            ticks: { color: '#9CA3AF', font: { size: 12 }, padding: 8 }
-                        }
-                    }
-                }
-            });
-        }
+        // Removed the inflow/outflow line chart. The page now shows Maintenance Expenses Breakdown only.
 
         function initMaintenanceDonut(payload) {
             const node = document.querySelector('#maintenanceBreakdownChart');
@@ -328,7 +246,6 @@
             if (payloadNode) {
                 try {
                     const payload = JSON.parse(payloadNode.textContent || '{}');
-                    initInflowOutflowChart(payload);
                     initMaintenanceDonut(payload);
                 } catch (e) {
                     console.error('Failed to parse revenue reports payload', e);
@@ -339,7 +256,6 @@
                 window.__revenueReportsChartsListenerBound = true;
                 Livewire.on('update-charts', (event) => {
                     const payload = Array.isArray(event) ? event[0] : event;
-                    initInflowOutflowChart(payload);
                     initMaintenanceDonut(payload);
                 });
             }

@@ -23,6 +23,7 @@ class RevenueReports extends Component
         $this->dispatch('update-charts', [
             'inflowOutflowData' => $this->getInflowOutflowData(),
             'maintenanceCostData' => $this->getMaintenanceCostData(),
+            'revenueBreakdown' => $this->getRevenueBreakdown(),
         ]);
     }
 
@@ -102,6 +103,62 @@ class RevenueReports extends Component
         ];
     }
 
+    public function getRevenueBreakdown(): array
+    {
+        $year = Carbon::now()->year;
+        $driver = Transaction::query()->getConnection()->getDriverName();
+        $monthExpr = $driver === 'pgsql'
+            ? 'EXTRACT(MONTH FROM transaction_date)::int'
+            : 'MONTH(transaction_date)';
+        $categoryExpr = "CASE WHEN COALESCE(reference_number, '') ILIKE 'ADV%' THEN 'Advance Payment' ELSE COALESCE(NULLIF(category, ''), 'Uncategorized') END";
+
+        $rows = Transaction::query()
+            ->creditInflows()
+            ->whereRaw("LOWER({$categoryExpr}) NOT LIKE ?", ['%deposit%'])
+            ->whereYear('transaction_date', $year)
+            ->selectRaw("{$monthExpr} as month, {$categoryExpr} as category, SUM(amount) as total")
+            ->groupByRaw("{$monthExpr}, {$categoryExpr}")
+            ->orderByRaw($monthExpr)
+            ->get();
+
+        $monthNames = [
+            1 => 'Jan',
+            2 => 'Feb',
+            3 => 'Mar',
+            4 => 'Apr',
+            5 => 'May',
+            6 => 'Jun',
+            7 => 'Jul',
+            8 => 'Aug',
+            9 => 'Sep',
+            10 => 'Oct',
+            11 => 'Nov',
+            12 => 'Dec',
+        ];
+
+        $breakdown = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $breakdown[$m] = [
+                'month' => $m,
+                'month_name' => $monthNames[$m],
+                'categories' => [],
+            ];
+        }
+
+        foreach ($rows as $row) {
+            $month = (int) ($row->month ?? 0);
+            if ($month < 1 || $month > 12) {
+                continue;
+            }
+
+            $category = (string) ($row->category ?? 'Uncategorized');
+            $breakdown[$month]['categories'][$category] =
+                ($breakdown[$month]['categories'][$category] ?? 0) + (float) ($row->total ?? 0);
+        }
+
+        return array_values($breakdown);
+    }
+
     public function getMaintenanceBreakdownLabel(): string
     {
         if ($this->maintenanceBreakdownScope === 'month') {
@@ -115,11 +172,13 @@ class RevenueReports extends Component
     {
         $inflowOutflowData = $this->getInflowOutflowData();
         $maintenanceCostData = $this->getMaintenanceCostData();
+        $revenueBreakdown = $this->getRevenueBreakdown();
 
         return view('livewire.layouts.financials.revenue-reports', [
             'inflowOutflowData' => $inflowOutflowData,
             'maintenanceCostData' => $maintenanceCostData,
             'maintenanceBreakdownLabel' => $this->getMaintenanceBreakdownLabel(),
+            'revenueBreakdown' => $revenueBreakdown,
         ]);
     }
 }

@@ -15,7 +15,7 @@ use Throwable;
 
 class MaintenanceForecast
 {
-    protected $apiBaseUrl;
+    protected string $apiBaseUrl;
 
     private int $timeoutSeconds;
 
@@ -45,7 +45,7 @@ class MaintenanceForecast
         );
     }
 
-    public function generateForecast($year, $maintenanceData)
+    public function generateForecast(int $year, array $maintenanceData): array
     {
         try {
             $year = (int) $year;
@@ -85,53 +85,8 @@ class MaintenanceForecast
                 throw new \Exception($error);
             }
         } catch (\Exception $e) {
-            Log::error('Maintenance forecast service error: '.$e->getMessage());
-
-            // Return a fallback response so the UI remains usable during API outages.
-            $fallbackForecast = $this->buildFallbackForecast((int) $year, (array) $maintenanceData, $e->getMessage());
-            $this->cacheForecast($this->buildForecastCacheKey((int) $year, $this->getTrainingDataSignature()), $fallbackForecast, true);
-
-            return $fallbackForecast;
-        }
-    }
-
-    private function buildForecastCacheKey(int $year, string $signature): string
-    {
-        return "maintenance_forecast:v1:year:{$year}:sig:{$signature}";
-    }
-
-    private function getTrainingDataSignature(): string
-    {
-        $summary = DB::table('maintenance_requests as mr')
-            ->join('maintenance_logs as ml', 'mr.request_id', '=', 'ml.request_id')
-            ->where('mr.status', 'Completed')
-            ->whereNotNull('ml.completion_date')
-            ->whereNotNull('ml.cost')
-            ->selectRaw('COUNT(*) as row_count, COALESCE(MAX(ml.updated_at), MAX(ml.created_at), MAX(mr.updated_at), MAX(mr.created_at)) as latest_change, COALESCE(SUM(ml.cost), 0) as total_cost, MIN(ml.completion_date) as min_date, MAX(ml.completion_date) as max_date')
-            ->first();
-
-        $rowCount = (int) ($summary->row_count ?? 0);
-        $latestChange = (string) ($summary->latest_change ?? 'none');
-        $totalCost = number_format((float) ($summary->total_cost ?? 0), 2, '.', '');
-        $minDate = (string) ($summary->min_date ?? 'none');
-        $maxDate = (string) ($summary->max_date ?? 'none');
-
-        return sha1("{$rowCount}|{$latestChange}|{$totalCost}|{$minDate}|{$maxDate}");
-    }
-
-    private function cacheForecast(string $cacheKey, array $forecast, bool $isFallback = false): void
-    {
-        try {
-            $ttlSeconds = $isFallback
-                ? max(60, (int) floor($this->forecastCacheTtlSeconds / 4))
-                : $this->forecastCacheTtlSeconds;
-
-            Cache::put($cacheKey, $forecast, now()->addSeconds($ttlSeconds));
-        } catch (Throwable $exception) {
-            Log::warning('Failed to cache maintenance forecast result', [
-                'cache_key' => $cacheKey,
-                'error' => $exception->getMessage(),
-            ]);
+            Log::error('Maintenance forecast service error: ' . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -375,7 +330,7 @@ class MaintenanceForecast
         return 0.0;
     }
 
-    private function convertToCsv($data)
+    private function convertToCsv(array $data): string
     {
         if (empty($data)) {
             return '';
@@ -467,7 +422,7 @@ class MaintenanceForecast
         return $monthlyRows;
     }
 
-    private function getMonthlyDateRange($monthlyData)
+    private function getMonthlyDateRange(array $monthlyData): string
     {
         if (empty($monthlyData)) {
             return 'No data';

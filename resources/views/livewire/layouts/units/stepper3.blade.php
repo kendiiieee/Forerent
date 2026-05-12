@@ -99,8 +99,8 @@
                         </div>
                     </div>
 
-                    <p class="text-sm opacity-80 pt-2">
-                        Based on living area, capacity, and amenities
+                    <p class="text-xs opacity-80 pt-2">
+                        Rent price is suggested using historical listings with similar size, capacity, and amenity mix.
                     </p>
                 </div>
 
@@ -110,7 +110,7 @@
                     <label for="actual_price" class="block text-l font-medium text-white opacity-80 mb-2 md:text-right">Set Actual Price</label>
 
                     {{-- Glass container --}}
-                    <div id="actual-price" class="w-80 h-18 bg-white/20 backdrop-blur-md rounded-lg border border-white/20 flex items-center justify-center shadow-lg px-4 md:justify-end"
+                    <div id="actual-price" class="w-80 h-18 bg-white rounded-lg border border-white/20 flex items-center justify-center shadow-lg px-4 md:justify-end"
                         x-data="{
                             rawValue: '{{ $actual_price ? number_format((int)$actual_price, 0, '', '') : '' }}',
                             get formatted() {
@@ -129,7 +129,7 @@
                             <input type="text" inputmode="numeric" id="actual_price"
                                    :value="formatted"
                                    @input="onInput($event)"
-                                   class="w-full bg-transparent text-3xl font-bold text-white placeholder-white placeholder-opacity-80 border-0 focus:ring-0 p-0 text-right md:text-right"
+                                class="w-full bg-transparent text-3xl font-bold text-[#0C0B50] placeholder-gray-400 border-0 focus:ring-0 p-0 text-right md:text-right"
                                    placeholder="{{ number_format((int)$predicted_price, 0, '.', ',') }}">
                         </div>
                         @error('actual_price')

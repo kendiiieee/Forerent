@@ -9,6 +9,9 @@ use Carbon\Carbon;
 class MaintenanceStats extends Component
 {
     public $totalCost;
+    public $previousYearCost;
+    public $costDeltaPercent;
+    public $costTrendLabel;
     public $newRequests;
     public $pendingRequests;
     public $currentDate;
@@ -16,9 +19,25 @@ class MaintenanceStats extends Component
     public function mount()
     {
         // 1. Total Maintenance Cost: Sum of 'cost' from 'maintenance_logs'
+        $now = Carbon::now();
         $this->totalCost = DB::table('maintenance_logs')
-            ->whereYear('completion_date', now()->year)
+            ->whereYear('completion_date', $now->year)
+            ->whereMonth('completion_date', '<=', $now->month)
             ->sum('cost');
+
+        $this->previousYearCost = DB::table('maintenance_logs')
+            ->whereYear('completion_date', $now->year - 1)
+            ->whereMonth('completion_date', '<=', $now->month)
+            ->sum('cost');
+
+        if ($this->previousYearCost > 0) {
+            $delta = (($this->totalCost - $this->previousYearCost) / $this->previousYearCost) * 100;
+            $this->costDeltaPercent = round($delta, 1);
+            $this->costTrendLabel = $delta > 0 ? 'up' : ($delta < 0 ? 'down' : 'flat');
+        } else {
+            $this->costDeltaPercent = null;
+            $this->costTrendLabel = 'flat';
+        }
 
         // 2. New Requests: Count of requests created in the current month
         $this->newRequests = DB::table('maintenance_requests')
@@ -48,7 +67,7 @@ class MaintenanceStats extends Component
             ->count();
 
         // 4. Current Date for display
-        $this->currentDate = Carbon::now()->format('M d, Y');
+        $this->currentDate = $now->format('M d, Y');
     }
 
     public function render()

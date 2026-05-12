@@ -66,6 +66,22 @@
                 </div>
             </div>
 
+            {{-- Overview notice --}}
+            @php
+                $prevInsight = collect($insights ?? [])->first(fn($i) => str_contains($i['label'] ?? '', 'Previous Year'));
+                $baselineInsight = collect($insights ?? [])->first(fn($i) => str_contains($i['label'] ?? '', 'Forecast Baseline'));
+                $periodLabel = $forecastYear === now()->year ? 'year-to-date (YTD)' : 'full-year';
+                $trendDirection = ($prevInsight['tone'] ?? 'neutral') === 'positive'
+                    ? 'up'
+                    : (($prevInsight['tone'] ?? 'neutral') === 'negative' ? 'down' : 'flat');
+                $trendValue = $prevInsight['value_text'] ?? 'N/A';
+                $baselineValue = $baselineInsight['value_text'] ?? 'N/A';
+            @endphp
+            <div class="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+                <span class="font-semibold">Overview:</span>
+                This chart compares what was actually earned against the forecast, with last year and expenses shown for context. For {{ $periodLabel }}, revenue is {{ $trendDirection }} {{ $trendValue }} versus last year. The baseline comparison ({{ $baselineValue }}) shows how current results track the forecast.
+            </div>
+
             {{-- Legend below header --}}
             <div class="flex items-center gap-5 mb-4">
                 <div class="flex items-center gap-2">
@@ -95,15 +111,135 @@
                 <div class="mt-6 border-t border-gray-100 pt-5">
                     <div class="flex items-center justify-between mb-3">
                         <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-[0.15em]">Revenue Breakdown ({{ $forecastYear }})</h4>
-                        <span class="text-xs text-gray-400">Excluding security deposits</span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                        @foreach($revenueBreakdown as $rb)
+                        @php
+                            $first = $revenueBreakdown[0] ?? null;
+                        @endphp
+
+                        @if(is_array($first) && array_key_exists('category', $first))
+                            {{-- Old format: flat list of ['category' => ..., 'amount' => ...] --}}
+                            @php
+                                $grossRevenue = array_sum(array_map(fn ($rb) => (float) ($rb['amount'] ?? 0), $revenueBreakdown));
+                                $totalExpenses = array_sum((array) ($monthlyExpenses ?? []));
+                                $netRevenue = $grossRevenue - $totalExpenses;
+                            @endphp
+                            @foreach($revenueBreakdown as $rb)
+                                @php
+                                    $category = $rb['category'] ?? 'Category';
+                                    $tooltip = $category === 'Rent Payment'
+                                        ? 'Total rent payments collected for ' . $forecastYear . ' (excluding security deposits).'
+                                        : 'Total ' . $category . ' collected for ' . $forecastYear . '.';
+                                @endphp
+                                <div class="rounded-xl border p-4 bg-white">
+                                    <div class="flex items-center gap-1 mb-2">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $category }}</span>
+                                        <flux:tooltip :content="$tooltip" position="top">
+                                            <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </flux:tooltip>
+                                    </div>
+                                    <p class="text-2xl font-bold text-gray-700">₱{{ number_format($rb['amount'], 2) }}</p>
+                                    @if(($rb['category'] ?? '') === 'Rent Payment')
+                                        <p class="text-xs text-gray-400 mt-1">Excluding security deposits</p>
+                                    @endif
+                                </div>
+                            @endforeach
                             <div class="rounded-xl border p-4 bg-white">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ $rb['category'] }}</p>
-                                <p class="text-2xl font-bold text-gray-700">₱{{ number_format($rb['amount'], 2) }}</p>
+                                <div class="flex items-center gap-1 mb-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Security Deposits (Active Leases)</span>
+                                    <flux:tooltip :content="'Current sum of security deposits from active leases.'" position="top">
+                                        <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                        </svg>
+                                    </flux:tooltip>
+                                </div>
+                                <p class="text-2xl font-bold text-gray-700">₱{{ number_format($activeLeaseDepositsTotal ?? 0, 2) }}</p>
+                                <p class="text-xs text-gray-400 mt-1">Active leases only</p>
                             </div>
-                        @endforeach
+                            <div class="rounded-xl border p-4 bg-white">
+                                <div class="flex items-center gap-1 mb-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Gross Revenue - Expenses</span>
+                                    <flux:tooltip :content="'Total revenue for ' . $forecastYear . ' (Security Deposits excluded) minus total expenses.'" position="top">
+                                        <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                        </svg>
+                                    </flux:tooltip>
+                                </div>
+                                <p class="text-2xl font-bold text-gray-700">₱{{ number_format($netRevenue, 2) }}</p>
+                                <p class="text-xs text-gray-400 mt-1">Revenue: ₱{{ number_format($grossRevenue, 2) }} | Expenses: ₱{{ number_format($totalExpenses, 2) }}</p>
+                            </div>
+                        @elseif(is_array($first) && array_key_exists('categories', $first))
+                            {{-- New format: month-indexed with 'categories' => [category => amount]. Build yearly totals. --}}
+                            @php
+                                $yearly = [];
+                                foreach($revenueBreakdown as $monthEntry) {
+                                    if (!is_array($monthEntry) || !isset($monthEntry['categories']) || !is_array($monthEntry['categories'])) {
+                                        continue;
+                                    }
+
+                                    foreach($monthEntry['categories'] as $cat => $amt) {
+                                        $yearly[$cat] = ($yearly[$cat] ?? 0) + (float) $amt;
+                                    }
+                                }
+                                $grossRevenue = array_sum($yearly);
+                                $totalExpenses = array_sum((array) ($monthlyExpenses ?? []));
+                                $netRevenue = $grossRevenue - $totalExpenses;
+                            @endphp
+
+                            @if(empty($yearly))
+                                <p class="text-sm text-gray-500">No breakdown available.</p>
+                            @else
+                                @foreach($yearly as $cat => $amt)
+                                    @php
+                                        $tooltip = $cat === 'Rent Payment'
+                                            ? 'Total rent payments collected for ' . $forecastYear . ' (excluding security deposits).'
+                                            : 'Total ' . $cat . ' collected for ' . $forecastYear . '.';
+                                    @endphp
+                                    <div class="rounded-xl border p-4 bg-white">
+                                        <div class="flex items-center gap-1 mb-2">
+                                            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $cat }}</span>
+                                            <flux:tooltip :content="$tooltip" position="top">
+                                                <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                                </svg>
+                                            </flux:tooltip>
+                                        </div>
+                                        <p class="text-2xl font-bold text-gray-700">₱{{ number_format($amt, 2) }}</p>
+                                        @if($cat === 'Rent Payment')
+                                            <p class="text-xs text-gray-400 mt-1">Excluding security deposits</p>
+                                        @endif
+                                    </div>
+                                @endforeach
+                                <div class="rounded-xl border p-4 bg-white">
+                                    <div class="flex items-center gap-1 mb-2">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Security Deposits (Active Leases)</span>
+                                        <flux:tooltip :content="'Current sum of security deposits from active leases.'" position="top">
+                                            <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </flux:tooltip>
+                                    </div>
+                                    <p class="text-2xl font-bold text-gray-700">₱{{ number_format($activeLeaseDepositsTotal ?? 0, 2) }}</p>
+                                    <p class="text-xs text-gray-400 mt-1">Active leases only</p>
+                                </div>
+                                <div class="rounded-xl border p-4 bg-white">
+                                    <div class="flex items-center gap-1 mb-2">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Gross Revenue - Expenses</span>
+                                        <flux:tooltip :content="'Total revenue for ' . $forecastYear . ' (Security Deposits excluded) minus total expenses.'" position="top">
+                                            <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </flux:tooltip>
+                                    </div>
+                                    <p class="text-2xl font-bold text-gray-700">₱{{ number_format($netRevenue, 2) }}</p>
+                                    <p class="text-xs text-gray-400 mt-1">Revenue: ₱{{ number_format($grossRevenue, 2) }} | Expenses: ₱{{ number_format($totalExpenses, 2) }}</p>
+                                </div>
+                            @endif
+                        @else
+                            <p class="text-sm text-gray-500">No breakdown available.</p>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -135,9 +271,24 @@
                                     'negative' => 'text-rose-600/80',
                                     'neutral' => 'text-gray-500',
                                 ];
+                                $labelText = $insight['label'] ?? 'Insight';
+                                $tooltipText = trim((string) ($insight['detail'] ?? ''));
+                                if ($tooltipText === '') {
+                                    $tooltipText = 'Comparison versus previous year or forecast baseline.';
+                                }
+                                if (str_contains((string) $labelText, 'Peak Month Share')) {
+                                    $tooltipText = 'Share of the total forecasted annual revenue that comes from the single highest-forecast month.';
+                                }
                             @endphp
                             <div class="rounded-xl border p-4 {{ $cardClasses[$tone] ?? $cardClasses['neutral'] }}">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ $insight['label'] ?? 'Insight' }}</p>
+                                <div class="flex items-center gap-1 mb-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $labelText }}</span>
+                                    <flux:tooltip :content="$tooltipText" position="top">
+                                        <svg class="h-3.5 w-3.5 text-gray-400 hover:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM9 9.75a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4z" clip-rule="evenodd" />
+                                        </svg>
+                                    </flux:tooltip>
+                                </div>
                                 <p class="text-2xl font-bold {{ $valueClasses[$tone] ?? $valueClasses['neutral'] }}">{{ $insight['value_text'] ?? 'N/A' }}</p>
                                 <p class="text-xs mt-1 {{ $detailClasses[$tone] ?? $detailClasses['neutral'] }}">{{ $insight['detail'] ?? '' }}</p>
                             </div>

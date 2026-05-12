@@ -139,24 +139,7 @@
         </div>
     @endif
 
-    {{-- 2. Financial Overview with Graphs --}}
-    <div class="space-y-6">
-        <h3 class="text-2xl font-bold text-[#070642]">Financial Overview</h3>
 
-        {{-- Graph Layout: Large left, single summary card right --}}
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-
-            {{-- Left: Revenue vs Expenses (spans 2 columns) --}}
-            <div class="xl:col-span-2 h-full" wire:ignore>
-                @include('livewire.layouts.dashboard.revenue-expenses-chart')
-            </div>
-
-            {{-- Right Column: Single rent summary card --}}
-            <div>
-                @include('livewire.layouts.dashboard.rent-collected-chart')
-            </div>
-        </div>
-    </div>
 
     {{-- Modal (Hidden by default) --}}
     <livewire:layouts.dashboard.announcement-modal />

@@ -6,6 +6,8 @@ use Livewire\Component;
 use Livewire\Attributes\On;
 use App\Services\RevenueForecastService;
 use App\Models\Transaction;
+use App\Models\Lease;
+use App\Models\MaintenanceLog;
 use Carbon\Carbon;
 
 class RevenueForecast extends Component
@@ -24,6 +26,7 @@ class RevenueForecast extends Component
     public $dataPointsUsed = 0;
     public $forecastLoaded = false;
     public $insights = [];
+    public $activeLeaseDepositsTotal = 0;
 
     protected $revenueForecastService;
 
@@ -93,6 +96,7 @@ class RevenueForecast extends Component
             $this->monthlyExpenses = $this->getMonthlyExpensesForYear((int) $this->forecastYear);
             $this->revenueBreakdown = $this->getRevenueBreakdownForYear((int) $this->forecastYear);
             $this->insights = $this->buildInsights($this->monthlyForecasts);
+            $this->activeLeaseDepositsTotal = $this->getActiveLeaseDepositsTotal();
             
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
@@ -111,7 +115,7 @@ class RevenueForecast extends Component
         $monthExpr = $this->transactionMonthExpression();
         $actualByMonth = Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+                ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $this->forecastYear)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -158,7 +162,7 @@ class RevenueForecast extends Component
 
         $rows = Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+                ->whereRaw('LOWER(COALESCE(category, \'\')) NOT LIKE ?', ['%deposit%'])
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -297,23 +301,23 @@ class RevenueForecast extends Component
         return $delta >= 0 ? 'positive' : 'negative';
     }
 
-    private function transactionMonthExpression(): string
+    private function transactionMonthExpression(string $column = 'transaction_date'): string
     {
         $driver = Transaction::query()->getConnection()->getDriverName();
 
         if ($driver === 'pgsql') {
-            return 'EXTRACT(MONTH FROM transaction_date)::int';
+            return "EXTRACT(MONTH FROM {$column})::int";
         }
 
-        return 'MONTH(transaction_date)';
+        return "MONTH({$column})";
     }
 
     private function getMonthlyExpensesForYear(int $year): array
     {
-        $monthExpr = $this->transactionMonthExpression();
+        $monthExpr = $this->transactionMonthExpression('transaction_date');
 
         $rows = Transaction::query()
-            ->whereRaw('UPPER(COALESCE(transaction_type, "")) = ?', ['DEBIT'])
+            ->whereRaw('UPPER(COALESCE(transaction_type, \'\')) = ?', ['DEBIT'])
             ->whereYear('transaction_date', $year)
             ->selectRaw("{$monthExpr} as month, SUM(amount) as total")
             ->groupBy('month')
@@ -324,29 +328,76 @@ class RevenueForecast extends Component
             $totals[(int) $month] = (float) $total;
         }
 
+        // Also include maintenance costs recorded in MaintenanceLog (if any)
+        try {
+            $maintenanceMonthExpr = $this->transactionMonthExpression('completion_date');
+
+            $maintenanceRows = MaintenanceLog::query()
+                ->whereYear('completion_date', $year)
+                ->selectRaw("{$maintenanceMonthExpr} as month, SUM(cost) as total")
+                ->groupBy('month')
+                ->pluck('total', 'month');
+
+            foreach ($maintenanceRows as $month => $mTotal) {
+                $m = (int) $month;
+                $totals[$m] = ($totals[$m] ?? 0.0) + (float) $mTotal;
+            }
+        } catch (\Exception $e) {
+            // If MaintenanceLog or its fields aren't present, silently ignore so chart still renders
+        }
+
         return $totals;
     }
 
     private function getRevenueBreakdownForYear(int $year): array
     {
+        $monthExpr = $this->transactionMonthExpression();
+        $driver = Transaction::query()->getConnection()->getDriverName();
+        $advanceMatch = $driver === 'pgsql'
+            ? "COALESCE(reference_number, '') ILIKE 'ADV%'"
+            : "LOWER(COALESCE(reference_number, '')) LIKE 'adv%'";
+        $categoryExpr = "CASE WHEN {$advanceMatch} THEN 'Advance Payment' ELSE COALESCE(NULLIF(category, ''), 'Uncategorized') END";
+
         $rows = Transaction::query()
             ->creditInflows()
-            ->whereRaw('LOWER(COALESCE(category, "")) NOT LIKE ?', ['%deposit%'])
+                ->whereRaw("LOWER({$categoryExpr}) NOT LIKE ?", ['%deposit%'])
             ->whereYear('transaction_date', $year)
-            ->selectRaw('COALESCE(category, "Uncategorized") as category, SUM(amount) as total')
-            ->groupBy('category')
-            ->orderByDesc('total')
+            ->selectRaw("{$monthExpr} as month, {$categoryExpr} as category, SUM(amount) as total")
+            ->groupByRaw("{$monthExpr}, {$categoryExpr}")
+            ->orderByRaw($monthExpr)
             ->get();
 
-        $breakdown = [];
-        foreach ($rows as $row) {
-            $breakdown[] = [
-                'category' => (string) $row->category,
-                'amount' => (float) $row->total,
+        // Build a month-indexed table-like structure: [ monthNumber => [ 'month' => int, 'categories' => [category => amount] ] ]
+        $table = [];
+        // Initialize months 1..12
+        for ($m = 1; $m <= 12; $m++) {
+            $table[$m] = [
+                'month' => $m,
+                'categories' => [],
             ];
         }
 
-        return $breakdown;
+        foreach ($rows as $row) {
+            $month = (int) ($row->month ?? 0) ?: 0;
+            if ($month < 1 || $month > 12) {
+                continue;
+            }
+            $cat = (string) $row->category;
+            $amt = (float) $row->total;
+            $table[$month]['categories'][$cat] = ($table[$month]['categories'][$cat] ?? 0.0) + $amt;
+        }
+
+        // Convert to indexed array ordered by month for easier JSON consumption in the frontend
+        return array_values($table);
+    }
+
+    private function getActiveLeaseDepositsTotal(): float
+    {
+        $total = Lease::query()
+            ->where('status', 'Active')
+            ->sum('security_deposit');
+
+        return (float) $total;
     }
 
     public function render()
