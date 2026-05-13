@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 class AddPropertyModal extends Component
@@ -19,68 +21,68 @@ class AddPropertyModal extends Component
     use WithFileUploads, WithNotifications, WithPsgcAddress;
 
     /** Modal visibility */
-    public $isOpen = false;
+    public bool $isOpen = false;
 
     /** Unique modal instance */
-    public $modalId;
+    public string $modalId = '';
 
     /** Editing state */
-    public $editingPropertyId = null;
+    public ?int $editingPropertyId = null;
 
     /** Form fields */
     #[Validate('required|string|max:255')]
-    public $buildingName = '';
+    public string $buildingName = '';
 
     /** Legacy concatenated address — auto-synced from FK fields by Property model. */
-    public $address = '';
+    public string $address = '';
 
     #[Validate('required|exists:provinces,id')]
-    public $provinceId = '';
+    public string $provinceId = '';
 
     #[Validate('required|exists:cities,id')]
-    public $cityId = '';
+    public string $cityId = '';
 
     #[Validate('required|exists:barangays,id')]
-    public $barangayId = '';
+    public string $barangayId = '';
 
     #[Validate('required|min:3')]
-    public $street = '';
+    public string $street = '';
 
     #[Validate('required|string')]
-    public $description = '';
+    public string $description = '';
 
     /** Deposit interest rate (annual %, based on owner's depository bank savings rate) */
-    public $depositInterestRate = '';
+    public string $depositInterestRate = '';
 
     /** File uploads */
-    public $propertyPhotos = [];
+    public array $propertyPhotos = [];
 
-    public $newPhotos = [];
+    public array $newPhotos = [];
 
-    public $businessPermit = null;
+    public ?TemporaryUploadedFile $businessPermit = null;
 
-    public $bir2303 = null;
+    public ?TemporaryUploadedFile $bir2303 = null;
 
-    public $inspectionReport = null;
+    public ?TemporaryUploadedFile $inspectionReport = null;
 
-    public $barangayClearance = null;
+    public ?TemporaryUploadedFile $barangayClearance = null;
 
-    public $occupancyPermit = null;
+    public ?TemporaryUploadedFile $occupancyPermit = null;
 
-    public $titleTct = null;
+    public ?TemporaryUploadedFile $titleTct = null;
 
-    public $taxDeclaration = null;
+    public ?TemporaryUploadedFile $taxDeclaration = null;
 
-    public $transferCertificate = null;
+    public ?TemporaryUploadedFile $transferCertificate = null;
 
     /** Existing documents for edit mode */
-    public $existingPhotos = [];
+    public array $existingPhotos = [];
 
-    public $existingDocuments = [];
+    public array $existingDocuments = [];
 
-    public $removedDocumentIds = [];
+    public array $removedDocumentIds = [];
 
-    public function mount($modalId = null)
+    public function mount(?string $modalId = null): void
     {
         $this->modalId = $modalId ?? uniqid('add_property_modal_');
     }
@@ -93,7 +95,7 @@ class AddPropertyModal extends Component
         ];
     }
 
-    protected function rules()
+    protected function rules(): array
     {
         $hasExistingPhotos = count($this->existingPhotos) > 0;
         $photoRule = $hasExistingPhotos ? 'nullable' : 'required';
@@ -131,7 +133,7 @@ class AddPropertyModal extends Component
         return $rules;
     }
 
-    protected function messages()
+    protected function messages(): array
     {
         return [
             'buildingName.required' => 'Property name is required.',
@@ -178,7 +180,7 @@ class AddPropertyModal extends Component
         $this->isOpen = true;
     }
 
-    public function loadPropertyForEditing($propertyId): void
+    public function loadPropertyForEditing(int $propertyId): void
     {
         $this->resetForm();
         $property = Property::with('documents')->find($propertyId);
@@ -275,7 +277,7 @@ class AddPropertyModal extends Component
         $this->newPhotos = [];
     }
 
-    public function removePhoto($index): void
+    public function removePhoto(int $index): void
     {
         if (isset($this->propertyPhotos[$index])) {
             array_splice($this->propertyPhotos, $index, 1);
@@ -283,7 +285,7 @@ class AddPropertyModal extends Component
         }
     }
 
-    public function removeExistingPhoto($docId): void
+    public function removeExistingPhoto(int $docId): void
     {
         $this->removedDocumentIds[] = $docId;
         $this->existingPhotos = array_values(
@@ -291,7 +293,7 @@ class AddPropertyModal extends Component
         );
     }
 
-    public function removeExistingDocument($docId): void
+    public function removeExistingDocument(int $docId): void
     {
         $this->removedDocumentIds[] = $docId;
         $this->existingDocuments = array_values(
@@ -508,7 +510,7 @@ class AddPropertyModal extends Component
         $this->resetValidation();
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.layouts.properties.add-property-modal');
     }

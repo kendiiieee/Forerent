@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -17,17 +18,17 @@ class RevenueRecords extends Component
 {
     use WithPagination;
 
-    public $activeTab = 'payment';
+    public string $activeTab = 'payment';
 
-    public $selectedMonth = null;
+    public ?string $selectedMonth = null;
 
-    public $selectedYear = null;
+    public ?int $selectedYear = null;
 
-    public $selectedBuilding = null;
+    public ?string $selectedBuilding = null;
 
-    public $search = '';
+    public string $search = '';
 
-    public function setTab($tab)
+    public function setTab(string $tab): void
     {
         $this->activeTab = $tab;
         $this->resetPage('paymentPage');
@@ -65,7 +66,7 @@ class RevenueRecords extends Component
         $this->resetPage('maintenancePage');
     }
 
-    public function viewReceipt($billingId)
+    public function viewReceipt(int $billingId): void
     {
         try {
             $record = DB::table('billings')
@@ -188,7 +189,7 @@ class RevenueRecords extends Component
         $this->dispatch('open-payment-receipt', data: $data);
     }
 
-    public function render()
+    public function render(): View
     {
         $search = trim((string) $this->search);
 

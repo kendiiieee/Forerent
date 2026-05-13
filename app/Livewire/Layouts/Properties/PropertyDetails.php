@@ -4,29 +4,30 @@ namespace App\Livewire\Layouts\Properties;
 
 use App\Models\Property;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
 class PropertyDetails extends Component
 {
-    public $propertyId = null;
+    public ?int $propertyId = null;
 
-    public $activePhotoIndex = 0;
+    public int $activePhotoIndex = 0;
 
     // Store as plain arrays/scalars — no Eloquent model hydration issues
-    public $buildingName = '';
+    public string $buildingName = '';
 
-    public $address = '';
+    public string $address = '';
 
-    public $description = '';
+    public string $description = '';
 
-    public $unitCount = 0;
+    public int $unitCount = 0;
 
-    public $photos = [];
+    public array $photos = [];
 
-    public $documents = [];
+    public array $documents = [];
 
-    public function mount($buildingId = null)
+    public function mount(?int $buildingId = null): void
     {
         // Don't independently resolve — wait for buildingSelected event
         // from BuildingCardsSection to ensure consistent selection
@@ -36,7 +37,7 @@ class PropertyDetails extends Component
     }
 
     #[On('buildingSelected')]
-    public function onBuildingSelected($buildingId = null)
+    public function onBuildingSelected(?int $buildingId = null): void
     {
         if (! $buildingId) {
             return;
@@ -50,7 +51,7 @@ class PropertyDetails extends Component
     }
 
     #[On('refresh-property-list')]
-    public function refreshPropertyDetails()
+    public function refreshPropertyDetails(): void
     {
         if ($this->propertyId) {
             $this->loadPropertyData($this->propertyId);
@@ -71,7 +72,7 @@ class PropertyDetails extends Component
         $this->loadPropertyData((int) $this->propertyId);
     }
 
-    private function loadPropertyData($id): void
+    private function loadPropertyData(int $id): void
     {
         $this->propertyId = $id;
         $this->activePhotoIndex = 0;
@@ -125,12 +126,12 @@ class PropertyDetails extends Component
             ->toArray();
     }
 
-    public function setActivePhoto($index)
+    public function setActivePhoto(int $index): void
     {
         $this->activePhotoIndex = $index;
     }
 
-    public function getCategoryLabel($category)
+    public function getCategoryLabel(string $category): string
     {
         return match ($category) {
             'business_permit' => 'Business Permit',
@@ -142,7 +143,7 @@ class PropertyDetails extends Component
         };
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.layouts.properties.property-details');
     }

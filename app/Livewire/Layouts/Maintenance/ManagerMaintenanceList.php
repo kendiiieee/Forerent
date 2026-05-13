@@ -6,52 +6,53 @@ use App\Models\Property;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ManagerMaintenanceList extends Component
 {
     // Tabs are all/pending/ongoing/completed
-    public $activeTab = 'all';
+    public string $activeTab = 'all';
 
-    public $activeRequestId = null;
+    public ?int $activeRequestId = null;
 
     // ADDED: Sort order property initialized to 'newest'
-    public $sortOrder = 'newest';
+    public string $sortOrder = 'newest';
 
     // Building filter
-    public $selectedBuilding = null;
+    public ?string $selectedBuilding = null;
 
     // Search
-    public $search = '';
+    public string $search = '';
 
     #[On('refreshDashboard')]
-    public function refreshDashboard() {}  // triggers re-render
+    public function refreshDashboard(): void {}  // triggers re-render
 
-    public function updatedSearch()
+    public function updatedSearch(): void
     {
         $this->activeRequestId = null;
     }
 
     #[On('refresh-maintenance-list')]
-    public function refreshList()
+    public function refreshList(): void
     {
         // Event-driven refresh after create/status updates.
     }
 
-    public function setTab($tab)
+    public function setTab(string $tab): void
     {
         $this->activeTab = $tab;
         $this->activeRequestId = null;
     }
 
-    public function selectRequest($id)
+    public function selectRequest(int $id): void
     {
         $this->activeRequestId = $id;
         $this->dispatch('managerMaintenanceSelected', requestId: $id);
     }
 
-    public function render()
+    public function render(): View
     {
         $managerId = Auth::id();
         $allCount = 0;

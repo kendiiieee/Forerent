@@ -5,32 +5,33 @@ namespace App\Livewire\Layouts\Settings;
 use App\Models\Lease;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Livewire\Component;
 
 class TenantPropertyDetails extends Component
 {
-    public $hasLease = false;
+    public bool $hasLease = false;
 
     // Property info
-    public $buildingName = '';
+    public string $buildingName = '';
 
-    public $address = '';
+    public string $address = '';
 
-    public $description = '';
+    public string $description = '';
 
-    public $photos = [];
+    public array $photos = [];
 
-    public $documents = [];
+    public array $documents = [];
 
-    public $activePhotoIndex = 0;
+    public int $activePhotoIndex = 0;
 
     // Unit info
-    public $unit = null;
+    public ?array $unit = null;
 
-    public $amenities = [];
+    public array $amenities = [];
 
     // Tenant government ID
-    public $tenantGovernmentId = null;
+    public int|string|null $tenantGovernmentId = null;
 
     public function mount(): void
     {
@@ -117,12 +118,12 @@ class TenantPropertyDetails extends Component
         }
     }
 
-    public function setActivePhoto($index)
+    public function setActivePhoto(int $index): void
     {
         $this->activePhotoIndex = $index;
     }
 
-    public function getCategoryLabel($category)
+    public function getCategoryLabel(string $category): string
     {
         return match ($category) {
             'business_permit' => 'Business Permit',
@@ -134,7 +135,7 @@ class TenantPropertyDetails extends Component
         };
     }
 
-    public function render()
+    public function render(): View
     {
         return view('livewire.layouts.settings.tenant-property-details');
     }

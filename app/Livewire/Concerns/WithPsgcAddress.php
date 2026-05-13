@@ -6,6 +6,7 @@ use App\Models\Barangay;
 use App\Models\City;
 use App\Models\Province;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Log;
  */
 trait WithPsgcAddress
 {
-    public function psgcProvinces()
+    public function psgcProvinces(): Collection
     {
         try {
             return Cache::remember('psgc_provinces', 3600, fn () => Province::orderBy('name')->get(['id', 'name'])
@@ -34,7 +35,7 @@ trait WithPsgcAddress
         }
     }
 
-    public function psgcCities($provinceId)
+    public function psgcCities(?int $provinceId): Collection
     {
         if (! $provinceId) {
             return collect();
@@ -53,7 +54,7 @@ trait WithPsgcAddress
         }
     }
 
-    public function psgcBarangays($cityId)
+    public function psgcBarangays(?int $cityId): Collection
     {
         if (! $cityId) {
             return collect();

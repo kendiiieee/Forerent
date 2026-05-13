@@ -49,7 +49,7 @@ class MaintenanceForecast
     {
         try {
             $year = (int) $year;
-            $dataSignature = $this->getTrainingDataSignature();
+            $dataSignature = $this->getTrainingDataSignature($maintenanceData);
             $cacheKey = $this->buildForecastCacheKey($year, $dataSignature);
             $cachedForecast = Cache::get($cacheKey);
 
@@ -87,6 +87,50 @@ class MaintenanceForecast
         } catch (\Exception $e) {
             Log::error('Maintenance forecast service error: '.$e->getMessage());
             throw $e;
+        }
+    }
+
+    private function getTrainingDataSignature(?array $maintenanceData = null): string
+    {
+        try {
+            $data = $maintenanceData ?? $this->getMaintenanceDataForForecast();
+
+            $normalized = array_map(function ($row) {
+                return [
+                    'date' => $row['date'] ?? '',
+                    'cost' => isset($row['cost']) ? (float) $row['cost'] : 0.0,
+                    'count' => (int) ($row['item_count'] ?? $row['maintenance_count'] ?? 0),
+                ];
+            }, $data);
+
+            usort($normalized, function ($a, $b) {
+                return strcmp($a['date'] ?? '', $b['date'] ?? '');
+            });
+
+            $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            return substr(hash('sha256', $json ?? ''), 0, 16);
+        } catch (Throwable $e) {
+            Log::warning('Unable to compute training data signature: '.$e->getMessage());
+
+            return 'signature-fallback';
+        }
+    }
+
+    private function buildForecastCacheKey(int $year, string $signature): string
+    {
+        $prefix = env('FORECAST_CACHE_PREFIX', 'maintenance_forecast');
+
+        return sprintf('%s:%s:%s', $prefix, (int) $year, $signature);
+    }
+
+    private function cacheForecast(string $cacheKey, array $result): void
+    {
+        try {
+            Cache::put($cacheKey, $result, $this->forecastCacheTtlSeconds);
+            Log::info('Cached maintenance forecast', ['cache_key' => $cacheKey]);
+        } catch (Throwable $e) {
+            Log::warning('Failed to cache maintenance forecast: '.$e->getMessage());
         }
     }
 
